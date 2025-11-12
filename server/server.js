@@ -3,39 +3,68 @@ import dotenv from "dotenv";
 import mongoose from "mongoose";
 import cors from "cors";
 import morgan from "morgan";
+import path from "path";
 
+// ✅ Import routes
+import authRoutes from "./src/routes/authRoutes.js";
+import companyRoutes from "./src/routes/companyRoutes.js";
+import managerRoutes from "./src/routes/managerRoutes.js";
+import driverRoutes from "./src/routes/driverRoutes.js"; // 👈 NEW
+import vehicleRoutes from "./src/routes/vehicleRoutes.js";
+import orderRoutes from "./src/routes/orderRoutes.js";
 dotenv.config();
 
 const app = express();
 
-// Middleware
+/* ==========================================================
+   🧩 GLOBAL MIDDLEWARE
+   ========================================================== */
 app.use(express.json());
 app.use(cors());
 app.use(morgan("dev"));
 
-// Basic test route
+// ✅ Serve static uploads (for driver images, etc.)
+app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
+
+/* ==========================================================
+   🚦 API ROUTES
+   ========================================================== */
+app.use("/api/auth", authRoutes);
+app.use("/api/company", companyRoutes);
+app.use("/api/manager", managerRoutes);
+app.use("/api/driver", driverRoutes); // 👈 NEW
+app.use("/api/vehicle", vehicleRoutes);
+app.use("/api/order", orderRoutes);
+// 🧪 Health check
 app.get("/api/health", (req, res) => {
-  res.json({ status: "smarttrack api running" });
+  res.json({ status: "✅ SmartTrack API is running" });
 });
 
-// Connect MongoDB
+/* ==========================================================
+   ⚙️ DATABASE CONNECTION
+   ========================================================== */
 const connectDB = async () => {
   try {
-    await mongoose.connect(process.env.MONGO_URI || "mongodb://localhost:27017/smarttrack", {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
-    console.log("✅ MongoDB connected");
+    await mongoose.connect(
+      process.env.MONGO_URI || "mongodb://localhost:27017/smarttrack",
+      {
+        useNewUrlParser: true,
+        useUnifiedTopology: true,
+      }
+    );
+    console.log("✅ MongoDB connected successfully");
   } catch (err) {
     console.error("❌ MongoDB connection failed:", err.message);
     process.exit(1);
   }
 };
 
-// Start the server
+/* ==========================================================
+   🚀 SERVER START
+   ========================================================== */
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+
+app.listen(PORT, async () => {
+  await connectDB();
   console.log(`🚀 Server running on port ${PORT}`);
 });
-
-connectDB();
