@@ -12,6 +12,14 @@ import managerRoutes from "./src/routes/managerRoutes.js";
 import driverRoutes from "./src/routes/driverRoutes.js"; // 👈 NEW
 import vehicleRoutes from "./src/routes/vehicleRoutes.js";
 import orderRoutes from "./src/routes/orderRoutes.js";
+import maintenanceRoutes from "./src/routes/maintenanceRoutes.js";
+import tripRoutes from "./src/routes/tripRoutes.js";
+import tripAnalyticsRoutes from "./src/routes/tripAnalyticsRoutes.js";
+import paymentRoutes from "./src/routes/paymentRoutes.js";
+import customerTripRoutes from "./src/routes/customerTripRoutes.js";
+import companyDriversRoutes from "./src/routes/companyDriversRoutes.js";
+import customerCompanyRoutes from "./src/routes/customerCompanyRoutes.js";
+import productRoutes from "./src/routes/productRoutes.js";
 dotenv.config();
 
 const app = express();
@@ -35,6 +43,14 @@ app.use("/api/manager", managerRoutes);
 app.use("/api/driver", driverRoutes); // 👈 NEW
 app.use("/api/vehicle", vehicleRoutes);
 app.use("/api/order", orderRoutes);
+app.use("/api/maintenance", maintenanceRoutes);
+app.use("/api/trip", tripRoutes);
+app.use("/api/trip/analytics", tripAnalyticsRoutes);
+app.use("/api/payments", paymentRoutes);
+app.use("/api/customer/trips", customerTripRoutes);
+app.use("/api/company/drivers", companyDriversRoutes);
+app.use("/api/customer", customerCompanyRoutes);
+app.use("/api/products", productRoutes);
 // 🧪 Health check
 app.get("/api/health", (req, res) => {
   res.json({ status: "✅ SmartTrack API is running" });

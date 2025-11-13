@@ -1,7 +1,8 @@
+// server/src/models/Vehicle.js
 import mongoose from "mongoose";
 
 /* ==========================================================
-   🚘 VEHICLE MODEL — Cars, Motors, and Fleet Management
+   🚘 VEHICLE MODEL — Cars, Motors & Fleet Management
    ========================================================== */
 const vehicleSchema = new mongoose.Schema(
   {
@@ -23,16 +24,19 @@ const vehicleSchema = new mongoose.Schema(
       required: true,
     },
 
-    brand: { type: String, required: true },
-    model: { type: String, required: true },
-    plateNumber: { type: String, required: true, unique: true },
+    brand: { type: String, required: true, trim: true },
+    model: { type: String, required: true, trim: true },
+    plateNumber: { type: String, required: true, unique: true, trim: true },
 
-    // Vehicle status logic
+    // Vehicle status
     status: {
       type: String,
-      enum: ["available", "active", "maintenance"],
+      enum: ["available", "in_use", "maintenance"],
       default: "available",
     },
+
+    // 📸 Vehicle image (relative URL)
+    vehicleImage: { type: String, default: null },
 
     lastServiceDate: { type: Date, default: null },
 
@@ -40,14 +44,6 @@ const vehicleSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
-
-/* ==========================================================
-   🚦 STATUS DEFINITIONS
-   ==========================================================
-   available   → not assigned to any driver
-   active      → currently under use by a driver
-   maintenance → temporarily unavailable due to repair or service
-   ========================================================== */
 
 const Vehicle = mongoose.model("Vehicle", vehicleSchema);
 export default Vehicle;

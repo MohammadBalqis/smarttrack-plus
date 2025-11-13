@@ -1,12 +1,14 @@
+// server/src/routes/vehicleRoutes.js
 import { Router } from "express";
 import Vehicle from "../models/Vehicle.js";
+import User from "../models/User.js";
 import { protect } from "../middleware/authMiddleware.js";
 import { authorizeRoles } from "../middleware/roleMiddleware.js";
 
 const router = Router();
 
 /* ==========================================================
-   🚗 CREATE VEHICLE  (Company / Manager)
+   🚗 CREATE VEHICLE (Company / Manager)
    ========================================================== */
 router.post(
   "/create",
@@ -14,7 +16,8 @@ router.post(
   authorizeRoles("company", "manager"),
   async (req, res) => {
     try {
-      const { type, brand, model, plateNumber, notes } = req.body;
+      const { type, brand, model, plateNumber, notes, vehicleImage } = req.body;
+
       if (!type || !brand || !model || !plateNumber)
         return res.status(400).json({ error: "Missing fields" });
 
@@ -28,6 +31,7 @@ router.post(
         plateNumber,
         companyId,
         notes,
+        vehicleImage: vehicleImage || null, // URL or null
       });
 
       res.status(201).json({
@@ -56,7 +60,7 @@ router.get(
 
       const vehicles = await Vehicle.find({ companyId }).populate(
         "driverId",
-        "name email"
+        "name email profileImage"
       );
 
       res.json({ ok: true, count: vehicles.length, vehicles });
@@ -68,7 +72,7 @@ router.get(
 );
 
 /* ==========================================================
-   🔄 ASSIGN DRIVER TO VEHICLE
+   🔄 ASSIGN / REMOVE DRIVER FROM VEHICLE
    ========================================================== */
 router.put(
   "/assign-driver/:vehicleId",
@@ -83,12 +87,15 @@ router.put(
       if (!vehicle) return res.status(404).json({ error: "Vehicle not found" });
 
       if (vehicle.status === "maintenance")
-        return res
-          .status(400)
-          .json({ error: "Vehicle under maintenance — cannot assign driver" });
+        return res.status(400).json({
+          error: "Vehicle is under maintenance — cannot assign driver",
+        });
 
       vehicle.driverId = driverId || null;
-      vehicle.status = driverId ? "active" : "available";
+
+      // Update status based on assignment
+      vehicle.status = driverId ? "in_use" : "available";
+
       await vehicle.save();
 
       res.json({
@@ -104,8 +111,9 @@ router.put(
     }
   }
 );
+
 /* ==========================================================
-   🧰 UPDATE VEHICLE STATUS
+   🧰 UPDATE VEHICLE STATUS (manual)
    ========================================================== */
 router.put(
   "/update-status/:vehicleId",
@@ -116,25 +124,24 @@ router.put(
       const { vehicleId } = req.params;
       const { status } = req.body;
 
-      const allowedStatuses = ["available", "active", "maintenance"];
+      const allowedStatuses = ["available", "in_use", "maintenance"];
       if (!allowedStatuses.includes(status))
-        return res
-          .status(400)
-          .json({ error: "Invalid status. Must be: available, active, or maintenance." });
+        return res.status(400).json({
+          error: "Invalid status. Must be: available, in_use, or maintenance.",
+        });
 
       const vehicle = await Vehicle.findById(vehicleId);
       if (!vehicle)
         return res.status(404).json({ error: "Vehicle not found" });
 
-      // 🚗 Rules
-      // If vehicle is assigned to driver → status should be active
+      // Rule: cannot set available if driver assigned
       if (vehicle.driverId && status === "available") {
         return res.status(400).json({
-          error: "Cannot mark vehicle as available while assigned to a driver",
+          error:
+            "Vehicle cannot be 'available' while assigned to a driver. Remove driver first.",
         });
       }
 
-      // Apply new status
       vehicle.status = status;
       await vehicle.save();
 
