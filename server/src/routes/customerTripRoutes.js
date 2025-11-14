@@ -7,7 +7,7 @@ import { authorizeRoles } from "../middleware/roleMiddleware.js";
 const router = Router();
 
 /* ==========================================================
-   🟢 1. Customer CREATES a delivery order
+   🟢 1. Customer CREATES a delivery order (GLOBAL CUSTOMER)
    ========================================================== */
 router.post(
   "/create",
@@ -16,6 +16,7 @@ router.post(
   async (req, res) => {
     try {
       const {
+        companyId,        // 🔥 customer chooses company from frontend
         pickupAddress,
         pickupLat,
         pickupLng,
@@ -27,16 +28,12 @@ router.post(
         deliveryFee,
       } = req.body;
 
-      if (!pickupAddress || !dropoffAddress) {
-        return res
-          .status(400)
-          .json({ error: "pickupAddress and dropoffAddress are required" });
-      }
+      if (!companyId)
+        return res.status(400).json({ error: "companyId is required" });
 
-      // Customer must be linked with a company
-      if (!req.user.companyId) {
+      if (!pickupAddress || !dropoffAddress) {
         return res.status(400).json({
-          error: "This customer is not linked to any company. Contact support.",
+          error: "pickupAddress and dropoffAddress are required",
         });
       }
 
@@ -53,7 +50,7 @@ router.post(
       };
 
       const trip = await Trip.create({
-        companyId: req.user.companyId,
+        companyId,         // 🔥 customer selects company per order
         customerId: req.user._id,
         driverId: null,
         vehicleId: null,
@@ -166,10 +163,7 @@ router.get(
         return res.status(404).json({ error: "Trip not found or unauthorized" });
       }
 
-      res.json({
-        ok: true,
-        trip,
-      });
+      res.json({ ok: true, trip });
     } catch (err) {
       console.error("❌ Error fetching trip details:", err.message);
       res.status(500).json({ error: "Error fetching trip details" });

@@ -47,6 +47,9 @@ const userSchema = new mongoose.Schema(
     // 🚚 Number of currently active orders for drivers
     driverOrdersCount: { type: Number, default: 0 },
 
+        // 📝 Optional notes from company/manager about driver
+    driverNotes: { type: String, trim: true },
+
     // ⚙️ Status
     isActive: { type: Boolean, default: true },
   },
