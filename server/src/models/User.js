@@ -1,15 +1,26 @@
+// server/src/models/User.js
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 
 /* =====================================================
-   🧩 ALLOWED ROLES — RBAC Hierarchy
+   🧩 ROLE-BASED ACCESS CONTROL (RBAC)
    ===================================================== */
-export const ROLES_LIST = ["owner", "company", "manager", "driver", "customer"];
+export const ROLES_LIST = [
+  "superadmin",  // Full system access
+  "company",     // Company owner / company account
+  "manager",     // Works under company
+  "driver",      // Works under manager or company
+  "customer",    // End user requesting delivery
+];
 
+/* =====================================================
+   🧩 USER SCHEMA
+   ===================================================== */
 const userSchema = new mongoose.Schema(
   {
-    // 🔹 Core Info
+    // 🔹 BASIC INFO
     name: { type: String, required: true, trim: true },
+
     email: {
       type: String,
       required: true,
@@ -18,53 +29,85 @@ const userSchema = new mongoose.Schema(
       trim: true,
     },
 
-    // 🔐 Security
     passwordHash: { type: String, required: true },
 
-    // 🎭 Role Management
-    role: { type: String, enum: ROLES_LIST, required: true, index: true },
+    // 🎭 USER ROLE
+    role: {
+      type: String,
+      enum: ROLES_LIST,
+      required: true,
+      index: true,
+    },
 
-    // 🏢 Company association (used by manager/driver)
+    /* =====================================================
+       🏰 SUPERADMIN PROPERTIES
+       ===================================================== */
+    isSystemOwner: {
+      type: Boolean,
+      default: false,
+    },
+
+    systemAccessLevel: {
+      type: Number, // 1=view, 2=edit, 3=full access
+      default: 3,
+      min: 1,
+      max: 3,
+    },
+
+    /* =====================================================
+       🏢 COMPANY RELATIONS
+       ===================================================== */
+
+    // Used by MANAGER and DRIVER
     companyId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User", // refers to the company user
+      ref: "User",
       default: null,
     },
 
-    // 👨‍💼 Manager association (used by drivers)
+    // Used by DRIVER
     managerId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User", // refers to the manager user
+      ref: "User",
       default: null,
     },
 
-    // 🏷️ Optional Company Info (only for company accounts)
+    // Only for company accounts
     companyName: { type: String, trim: true },
 
-    // 🖼️ Driver / User profile image
-    profileImage: { type: String, default: null }, // e.g. /uploads/drivers/face.jpg
+    /* =====================================================
+       👤 PROFILE & DRIVER INFO
+       ===================================================== */
+    profileImage: { type: String, default: null },
 
-    // 🚚 Number of currently active orders for drivers
     driverOrdersCount: { type: Number, default: 0 },
 
-        // 📝 Optional notes from company/manager about driver
     driverNotes: { type: String, trim: true },
 
-    // ⚙️ Status
+    /* =====================================================
+       ⚙️ STATUS
+       ===================================================== */
     isActive: { type: Boolean, default: true },
   },
   { timestamps: true }
 );
 
 /* =====================================================
-   🔐 Compare Password
+   🔐 COMPARE PASSWORD
    ===================================================== */
 userSchema.methods.matchPassword = async function (enteredPassword) {
   return bcrypt.compare(enteredPassword, this.passwordHash);
 };
 
 /* =====================================================
-   ✅ Export Model
+   🧠 VIRTUAL: SUPERADMIN CHECK
+   ===================================================== */
+userSchema.virtual("isSuperAdmin").get(function () {
+  return this.role === "superadmin";
+});
+
+/* =====================================================
+   📦 EXPORT MODEL
    ===================================================== */
 const User = mongoose.model("User", userSchema);
 export default User;

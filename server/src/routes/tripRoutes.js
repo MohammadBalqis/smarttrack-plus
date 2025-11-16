@@ -95,13 +95,66 @@ const createNotification = async (
   });
 };
 
+// Event name for realtime status updates
+const TRIP_STATUS_EVENT = "trip-status";
+
+/**
+ * Broadcast full trip status to all related users:
+ *  - driver
+ *  - customer
+ *  - company
+ */
+const broadcastTripStatus = async (req, tripId) => {
+  try {
+    const io = req.app.get("io");
+    if (!io) return;
+
+    const trip = await getPopulatedTripForNotify(tripId);
+    if (!trip) return;
+
+    const payload = {
+      tripId: trip._id,
+      status: trip.status,
+      liveStatus: trip.liveStatus || null,
+      pickupLocation: trip.pickupLocation,
+      dropoffLocation: trip.dropoffLocation,
+      routeHistory: trip.routeHistory,
+      startTime: trip.startTime,
+      endTime: trip.endTime,
+      deliveryFee: trip.deliveryFee,
+      paymentStatus: trip.paymentStatus,
+      customerConfirmed: trip.customerConfirmed,
+      totalDistance: trip.totalDistance,
+
+      // relations
+      driver: trip.driverId,
+      vehicle: trip.vehicleId,
+      customer: trip.customerId,
+      company: trip.companyId,
+      updatedAt: new Date(),
+    };
+
+    const targets = [
+      trip.driverId?._id,
+      trip.customerId?._id,
+      trip.companyId?._id,
+    ].filter(Boolean);
+
+    targets.forEach((userId) => {
+      io.to(String(userId)).emit(TRIP_STATUS_EVENT, payload);
+    });
+  } catch (err) {
+    console.error("⚠ trip-status broadcast error:", err.message);
+  }
+};
+
 /* ==========================================================
-   🟢 1. Create a Trip (Company / Manager creates manually)
+   🟢 1. Create a Trip (Company / Manager / Superadmin)
    ========================================================== */
 router.post(
   "/create",
   protect,
-  authorizeRoles("company", "manager"),
+  authorizeRoles("company", "manager", "superadmin"),
   async (req, res) => {
     try {
       const {
@@ -111,13 +164,28 @@ router.post(
         pickupLocation,
         dropoffLocation,
         deliveryFee,
+        companyId: bodyCompanyId, // ✅ used for superadmin
       } = req.body;
 
       if (!driverId || !vehicleId || !customerId)
         return res.status(400).json({ error: "Missing required fields" });
 
-      const companyId =
-        req.user.role === "company" ? req.user._id : req.user.companyId;
+      let companyId;
+
+      if (req.user.role === "company") {
+        companyId = req.user._id;
+      } else if (req.user.role === "manager") {
+        companyId = req.user.companyId;
+      } else if (req.user.role === "superadmin" || req.user.role === "owner") {
+        companyId = bodyCompanyId;
+      }
+
+      if (!companyId) {
+        return res.status(400).json({
+          error:
+            "companyId is required in body when creating a trip as superadmin/owner.",
+        });
+      }
 
       // Validate driver belongs to company
       const driver = await User.findOne({
@@ -128,14 +196,14 @@ router.post(
 
       if (!driver)
         return res.status(400).json({
-          error: "Driver not found or does not belong to your company",
+          error: "Driver not found or does not belong to this company",
         });
 
       // Validate vehicle belongs to company
       const vehicle = await Vehicle.findOne({ _id: vehicleId, companyId });
       if (!vehicle)
         return res.status(400).json({
-          error: "Vehicle not found or not part of your company",
+          error: "Vehicle not found or not part of this company",
         });
 
       if (vehicle.status === "maintenance")
@@ -198,6 +266,9 @@ router.post(
         extraData: payloadCommon,
       });
 
+      // 🔁 Realtime broadcast
+      await broadcastTripStatus(req, trip._id);
+
       res.status(201).json({
         ok: true,
         message: "Trip created & driver/vehicle assigned",
@@ -216,24 +287,44 @@ router.post(
 router.post(
   "/assign",
   protect,
-  authorizeRoles("company", "manager"),
+  authorizeRoles("company", "manager", "superadmin"),
   async (req, res) => {
     try {
-      const { tripId, driverId, vehicleId, deliveryFee } = req.body;
+      const {
+        tripId,
+        driverId,
+        vehicleId,
+        deliveryFee,
+        companyId: bodyCompanyId, // ✅ for superadmin/owner
+      } = req.body;
 
       if (!tripId || !driverId || !vehicleId)
         return res.status(400).json({
           error: "tripId, driverId, vehicleId are required",
         });
 
-      const companyId =
-        req.user.role === "company" ? req.user._id : req.user.companyId;
+      let companyId;
+
+      if (req.user.role === "company") {
+        companyId = req.user._id;
+      } else if (req.user.role === "manager") {
+        companyId = req.user.companyId;
+      } else if (req.user.role === "superadmin" || req.user.role === "owner") {
+        companyId = bodyCompanyId;
+      }
+
+      if (!companyId) {
+        return res.status(400).json({
+          error:
+            "companyId is required in body when assigning as superadmin/owner.",
+        });
+      }
 
       // Get pending trip
       const trip = await Trip.findOne({ _id: tripId, companyId });
       if (!trip)
         return res.status(404).json({
-          error: "Trip not found for your company",
+          error: "Trip not found for this company",
         });
 
       if (trip.status !== "pending")
@@ -250,14 +341,14 @@ router.post(
 
       if (!driver)
         return res.status(400).json({
-          error: "Driver not found or not part of your company",
+          error: "Driver not found or not part of this company",
         });
 
       // Validate vehicle
       const vehicle = await Vehicle.findOne({ _id: vehicleId, companyId });
       if (!vehicle)
         return res.status(400).json({
-          error: "Vehicle not found or not part of your company",
+          error: "Vehicle not found or not part of this company",
         });
 
       if (vehicle.status === "maintenance")
@@ -313,6 +404,9 @@ router.post(
         extraData: payloadCommon,
       });
 
+      // 🔁 Realtime broadcast
+      await broadcastTripStatus(req, trip._id);
+
       res.json({
         ok: true,
         message: "Trip assigned successfully",
@@ -350,6 +444,9 @@ router.post(
 
       await trip.save();
 
+      // 🔁 Realtime broadcast
+      await broadcastTripStatus(req, trip._id);
+
       res.json({
         ok: true,
         message: "Driver location updated",
@@ -370,7 +467,7 @@ router.post(
 router.post(
   "/complete",
   protect,
-  authorizeRoles("driver", "manager", "company"),
+  authorizeRoles("driver", "manager", "company", "superadmin"),
   async (req, res) => {
     try {
       const { tripId, totalDistance } = req.body;
@@ -433,6 +530,9 @@ router.post(
         extraData: payloadCommon,
       });
 
+      // 🔁 Realtime broadcast
+      await broadcastTripStatus(req, trip._id);
+
       res.json({
         ok: true,
         message: "Trip completed successfully",
@@ -478,12 +578,12 @@ router.get(
 );
 
 /* ==========================================================
-   🌍 5. Company/Manager — route history
+   🌍 5. Company/Manager/Owner/Superadmin — route history
    ========================================================== */
 router.get(
   "/:tripId/route",
   protect,
-  authorizeRoles("company", "manager", "owner"),
+  authorizeRoles("company", "manager", "owner", "superadmin"),
   async (req, res) => {
     try {
       const trip = await Trip.findById(req.params.tripId);
@@ -505,18 +605,28 @@ router.get(
 );
 
 /* ==========================================================
-   📦 6. List all Trips for Company / Manager / Owner
+   📦 6. List all Trips (Company / Manager / Owner / Superadmin)
    ========================================================== */
 router.get(
   "/list",
   protect,
-  authorizeRoles("company", "manager", "owner"),
+  authorizeRoles("company", "manager", "owner", "superadmin"),
   async (req, res) => {
     try {
-      const companyId =
-        req.user.role === "company" ? req.user._id : req.user.companyId;
+      const filter = {};
 
-      const trips = await Trip.find({ companyId })
+      if (req.user.role === "company") {
+        filter.companyId = req.user._id;
+      } else if (req.user.role === "manager") {
+        filter.companyId = req.user.companyId;
+      } else if (req.user.role === "owner" || req.user.role === "superadmin") {
+        // optional ?companyId=...
+        if (req.query.companyId) {
+          filter.companyId = req.query.companyId;
+        }
+      }
+
+      const trips = await Trip.find(filter)
         .populate("driverId", "name email profileImage")
         .populate(
           "vehicleId",
@@ -545,7 +655,7 @@ router.get(
 router.get(
   "/:tripId/generate-qr",
   protect,
-  authorizeRoles("company", "manager", "driver"),
+  authorizeRoles("company", "manager", "driver", "superadmin"),
   async (req, res) => {
     try {
       const { tripId } = req.params;
@@ -641,6 +751,9 @@ router.post("/confirm-delivery", async (req, res) => {
       });
     }
 
+    // 🔁 Realtime broadcast
+    await broadcastTripStatus(req, trip._id);
+
     res.json({
       ok: true,
       message: "Customer confirmed delivery successfully!",
@@ -685,6 +798,7 @@ router.get(
         ok: true,
         tripId: trip._id,
         status: trip.status,
+        liveStatus: trip.liveStatus || null,
         pickupLocation: trip.pickupLocation,
         dropoffLocation: trip.dropoffLocation,
         routeHistory: trip.routeHistory,
@@ -704,12 +818,12 @@ router.get(
 );
 
 /* ==========================================================
-   📦 MANAGER — Filtered Orders List (search + filters)
+   📦 MANAGER / COMPANY / OWNER / SUPERADMIN — Filtered Orders
    ========================================================== */
 router.get(
   "/manager/search",
   protect,
-  authorizeRoles("manager", "company"),
+  authorizeRoles("manager", "company", "owner", "superadmin"),
   async (req, res) => {
     try {
       const {
@@ -722,12 +836,20 @@ router.get(
         search,
         page = 1,
         limit = 20,
+        companyId: queryCompanyId,
       } = req.query;
 
-      const companyId =
-        req.user.role === "company" ? req.user._id : req.user.companyId;
+      const filter = {};
 
-      const filter = { companyId };
+      if (req.user.role === "company") {
+        filter.companyId = req.user._id;
+      } else if (req.user.role === "manager") {
+        filter.companyId = req.user.companyId;
+      } else if (req.user.role === "owner" || req.user.role === "superadmin") {
+        if (queryCompanyId) {
+          filter.companyId = queryCompanyId;
+        }
+      }
 
       // STATUS
       if (status) filter.status = status;
@@ -795,20 +917,20 @@ router.get(
 );
 
 /* ==========================================================
-   6D — MANAGER / COMPANY — Cancel a Trip (with reason)
+   6D — MANAGER / COMPANY / OWNER / SUPERADMIN — Cancel a Trip
    ========================================================== */
 /*
 PATCH /api/trip/cancel/:tripId
-Body: { "reason": "Customer unreachable" }
+Body: { "reason": "Customer unreachable", "companyId": "..." } // companyId optional for owner/superadmin
 */
 router.patch(
   "/cancel/:tripId",
   protect,
-  authorizeRoles("manager", "company"),
+  authorizeRoles("manager", "company", "owner", "superadmin"),
   async (req, res) => {
     try {
       const { tripId } = req.params;
-      const { reason } = req.body;
+      const { reason, companyId: bodyCompanyId } = req.body;
 
       if (!reason || reason.trim().length < 3) {
         return res.status(400).json({
@@ -816,14 +938,29 @@ router.patch(
         });
       }
 
-      const companyId =
-        req.user.role === "company" ? req.user._id : req.user.companyId;
+      let trip;
 
-      const trip = await Trip.findOne({ _id: tripId, companyId });
+      if (req.user.role === "company") {
+        trip = await Trip.findOne({ _id: tripId, companyId: req.user._id });
+      } else if (req.user.role === "manager") {
+        trip = await Trip.findOne({
+          _id: tripId,
+          companyId: req.user.companyId,
+        });
+      } else if (req.user.role === "owner" || req.user.role === "superadmin") {
+        if (bodyCompanyId) {
+          trip = await Trip.findOne({
+            _id: tripId,
+            companyId: bodyCompanyId,
+          });
+        } else {
+          trip = await Trip.findById(tripId);
+        }
+      }
 
       if (!trip) {
         return res.status(404).json({
-          error: "Trip not found for your company",
+          error: "Trip not found for your scope",
         });
       }
 
@@ -886,6 +1023,9 @@ router.patch(
         });
       }
 
+      // 🔁 Realtime broadcast
+      await broadcastTripStatus(req, trip._id);
+
       res.json({
         ok: true,
         message: "Trip cancelled successfully",
@@ -901,13 +1041,12 @@ router.patch(
 );
 
 /* ==========================================================
-   6E — MANAGER UPDATE TRIP
-   Update: driver, vehicle, fee, pickup, dropoff
+   6E — MANAGER / COMPANY / OWNER / SUPERADMIN — Update Trip
    ========================================================== */
 router.patch(
   "/update/:tripId",
   protect,
-  authorizeRoles("manager", "company"),
+  authorizeRoles("manager", "company", "owner", "superadmin"),
   async (req, res) => {
     try {
       const { tripId } = req.params;
@@ -917,17 +1056,36 @@ router.patch(
         deliveryFee,
         pickupLocation,
         dropoffLocation,
+        companyId: bodyCompanyId,
       } = req.body;
 
-      const companyId =
-        req.user.role === "company" ? req.user._id : req.user.companyId;
+      let trip;
 
-      // Fetch trip
-      const trip = await Trip.findOne({ _id: tripId, companyId });
+      if (req.user.role === "company") {
+        trip = await Trip.findOne({
+          _id: tripId,
+          companyId: req.user._id,
+        });
+      } else if (req.user.role === "manager") {
+        trip = await Trip.findOne({
+          _id: tripId,
+          companyId: req.user.companyId,
+        });
+      } else if (req.user.role === "owner" || req.user.role === "superadmin") {
+        if (bodyCompanyId) {
+          trip = await Trip.findOne({
+            _id: tripId,
+            companyId: bodyCompanyId,
+          });
+        } else {
+          trip = await Trip.findById(tripId);
+        }
+      }
+
       if (!trip)
         return res
           .status(404)
-          .json({ error: "Trip not found in your company" });
+          .json({ error: "Trip not found in your scope" });
 
       // Validate allowed statuses
       if (["delivered", "cancelled"].includes(trip.status)) {
@@ -935,6 +1093,8 @@ router.patch(
           error: `Cannot update trip with status '${trip.status}'.`,
         });
       }
+
+      const companyId = trip.companyId;
 
       // DRIVER validation (optional)
       if (driverId && driverId !== String(trip.driverId)) {
@@ -946,7 +1106,7 @@ router.patch(
 
         if (!driver)
           return res.status(400).json({
-            error: "Driver not found or not part of your company",
+            error: "Driver not found or not part of this company",
           });
 
         // Check if driver already has an active trip
@@ -971,7 +1131,7 @@ router.patch(
 
         if (!vehicle)
           return res.status(400).json({
-            error: "Vehicle not found or not part of your company",
+            error: "Vehicle not found or not part of this company",
           });
 
         if (vehicle.status === "maintenance") {
@@ -1055,6 +1215,9 @@ router.patch(
         });
       }
 
+      // 🔁 Realtime broadcast
+      await broadcastTripStatus(req, trip._id);
+
       res.json({
         ok: true,
         message: "Trip updated successfully",
@@ -1063,6 +1226,85 @@ router.patch(
     } catch (err) {
       console.error("❌ Trip update error:", err.message);
       res.status(500).json({ error: "Server error updating trip" });
+    }
+  }
+);
+
+/* ==========================================================
+   7E — DRIVER SENDS LIVE STATUS UPDATE
+   ========================================================== */
+/*
+POST /api/trip/live-status
+Body:
+{
+  "tripId": "",
+  "status": "Arrived at pickup" // any custom message
+}
+*/
+
+router.post(
+  "/live-status",
+  protect,
+  authorizeRoles("driver"),
+  async (req, res) => {
+    try {
+      const { tripId, status } = req.body;
+
+      if (!tripId || !status) {
+        return res.status(400).json({
+          error: "tripId and status are required",
+        });
+      }
+
+      const trip = await Trip.findById(tripId)
+        .populate("customerId", "name email")
+        .populate("companyId", "name")
+        .populate("driverId", "name email profileImage");
+
+      if (!trip) {
+        return res.status(404).json({ error: "Trip not found" });
+      }
+
+      // Update trip liveStatus (not the main status)
+      trip.liveStatus = status;
+      await trip.save();
+
+      const io = req.app.get("io");
+      const payload = {
+        tripId: trip._id,
+        status: trip.status,
+        liveStatus: status,
+        driver: trip.driverId,
+        customer: trip.customerId,
+        company: trip.companyId,
+        timestamp: new Date(),
+      };
+
+      if (io) {
+        // Notify customer
+        if (trip.customerId?._id) {
+          io.to(String(trip.customerId._id)).emit(TRIP_STATUS_EVENT, payload);
+        }
+
+        // Notify manager/company
+        if (trip.companyId?._id) {
+          io.to(String(trip.companyId._id)).emit(TRIP_STATUS_EVENT, payload);
+        }
+
+        // Notify driver himself (for sync)
+        if (trip.driverId?._id) {
+          io.to(String(trip.driverId._id)).emit(TRIP_STATUS_EVENT, payload);
+        }
+      }
+
+      res.json({
+        ok: true,
+        message: "Live status updated successfully",
+        payload,
+      });
+    } catch (err) {
+      console.error("❌ Live status update error:", err.message);
+      res.status(500).json({ error: "Server error updating live status" });
     }
   }
 );

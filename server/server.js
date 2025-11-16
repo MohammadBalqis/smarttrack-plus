@@ -4,8 +4,11 @@ import mongoose from "mongoose";
 import cors from "cors";
 import morgan from "morgan";
 import path from "path";
-import http from "http";                 // Socket.io Requirement
-import { Server } from "socket.io";      // Socket.io Requirement
+import http from "http";
+import { Server } from "socket.io";
+
+// MODELS
+import GlobalSettings from "./src/models/GlobalSettings.js"; // ✅ Required for maintenance mode middleware
 
 // ROUTES
 import authRoutes from "./src/routes/authRoutes.js";
@@ -27,15 +30,15 @@ import managerDriverRoutes from "./src/routes/managerDriverRoutes.js";
 import managerVehicleRoutes from "./src/routes/managerVehicleRoutes.js";
 import customerRoutes from "./src/routes/customerRoutes.js";
 import notificationRoutes from "./src/routes/notificationRoutes.js";
-
+import superAdminRoutes from "./src/routes/superAdminRoutes.js";
+import globalSettingsRoutes from "./src/routes/globalSettingsRoutes.js";
 
 dotenv.config();
-
 const app = express();
 
 /* ==========================================================
    🧩 GLOBAL MIDDLEWARE
-   ========================================================== */
+========================================================== */
 app.use(express.json());
 app.use(cors());
 app.use(morgan("dev"));
@@ -44,11 +47,39 @@ app.use(morgan("dev"));
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
 /* ==========================================================
+   🚧 GLOBAL MAINTENANCE MODE CHECK
+   IMPORTANT:
+   - If system is in maintenance mode:
+   - All users are blocked EXCEPT superadmin
+========================================================== */
+app.use(async (req, res, next) => {
+  try {
+    const settings = await GlobalSettings.findOne();
+
+    if (settings?.maintenanceMode === true) {
+      // Allow superadmin to bypass maintenance mode
+      if (req.user && req.user.role === "superadmin") {
+        return next();
+      }
+
+      return res.status(503).json({
+        ok: false,
+        message: "🚧 System is currently under maintenance. Please try again later.",
+      });
+    }
+  } catch (err) {
+    console.error("⚠ Maintenance middleware error:", err.message);
+  }
+
+  next();
+});
+
+/* ==========================================================
    🚦 API ROUTES
-   ========================================================== */
+========================================================== */
 app.use("/api/auth", authRoutes);
 app.use("/api/company", companyRoutes);
-app.use("/api/manager", managerRoutes);          // Manager main routes
+app.use("/api/manager", managerRoutes);
 app.use("/api/driver", driverRoutes);
 app.use("/api/vehicle", vehicleRoutes);
 app.use("/api/order", orderRoutes);
@@ -58,34 +89,30 @@ app.use("/api/trip/analytics", tripAnalyticsRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/notifications", notificationRoutes);
 
+app.use("/api/superadmin", superAdminRoutes);
+app.use("/api/settings", globalSettingsRoutes);
+
 app.use("/api/customer/trips", customerTripRoutes);
 app.use("/api/company/drivers", companyDriversRoutes);
 app.use("/api/customer", customerCompanyRoutes);
 app.use("/api/products", productRoutes);
 
 app.use("/api/manager-dashboard", managerDashboardRoutes);
-
-// Manager sub-modules
 app.use("/api/manager", managerDriverRoutes);
 app.use("/api/manager", managerVehicleRoutes);
-
-// Customer account routes
 app.use("/api/customer", customerRoutes);
 
-// Health check route
+// Health Check
 app.get("/api/health", (req, res) => {
   res.json({ status: "✅ SmartTrack API is running" });
 });
 
 /* ==========================================================
    ⚙️ DATABASE CONNECTION
-   ========================================================== */
+========================================================== */
 const connectDB = async () => {
   try {
-    await mongoose.connect(
-      process.env.MONGO_URI || "mongodb://localhost:27017/smarttrack"
-    );
-
+    await mongoose.connect(process.env.MONGO_URI);
     console.log("✅ MongoDB connected successfully");
   } catch (err) {
     console.error("❌ MongoDB connection failed:", err.message);
@@ -95,26 +122,22 @@ const connectDB = async () => {
 
 /* ==========================================================
    🔌 SOCKET.IO SETUP
-   ========================================================== */
-
-// Wrap Express app with HTTP server
+========================================================== */
 const server = http.createServer(app);
 
-// Attach Socket.io
 export const io = new Server(server, {
-  cors: {
-    origin: "*",
-    methods: ["GET", "POST", "PATCH", "PUT"]
-  }
+  cors: { origin: "*", methods: ["GET", "POST", "PATCH", "PUT"] },
 });
 
-// Socket.io events
+// Make io available for all routes
+app.set("io", io);
+
 io.on("connection", (socket) => {
   console.log("🔵 Socket connected:", socket.id);
 
   socket.on("register", (userId) => {
-    socket.join(userId);
-    console.log(`🟢 User ${userId} joined their socket room`);
+    socket.join(String(userId));
+    console.log(`🟢 User ${userId} joined their private room`);
   });
 
   socket.on("disconnect", () => {
@@ -124,7 +147,7 @@ io.on("connection", (socket) => {
 
 /* ==========================================================
    🚀 START SERVER
-   ========================================================== */
+========================================================== */
 const PORT = process.env.PORT || 5000;
 
 server.listen(PORT, async () => {

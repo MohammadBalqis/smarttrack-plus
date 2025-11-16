@@ -1,20 +1,16 @@
 // server/src/middleware/roleMiddleware.js
+
 export const authorizeRoles = (...allowedRoles) => {
   return (req, res, next) => {
     if (!req.user) {
-      return res.status(401).json({ error: "Not authorized" });
+      return res.status(401).json({ error: "Not authenticated" });
     }
 
-    // 🔑 System Owner bypasses restrictions
-    if (req.user.role === "owner") {
-      return next();
-    }
-
-    // Normal role checks
     if (!allowedRoles.includes(req.user.role)) {
-      return res
-        .status(403)
-        .json({ error: "Access denied: insufficient permissions" });
+      return res.status(403).json({
+        ok: false,
+        error: "You do not have permission to access this resource",
+      });
     }
 
     next();

@@ -1,141 +1,177 @@
+// server/src/controllers/authController.js
+import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import User from "../models/User.js";
 
 /* ==========================================================
-   🧩 REGISTER — Secure Role Assignment (with Owner Detection)
-   ========================================================== */
+   🔐 GENERATE JWT TOKEN
+========================================================== */
+const generateToken = (user) =>
+  jwt.sign(
+    {
+      uid: user._id,
+      role: user.role,
+      companyId: user.companyId || null,
+      managerId: user.managerId || null,
+      isSuperAdmin: user.role === "superadmin",
+    },
+    process.env.JWT_SECRET,
+    { expiresIn: "7d" }
+  );
+
+/* ==========================================================
+   🟢 REGISTER — Public (Customer only)
+========================================================== */
 export const register = async (req, res) => {
   try {
-    const { name, email, password, role, companyId } = req.body;
+    const { name, email, password, role = "customer" } = req.body;
 
-    // 1️⃣ Validate input
     if (!name || !email || !password)
-      return res.status(400).json({ error: "Missing required fields" });
+      return res.status(400).json({ error: "Missing fields" });
 
-    // 2️⃣ Prevent duplicate emails
+    if (role !== "customer")
+      return res.status(403).json({
+        error: "Only customers can self-register",
+      });
+
     const exists = await User.findOne({ email });
-    if (exists)
-      return res.status(409).json({ error: "Email is already registered" });
+    if (exists) return res.status(409).json({ error: "Email already used" });
 
-    // 3️⃣ Hash password
     const passwordHash = await bcrypt.hash(password, 10);
 
-    // 4️⃣ Role enforcement logic
-    let assignedRole = "driver"; // default role
-    const ownerEmail = "mohammad.balqis284@gmail.com"; // 👈 your real Gmail here
-
-    console.log("🔍 Incoming registration:", email, " | Desired role:", role);
-
-    // ✅ Automatically assign owner role if the email matches yours
-    if (email.toLowerCase() === ownerEmail.toLowerCase()) {
-      assignedRole = "owner";
-      console.log("✅ Assigned role: OWNER (auto-detected Gmail)");
-    }
-    // 🚫 Block manual attempts to register as owner
-    else if (role === "owner") {
-      return res
-        .status(403)
-        .json({ error: "You are not allowed to register as 'owner'" });
-    }
-    // ✅ Allow company self-registration
-    else if (role === "company") {
-      assignedRole = "company";
-      console.log("✅ Assigned role: COMPANY");
-    }
-    // ✅ Allow manager registration if linked to company
-    else if (role === "manager" && companyId) {
-      assignedRole = "manager";
-      console.log("✅ Assigned role: MANAGER (linked to company)");
-    }
-    // ✅ Default case — driver
-    else {
-      assignedRole = "driver";
-      console.log("✅ Assigned role: DRIVER (default)");
-    }
-
-    // 5️⃣ Create the user
     const user = await User.create({
       name,
       email,
       passwordHash,
-      role: assignedRole,
-      companyId: companyId || null,
-      isActive: true,
+      role: "customer",
     });
 
-    // 6️⃣ Generate JWT
-    const token = jwt.sign(
-      { uid: user._id, role: user.role, companyId: user.companyId },
-      process.env.JWT_SECRET,
-      { expiresIn: "7d" }
-    );
-
-    // 7️⃣ Respond
     res.status(201).json({
       ok: true,
-      message: "User registered successfully",
-      token,
+      message: "Customer registered",
       user: {
         id: user._id,
         name: user.name,
         email: user.email,
-        role: user.role,
-        companyId: user.companyId,
+        role: "customer",
       },
+      token: generateToken(user),
     });
-
-    console.log("✅ Registration complete:", user.email, "=>", user.role);
-  } catch (e) {
-    console.error("❌ Register error:", e.message);
-    res.status(500).json({ error: "Server error during registration" });
+  } catch (err) {
+    console.error("Register error:", err.message);
+    res.status(500).json({ error: "Server error" });
   }
 };
 
 /* ==========================================================
-   🔐 LOGIN — User Authentication
-   ========================================================== */
+   🟡 LOGIN — All roles
+========================================================== */
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // 1️⃣ Validate input
-    if (!email || !password)
-      return res
-        .status(400)
-        .json({ error: "Please provide both email and password" });
-
-    // 2️⃣ Find user
     const user = await User.findOne({ email });
-    if (!user) return res.status(401).json({ error: "Invalid credentials" });
 
-    // 3️⃣ Compare password
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    if (!user.isActive)
+      return res.status(403).json({ error: "Account suspended" });
+
     const isMatch = await user.matchPassword(password);
-    if (!isMatch) return res.status(401).json({ error: "Invalid credentials" });
+    if (!isMatch) return res.status(401).json({ error: "Invalid password" });
 
-    // 4️⃣ Sign JWT
-    const token = jwt.sign(
-      { uid: user._id, role: user.role, companyId: user.companyId },
-      process.env.JWT_SECRET,
-      { expiresIn: "7d" }
-    );
-
-    // 5️⃣ Respond
     res.json({
       ok: true,
-      token,
+      message: "Logged in",
       user: {
         id: user._id,
         name: user.name,
         email: user.email,
         role: user.role,
         companyId: user.companyId,
+        managerId: user.managerId,
+        isSuperAdmin: user.role === "superadmin",
       },
+      token: generateToken(user),
+    });
+  } catch (err) {
+    console.error("Login error:", err.message);
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+/* ==========================================================
+   🟣 SUPERADMIN CREATES COMPANY
+========================================================== */
+export const superAdminCreateCompany = async (req, res) => {
+  try {
+    const { name, email, password, companyName } = req.body;
+
+    if (!name || !email || !password)
+      return res.status(400).json({ error: "Missing fields" });
+
+    const exists = await User.findOne({ email });
+    if (exists) return res.status(409).json({ error: "Email already used" });
+
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    const company = await User.create({
+      name,
+      email,
+      passwordHash,
+      role: "company",
+      companyName: companyName || name,
+      isActive: true,
     });
 
-    console.log("✅ Login successful:", user.email, "=>", user.role);
-  } catch (e) {
-    console.error("❌ Login error:", e.message);
-    res.status(500).json({ error: "Server error during login" });
+    res.status(201).json({
+      ok: true,
+      message: "Company created successfully",
+      company,
+    });
+  } catch (err) {
+    console.error("Superadmin create company error:", err.message);
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+/* ==========================================================
+   🟠 COMPANY CREATES MANAGER or DRIVER
+========================================================== */
+export const companyCreateUser = async (req, res) => {
+  try {
+    const { name, email, password, role, managerId } = req.body;
+
+    if (!name || !email || !password || !role)
+      return res.status(400).json({ error: "Missing fields" });
+
+    if (!["manager", "driver"].includes(role))
+      return res
+        .status(400)
+        .json({ error: "Role must be 'manager' or 'driver'" });
+
+    const exists = await User.findOne({ email });
+    if (exists)
+      return res.status(409).json({ error: "Email already used" });
+
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    const newUser = await User.create({
+      name,
+      email,
+      passwordHash,
+      role,
+      companyId: req.user._id, // company creating them
+      managerId: role === "driver" ? managerId || null : null,
+    });
+
+    res.status(201).json({
+      ok: true,
+      message: `${role} created successfully`,
+      user: newUser,
+    });
+  } catch (err) {
+    console.error("Company create user error:", err.message);
+    res.status(500).json({ error: "Server error" });
   }
 };

@@ -35,9 +35,9 @@ const routePointSchema = new mongoose.Schema(
    ========================================================== */
 const locationSchema = new mongoose.Schema(
   {
-    address: { type: String, required: true }, // text address
-    lat: { type: Number },                     // optional GPS
-    lng: { type: Number },                     // optional GPS
+    address: { type: String, required: true },
+    lat: { type: Number },
+    lng: { type: Number },
   },
   { _id: false }
 );
@@ -50,7 +50,7 @@ const tripSchema = new mongoose.Schema(
     // 🔗 Relations
     companyId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User", // the company selected by the customer
+      ref: "User",
       required: true,
     },
 
@@ -76,16 +76,16 @@ const tripSchema = new mongoose.Schema(
     },
 
     /* ==========================================================
-       🛒 MULTI-PRODUCT CART (ADDED FOR 12D)
+       🛒 MULTI-PRODUCT CART (ADDED for 12D)
        ========================================================== */
-    orderItems: [orderItemSchema],   // NEW FIELD
-    totalAmount: { type: Number, default: 0 }, // NEW FIELD
+    orderItems: [orderItemSchema],
+    totalAmount: { type: Number, default: 0 },
 
     // 📍 Locations
     pickupLocation: { type: locationSchema, required: true },
     dropoffLocation: { type: locationSchema, required: true },
 
-    // 💰 Delivery fee — does NOT replace order total
+    // 💰 Delivery fee
     deliveryFee: { type: Number, default: 0, min: 0 },
 
     // 📌 Status lifecycle
@@ -117,9 +117,17 @@ const tripSchema = new mongoose.Schema(
     // 🛰 Tracking
     routeHistory: [routePointSchema],
 
-    // 👤 Delivery confirmation (QR)
+    // 👤 Delivery confirmation
     customerConfirmed: { type: Boolean, default: false },
     confirmationTime: { type: Date, default: null },
+
+    /* ==========================================================
+       🔴 NEW — LIVE STATUS (7E)
+       ========================================================== */
+    liveStatus: {
+      type: String,
+      default: "Driver Assigned",
+    },
   },
   { timestamps: true }
 );

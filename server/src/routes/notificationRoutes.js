@@ -6,51 +6,55 @@ import { protect } from "../middleware/authMiddleware.js";
 const router = Router();
 
 /* ==========================================================
-   1️⃣ Get notifications for logged-in user
-   ========================================================== */
-/*
+   1️⃣ LIST NOTIFICATIONS (logged-in user)
+   ==========================================================
 GET /api/notifications
-
 Query:
-  page        (default 1)
-  limit       (default 20)
-  unreadOnly  (true/false)
-*/
+  page=1
+  limit=20
+  unreadOnly=true|false
+  type=status|assignment|update|payment|system
+  category=driver|manager|customer|company|owner|system
+========================================================== */
 router.get("/", protect, async (req, res) => {
   try {
     const userId = req.user._id;
-    const {
+
+    let {
       page = 1,
       limit = 20,
       unreadOnly = "false",
+      type,
+      category,
     } = req.query;
 
-    const numericPage = Number(page) || 1;
-    const numericLimit = Number(limit) || 20;
-    const skip = (numericPage - 1) * numericLimit;
+    page = Number(page) || 1;
+    limit = Number(limit) || 20;
+    const skip = (page - 1) * limit;
 
     const filter = { userId };
 
-    if (unreadOnly === "true") {
-      filter.isRead = false;
-    }
+    if (unreadOnly === "true") filter.isRead = false;
+    if (type) filter.type = type;
+    if (category) filter.category = category;
 
     const [total, notifications] = await Promise.all([
       Notification.countDocuments(filter),
       Notification.find(filter)
         .sort({ createdAt: -1 })
         .skip(skip)
-        .limit(numericLimit),
+        .limit(limit),
     ]);
 
     res.json({
       ok: true,
-      page: numericPage,
-      limit: numericLimit,
+      page,
+      limit,
       total,
-      totalPages: Math.ceil(total / numericLimit),
+      totalPages: Math.ceil(total / limit),
       notifications,
     });
+
   } catch (err) {
     console.error("❌ Get notifications error:", err.message);
     res.status(500).json({ error: "Server error loading notifications" });
@@ -58,11 +62,8 @@ router.get("/", protect, async (req, res) => {
 });
 
 /* ==========================================================
-   2️⃣ Unread count (for badge)
+   2️⃣ UNREAD COUNT
    ========================================================== */
-/*
-GET /api/notifications/unread-count
-*/
 router.get("/unread-count", protect, async (req, res) => {
   try {
     const count = await Notification.countDocuments({
@@ -78,11 +79,8 @@ router.get("/unread-count", protect, async (req, res) => {
 });
 
 /* ==========================================================
-   3️⃣ Mark ONE notification as read
+   3️⃣ MARK ONE AS READ
    ========================================================== */
-/*
-PATCH /api/notifications/mark-read/:id
-*/
 router.patch("/mark-read/:id", protect, async (req, res) => {
   try {
     const { id } = req.params;
@@ -94,37 +92,31 @@ router.patch("/mark-read/:id", protect, async (req, res) => {
     );
 
     if (!notification) {
-      return res.status(404).json({
-        error: "Notification not found",
-      });
+      return res.status(404).json({ error: "Notification not found" });
     }
 
-    res.json({
-      ok: true,
-      notification,
-    });
+    res.json({ ok: true, notification });
+
   } catch (err) {
-    console.error("❌ Mark notification read error:", err.message);
+    console.error("❌ Mark read error:", err.message);
     res.status(500).json({ error: "Server error updating notification" });
   }
 });
 
 /* ==========================================================
-   4️⃣ Mark ALL notifications as read
+   4️⃣ MARK ALL AS READ
    ========================================================== */
-/*
-PATCH /api/notifications/mark-all-read
-*/
 router.patch("/mark-all-read", protect, async (req, res) => {
   try {
     const result = await Notification.updateMany(
       { userId: req.user._id, isRead: false },
-      { $set: { isRead: true } }
+      { isRead: true }
     );
 
     res.json({
       ok: true,
       modifiedCount: result.modifiedCount,
+      message: "All notifications marked as read",
     });
   } catch (err) {
     console.error("❌ Mark all read error:", err.message);
@@ -133,11 +125,8 @@ router.patch("/mark-all-read", protect, async (req, res) => {
 });
 
 /* ==========================================================
-   5️⃣ Delete notification
+   5️⃣ DELETE NOTIFICATION
    ========================================================== */
-/*
-DELETE /api/notifications/:id
-*/
 router.delete("/:id", protect, async (req, res) => {
   try {
     const { id } = req.params;
@@ -157,6 +146,7 @@ router.delete("/:id", protect, async (req, res) => {
       ok: true,
       message: "Notification deleted",
     });
+
   } catch (err) {
     console.error("❌ Delete notification error:", err.message);
     res.status(500).json({ error: "Server error deleting notification" });
