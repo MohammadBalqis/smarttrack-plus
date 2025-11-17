@@ -4,7 +4,10 @@ import User from "../models/User.js";
 import Trip from "../models/Trip.js";
 import Payment from "../models/Payment.js";
 import bcrypt from "bcryptjs";
-import ActivityLog from "../models/ActivityLog.js";
+
+// Correct imports
+import ActivityLog from "../models/ActivityLog.js";           // default model import
+import { logActivity } from "../utils/activityLogger.js";     // logger import
 
 /* ==========================================================
    📊 SUPERADMIN SYSTEM DASHBOARD
@@ -79,6 +82,15 @@ export const toggleCompanyStatus = async (req, res) => {
     company.isActive = !company.isActive;
     await company.save();
 
+    // Log activity
+    await logActivity(req, {
+      action: "COMPANY_STATUS_TOGGLED",
+      description: `Company ${company.companyName} is now ${company.isActive ? "active" : "inactive"}`,
+      targetModel: "User",
+      targetId: company._id,
+      category: "user",
+    });
+
     res.json({
       ok: true,
       message: `Company ${company.isActive ? "activated" : "suspended"}`,
@@ -115,6 +127,15 @@ export const createCompany = async (req, res) => {
       isActive: true,
     });
 
+    // Activity Log
+    await logActivity(req, {
+      action: "COMPANY_CREATED",
+      description: `Company "${company.companyName}" created`,
+      category: "user",
+      targetModel: "User",
+      targetId: company._id,
+    });
+
     res.json({ ok: true, message: "Company created", company });
   } catch (err) {
     console.error("❌ Create company error:", err.message);
@@ -144,6 +165,15 @@ export const updateCompany = async (req, res) => {
 
     await company.save();
 
+    // Log update
+    await logActivity(req, {
+      action: "COMPANY_UPDATED",
+      description: `Company "${company.companyName}" was updated`,
+      category: "user",
+      targetModel: "User",
+      targetId: company._id,
+    });
+
     res.json({ ok: true, message: "Company updated", company });
   } catch (err) {
     console.error("❌ Update company error:", err.message);
@@ -171,6 +201,14 @@ export const resetCompanyPassword = async (req, res) => {
     company.passwordHash = await bcrypt.hash(newPassword, 10);
     await company.save();
 
+    await logActivity(req, {
+      action: "COMPANY_PASSWORD_RESET",
+      description: `Password reset for company "${company.companyName}"`,
+      category: "user",
+      targetModel: "User",
+      targetId: company._id,
+    });
+
     res.json({
       ok: true,
       message: "Company password reset successfully",
@@ -182,7 +220,7 @@ export const resetCompanyPassword = async (req, res) => {
 };
 
 /* ==========================================================
-   ❌ DELETE COMPANY + RELATED DATA (SAFE)
+   ❌ DELETE COMPANY + RELATED DATA
 ========================================================== */
 export const deleteCompany = async (req, res) => {
   try {
@@ -194,17 +232,19 @@ export const deleteCompany = async (req, res) => {
     if (!company)
       return res.status(404).json({ error: "Company not found" });
 
-    // Delete drivers & managers under this company
+    // Cascade delete
     await User.deleteMany({ companyId: req.params.id });
-
-    // Delete trips
     await Trip.deleteMany({ companyId: req.params.id });
-
-    // Delete payments
     await Payment.deleteMany({ companyId: req.params.id });
-
-    // Finally delete company
     await User.findByIdAndDelete(req.params.id);
+
+    await logActivity(req, {
+      action: "COMPANY_DELETED",
+      description: `Company "${company.companyName}" deleted`,
+      category: "user",
+      targetModel: "User",
+      targetId: company._id,
+    });
 
     res.json({
       ok: true,
@@ -217,8 +257,7 @@ export const deleteCompany = async (req, res) => {
 };
 
 /* ==========================================================
-   🚚 LIST ALL TRIPS (GLOBAL VIEW)
-   — SuperAdmin only (NO modifying)
+   🚚 LIST ALL TRIPS
 ========================================================== */
 export const listAllTrips = async (req, res) => {
   try {
@@ -228,24 +267,22 @@ export const listAllTrips = async (req, res) => {
       .populate("customerId", "name email phone")
       .populate("companyId", "companyName");
 
-    res.json({
-      ok: true,
-      total: trips.length,
-      trips,
-    });
+    res.json({ ok: true, total: trips.length, trips });
   } catch (err) {
     console.error("❌ List trips error:", err.message);
     res.status(500).json({ error: "Failed to load trips" });
   }
 };
+
+/* ==========================================================
+   📜 ACTIVITY LOGS
+========================================================== */
 export const listActivityLogs = async (req, res) => {
   try {
     const logs = await ActivityLog.find()
       .sort({ createdAt: -1 })
       .limit(500)
-      .populate("userId", "name email role")
-      .populate("tripId", "status")
-      .populate("companyId", "name email companyName");
+      .populate("userId", "name email role");
 
     res.json({
       ok: true,

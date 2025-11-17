@@ -6,11 +6,11 @@ import bcrypt from "bcryptjs";
    🧩 ROLE-BASED ACCESS CONTROL (RBAC)
    ===================================================== */
 export const ROLES_LIST = [
-  "superadmin",  // Full system access
-  "company",     // Company owner / company account
-  "manager",     // Works under company
-  "driver",      // Works under manager or company
-  "customer",    // End user requesting delivery
+  "superadmin",   // Full system access
+  "company",      // Company owner / company account
+  "manager",      // Works under company
+  "driver",       // Works under manager or company
+  "customer",     // End user requesting delivery
 ];
 
 /* =====================================================
@@ -18,7 +18,9 @@ export const ROLES_LIST = [
    ===================================================== */
 const userSchema = new mongoose.Schema(
   {
-    // 🔹 BASIC INFO
+    /* -------------------------------
+       🔹 BASIC INFO
+    --------------------------------*/
     name: { type: String, required: true, trim: true },
 
     email: {
@@ -31,7 +33,9 @@ const userSchema = new mongoose.Schema(
 
     passwordHash: { type: String, required: true },
 
-    // 🎭 USER ROLE
+    /* -------------------------------
+       🎭 USER ROLE
+    --------------------------------*/
     role: {
       type: String,
       enum: ROLES_LIST,
@@ -40,7 +44,7 @@ const userSchema = new mongoose.Schema(
     },
 
     /* =====================================================
-       🏰 SUPERADMIN PROPERTIES
+         🏰 SUPERADMIN PROPERTIES
        ===================================================== */
     isSystemOwner: {
       type: Boolean,
@@ -48,14 +52,14 @@ const userSchema = new mongoose.Schema(
     },
 
     systemAccessLevel: {
-      type: Number, // 1=view, 2=edit, 3=full access
+      type: Number,        // 1 = view, 2 = edit, 3 = full access
       default: 3,
       min: 1,
       max: 3,
     },
 
     /* =====================================================
-       🏢 COMPANY RELATIONS
+       🏢 COMPANY & TEAM RELATIONS
        ===================================================== */
 
     // Used by MANAGER and DRIVER
@@ -65,7 +69,7 @@ const userSchema = new mongoose.Schema(
       default: null,
     },
 
-    // Used by DRIVER
+    // Used only by DRIVER
     managerId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -76,19 +80,59 @@ const userSchema = new mongoose.Schema(
     companyName: { type: String, trim: true },
 
     /* =====================================================
-       👤 PROFILE & DRIVER INFO
+       👤 PROFILE INFO
        ===================================================== */
     profileImage: { type: String, default: null },
+    phone: { type: String, trim: true },
+    address: { type: String, trim: true },
 
+    /* =====================================================
+       🚚 DRIVER-SPECIFIC FIELDS
+       ===================================================== */
+
+    // Driver availability
+    driverStatus: {
+      type: String,
+      enum: ["offline", "available", "on_trip"],
+      default: "offline",
+    },
+
+    // Driver ratings
+    driverRating: { type: Number, default: 0 },
+    totalRatings: { type: Number, default: 0 },
+
+    // Live GPS tracking
+    currentLat: { type: Number, default: null },
+    currentLng: { type: Number, default: null },
+
+    // Performance metrics
+    totalTripsCompleted: { type: Number, default: 0 },
     driverOrdersCount: { type: Number, default: 0 },
+    performanceScore: { type: Number, default: 0 },
 
+    // Optional assigned vehicle
+    vehicleAssigned: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Vehicle",
+      default: null,
+    },
+
+    // Driver notes (company writes about driver)
     driverNotes: { type: String, trim: true },
 
     /* =====================================================
-       ⚙️ STATUS
+       🟦 MANAGER-SPECIFIC FIELDS
+       ===================================================== */
+    managerDepartment: { type: String, trim: true },
+    managerNotes: { type: String, trim: true },
+    managerPermissions: { type: Array, default: [] },
+
+    /* =====================================================
+       ⚙️ ACCOUNT STATUS
        ===================================================== */
     isActive: { type: Boolean, default: true },
   },
+
   { timestamps: true }
 );
 

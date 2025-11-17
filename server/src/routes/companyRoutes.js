@@ -6,12 +6,14 @@ import { authorizeRoles } from "../middleware/roleMiddleware.js";
 import User from "../models/User.js";
 import Trip from "../models/Trip.js";
 import Vehicle from "../models/Vehicle.js";
+import bcrypt from "bcryptjs";
+import { logActivity } from "../utils/activityLogger.js";
 
 const router = Router();
 
 /* ==========================================================
    🟣 SUPERADMIN — LIST ALL COMPANIES
-   ========================================================== */
+========================================================== */
 router.get(
   "/superadmin/list",
   protect,
@@ -22,6 +24,14 @@ router.get(
         .populate("ownerId", "name email role")
         .sort({ createdAt: -1 });
 
+      await logActivity({
+        userId: req.user._id,
+        action: "SUPERADMIN_LIST_COMPANIES",
+        description: "Superadmin viewed all companies",
+        ipAddress: req.ip,
+        deviceInfo: req.headers["user-agent"],
+      });
+
       res.json({ ok: true, total: companies.length, companies });
     } catch (err) {
       console.error("❌ Superadmin list companies error:", err.message);
@@ -31,20 +41,28 @@ router.get(
 );
 
 /* ==========================================================
-   🟣 SUPERADMIN — CREATE COMPANY (full power)
-   ========================================================== */
+   🟣 SUPERADMIN — CREATE COMPANY
+========================================================== */
 router.post(
   "/superadmin/create",
   protect,
   authorizeRoles("superadmin"),
   async (req, res) => {
     try {
-      const { name, email, phone, address, ownerId } = req.body;
+      const {
+        name,
+        email,
+        phone,
+        address,
+        ownerId,
+        logo,
+        taxNumber,
+        crNumber,
+        businessType,
+      } = req.body;
 
       if (!name || !email)
-        return res
-          .status(400)
-          .json({ error: "Company name and email are required" });
+        return res.status(400).json({ error: "Company name and email required" });
 
       const existing = await Company.findOne({ email });
       if (existing)
@@ -56,6 +74,21 @@ router.post(
         phone,
         address,
         ownerId: ownerId || null,
+
+        // 10A new fields:
+        logo: logo || null,
+        taxNumber: taxNumber || "",
+        crNumber: crNumber || "",
+        businessType: businessType || "",
+      });
+
+      await logActivity({
+        userId: req.user._id,
+        action: "SUPERADMIN_CREATE_COMPANY",
+        description: `Created company: ${name}`,
+        targetUserId: ownerId || null,
+        ipAddress: req.ip,
+        deviceInfo: req.headers["user-agent"],
       });
 
       res.status(201).json({
@@ -79,14 +112,44 @@ router.patch(
   authorizeRoles("superadmin"),
   async (req, res) => {
     try {
+      const updateData = {
+        ...req.body,
+      };
+
+      // Only allow profile fields to be updated (10A)
+      const allowedFields = [
+        "name",
+        "email",
+        "phone",
+        "address",
+        "logo",
+        "taxNumber",
+        "crNumber",
+        "businessType",
+        "isActive",
+      ];
+
+      Object.keys(updateData).forEach((key) => {
+        if (!allowedFields.includes(key)) delete updateData[key];
+      });
+
       const company = await Company.findByIdAndUpdate(
         req.params.id,
-        req.body,
+        updateData,
         { new: true }
       );
 
       if (!company)
         return res.status(404).json({ error: "Company not found" });
+
+      await logActivity({
+        userId: req.user._id,
+        action: "SUPERADMIN_UPDATE_COMPANY",
+        description: `Updated company: ${company._id}`,
+        targetUserId: company.ownerId,
+        ipAddress: req.ip,
+        deviceInfo: req.headers["user-agent"],
+      });
 
       res.json({ ok: true, message: "Company updated", company });
     } catch (err) {
@@ -97,7 +160,7 @@ router.patch(
 );
 
 /* ==========================================================
-   🟣 SUPERADMIN — SUSPEND / ACTIVATE COMPANY
+   🟣 SUPERADMIN — ACTIVATE / SUSPEND COMPANY
 ========================================================== */
 router.patch(
   "/superadmin/status/:id",
@@ -116,6 +179,15 @@ router.patch(
       if (!company)
         return res.status(404).json({ error: "Company not found" });
 
+      await logActivity({
+        userId: req.user._id,
+        action: "SUPERADMIN_TOGGLE_COMPANY_STATUS",
+        description: `Set company ${company._id} active=${isActive}`,
+        targetUserId: company.ownerId,
+        ipAddress: req.ip,
+        deviceInfo: req.headers["user-agent"],
+      });
+
       res.json({
         ok: true,
         message: `Company ${isActive ? "activated" : "suspended"}`,
@@ -123,15 +195,13 @@ router.patch(
       });
     } catch (err) {
       console.error("❌ Status update error:", err.message);
-      res.status(500).json({
-        error: "Server error updating company status",
-      });
+      res.status(500).json({ error: "Server error updating company status" });
     }
   }
 );
 
 /* ==========================================================
-   🟣 SUPERADMIN — RESET COMPANY PASSWORD
+   🟣 SUPERADMIN — RESET COMPANY OWNER PASSWORD
 ========================================================== */
 router.patch(
   "/superadmin/reset-password/:ownerId",
@@ -141,9 +211,7 @@ router.patch(
     try {
       const { newPassword } = req.body;
       if (!newPassword)
-        return res
-          .status(400)
-          .json({ error: "newPassword is required" });
+        return res.status(400).json({ error: "newPassword is required" });
 
       const owner = await User.findById(req.params.ownerId);
       if (!owner || owner.role !== "company")
@@ -151,6 +219,15 @@ router.patch(
 
       owner.passwordHash = await bcrypt.hash(newPassword, 10);
       await owner.save();
+
+      await logActivity({
+        userId: req.user._id,
+        action: "SUPERADMIN_RESET_COMPANY_PASSWORD",
+        description: `Reset password for company owner ${owner._id}`,
+        targetUserId: owner._id,
+        ipAddress: req.ip,
+        deviceInfo: req.headers["user-agent"],
+      });
 
       res.json({
         ok: true,
@@ -193,6 +270,15 @@ router.get(
       const totalTrips = await Trip.countDocuments({ companyId });
       const totalVehicles = await Vehicle.countDocuments({ companyId });
 
+      await logActivity({
+        userId: req.user._id,
+        action: "SUPERADMIN_VIEW_COMPANY_DETAILS",
+        description: `Viewed details for company ${companyId}`,
+        targetUserId: company.ownerId?._id,
+        ipAddress: req.ip,
+        deviceInfo: req.headers["user-agent"],
+      });
+
       res.json({
         ok: true,
         company,
@@ -211,20 +297,19 @@ router.get(
 );
 
 /* ==========================================================
-   🟦 OWNER — CREATE COMPANY (your original feature)
-   ========================================================== */
+   🟦 OWNER — CREATE COMPANY (Your original feature)
+========================================================== */
 router.post(
   "/create",
   protect,
   authorizeRoles("owner"),
   async (req, res) => {
     try {
-      const { name, email, phone, address } = req.body;
+      const { name, email, phone, address, logo, taxNumber, crNumber, businessType } =
+        req.body;
 
       if (!name || !email)
-        return res
-          .status(400)
-          .json({ error: "Company name and email are required" });
+        return res.status(400).json({ error: "Company name and email required" });
 
       const existing = await Company.findOne({ email });
       if (existing)
@@ -236,6 +321,20 @@ router.post(
         phone,
         address,
         ownerId: req.user._id,
+
+        // 10A new fields:
+        logo: logo || null,
+        taxNumber: taxNumber || "",
+        crNumber: crNumber || "",
+        businessType: businessType || "",
+      });
+
+      await logActivity({
+        userId: req.user._id,
+        action: "OWNER_CREATE_COMPANY",
+        description: `Owner created company: ${name}`,
+        ipAddress: req.ip,
+        deviceInfo: req.headers["user-agent"],
       });
 
       res.status(201).json({
@@ -251,8 +350,8 @@ router.post(
 );
 
 /* ==========================================================
-   📊 COMPANY DASHBOARD SUMMARY (your original untouched code)
-   ========================================================== */
+   📊 COMPANY DASHBOARD SUMMARY (Your original code)
+========================================================== */
 router.get(
   "/dashboard",
   protect,
@@ -265,7 +364,11 @@ router.get(
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+      const monthStart = new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        1
+      );
 
       const totalDrivers = await User.countDocuments({
         companyId,
@@ -296,10 +399,12 @@ router.get(
           companyId,
           createdAt: { $gte: today },
         }),
+
         Trip.countDocuments({
           companyId,
           createdAt: { $gte: monthStart },
         }),
+
         Trip.countDocuments({ companyId, status: "pending" }),
         Trip.countDocuments({ companyId, status: "assigned" }),
         Trip.countDocuments({ companyId, status: "in_progress" }),
@@ -319,11 +424,25 @@ router.get(
         { $limit: 5 },
       ]);
 
+      await logActivity({
+        userId: req.user._id,
+        action: "VIEW_COMPANY_DASHBOARD",
+        description: "Company/Manager viewed dashboard",
+        ipAddress: req.ip,
+        deviceInfo: req.headers["user-agent"],
+      });
+
       res.json({
         ok: true,
         summary: {
-          drivers: { total: totalDrivers, available: availableDrivers },
-          vehicles: { total: totalVehicles, available: availableVehicles },
+          drivers: {
+            total: totalDrivers,
+            available: availableDrivers,
+          },
+          vehicles: {
+            total: totalVehicles,
+            available: availableVehicles,
+          },
           orders: {
             today: todayOrders,
             month: monthOrders,

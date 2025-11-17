@@ -2,6 +2,8 @@
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { logActivity } from "../utils/activityLogger.js";
+
 
 /* ==========================================================
    🔐 GENERATE JWT TOKEN
@@ -46,6 +48,15 @@ export const register = async (req, res) => {
       role: "customer",
     });
 
+    // ✅ Activity Log
+    await logActivity({
+      userId: user._id,
+      action: "REGISTER",
+      description: `Customer registered: ${user.email}`,
+      ipAddress: req.ip,
+      deviceInfo: req.headers["user-agent"],
+    });
+
     res.status(201).json({
       ok: true,
       message: "Customer registered",
@@ -72,13 +83,53 @@ export const login = async (req, res) => {
 
     const user = await User.findOne({ email });
 
-    if (!user) return res.status(404).json({ error: "User not found" });
+    if (!user) {
+      // ❌ Log failed login
+      await logActivity({
+        userId: null,
+        action: "LOGIN_FAILED",
+        description: `Login failed — email not found: ${email}`,
+        ipAddress: req.ip,
+        deviceInfo: req.headers["user-agent"],
+      });
+      return res.status(404).json({ error: "User not found" });
+    }
 
-    if (!user.isActive)
+    if (!user.isActive) {
+      await logActivity({
+        userId: user._id,
+        action: "LOGIN_FAILED_SUSPENDED",
+        description: `Suspended account tried to log in: ${email}`,
+        ipAddress: req.ip,
+        deviceInfo: req.headers["user-agent"],
+      });
       return res.status(403).json({ error: "Account suspended" });
+    }
 
     const isMatch = await user.matchPassword(password);
-    if (!isMatch) return res.status(401).json({ error: "Invalid password" });
+    if (!isMatch) {
+      // ❌ Wrong password
+      await logActivity({
+        userId: user._id,
+        action: "LOGIN_INVALID_PASSWORD",
+        description: `Invalid password for: ${email}`,
+        ipAddress: req.ip,
+        deviceInfo: req.headers["user-agent"],
+      });
+      return res.status(401).json({ error: "Invalid password" });
+    }
+
+    // Store userId for logging in route wrapper
+    res.locals.userId = user._id;
+
+    // ✅ LOGIN SUCCESS
+    await logActivity({
+      userId: user._id,
+      action: "LOGIN_SUCCESS",
+      description: `User logged in: ${email}`,
+      ipAddress: req.ip,
+      deviceInfo: req.headers["user-agent"],
+    });
 
     res.json({
       ok: true,
@@ -124,6 +175,15 @@ export const superAdminCreateCompany = async (req, res) => {
       isActive: true,
     });
 
+    // ✅ LOG ACTION
+    await logActivity({
+      userId: req.user._id,
+      action: "SUPERADMIN_CREATE_COMPANY",
+      description: `SuperAdmin created company: ${email}`,
+      ipAddress: req.ip,
+      deviceInfo: req.headers["user-agent"],
+    });
+
     res.status(201).json({
       ok: true,
       message: "Company created successfully",
@@ -161,8 +221,17 @@ export const companyCreateUser = async (req, res) => {
       email,
       passwordHash,
       role,
-      companyId: req.user._id, // company creating them
+      companyId: req.user._id,
       managerId: role === "driver" ? managerId || null : null,
+    });
+
+    // ✅ Activity Log
+    await logActivity({
+      userId: req.user._id,
+      action: "COMPANY_CREATE_USER",
+      description: `Company created ${role}: ${email}`,
+      ipAddress: req.ip,
+      deviceInfo: req.headers["user-agent"],
     });
 
     res.status(201).json({

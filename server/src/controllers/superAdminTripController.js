@@ -3,6 +3,7 @@
 import Trip from "../models/Trip.js";
 import User from "../models/User.js";
 import Vehicle from "../models/Vehicle.js";
+import { logActivity } from "../utils/activityLogger.js";   // ✅ FIXED IMPORT
 
 /* ==========================================================
    📌 SUPERADMIN — LIST ALL TRIPS (Read-Only)
@@ -41,7 +42,6 @@ export const superAdminListTrips = async (req, res) => {
         { "pickupLocation.address": { $regex: search, $options: "i" } },
         { "dropoffLocation.address": { $regex: search, $options: "i" } },
         { customerNotes: { $regex: search, $options: "i" } },
-        { _id: { $regex: search, $options: "i" } },
       ];
     }
 
@@ -59,6 +59,14 @@ export const superAdminListTrips = async (req, res) => {
         .limit(Number(limit)),
     ]);
 
+    // ⭐ LOG VIEW EVENT
+    await logActivity(req, {
+      action: "SUPERADMIN_VIEW_TRIPS",
+      description: "SuperAdmin viewed the trips list",
+      targetModel: "Trip",
+      category: "trip",
+    });
+
     res.json({
       ok: true,
       page: Number(page),
@@ -69,6 +77,13 @@ export const superAdminListTrips = async (req, res) => {
     });
   } catch (err) {
     console.error("❌ SuperAdmin trip list error:", err.message);
+
+    await logActivity(req, {
+      action: "SUPERADMIN_VIEW_TRIPS_FAILED",
+      description: err.message,
+      category: "system",
+    });
+
     res.status(500).json({ error: "Server error loading trip list" });
   }
 };
@@ -90,9 +105,25 @@ export const superAdminGetSingleTrip = async (req, res) => {
       return res.status(404).json({ error: "Trip not found" });
     }
 
+    // ⭐ LOG VIEW EVENT
+    await logActivity(req, {
+      action: "SUPERADMIN_VIEW_SINGLE_TRIP",
+      description: `SuperAdmin viewed trip ${trip._id}`,
+      targetId: trip._id,
+      targetModel: "Trip",
+      category: "trip",
+    });
+
     res.json({ ok: true, trip });
   } catch (err) {
     console.error("❌ SuperAdmin get trip error:", err.message);
+
+    await logActivity(req, {
+      action: "SUPERADMIN_VIEW_SINGLE_TRIP_FAILED",
+      description: err.message,
+      category: "system",
+    });
+
     res.status(500).json({ error: "Server error loading trip" });
   }
 };

@@ -1,22 +1,93 @@
+// server/src/models/ActivityLog.js
 import mongoose from "mongoose";
 
-const activityLogSchema = new mongoose.Schema(
+const { Schema } = mongoose;
+
+/* ==========================================================
+   🧾 ACTIVITY LOG MODEL
+   - Stores all important actions in the system
+   - Example actions:
+     LOGIN_SUCCESS, LOGIN_FAILED, TRIP_CREATED, PAYMENT_COLLECTED, etc.
+   ========================================================== */
+
+const activityLogSchema = new Schema(
   {
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
-    role: { type: String, default: "unknown" },
+    // Who performed the action
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+      index: true,
+    },
 
-    action: { type: String, required: true }, 
-    description: { type: String },
+    // Snapshot of user role at action time
+    role: {
+      type: String,
+      default: "guest",
+      index: true,
+    },
 
-    ip: { type: String },
-    userAgent: { type: String },
+    // Machine-readable action code
+    action: {
+      type: String,
+      required: true,
+      index: true,
+      trim: true,
+    },
 
-    // Optional relation to trip/payment/company
-    tripId: { type: mongoose.Schema.Types.ObjectId, ref: "Trip", default: null },
-    paymentId: { type: mongoose.Schema.Types.ObjectId, ref: "Payment", default: null },
-    companyId: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+    // Human-readable message
+    description: {
+      type: String,
+      trim: true,
+    },
+
+    // Category (auth, trip, payment, user, settings...)
+    category: {
+      type: String,
+      default: "system",
+      index: true,
+      trim: true,
+    },
+
+    // Target model (User, Trip, Company, Vehicle…)
+    targetModel: {
+      type: String,
+      default: null,
+      trim: true,
+    },
+
+    // Target id
+    targetId: {
+      type: Schema.Types.ObjectId,
+      default: null,
+      index: true,
+    },
+
+    // Technical info
+    ipAddress: {
+      type: String,
+      default: null,
+    },
+
+    userAgent: {
+      type: String,
+      default: null,
+    },
+
+    // Flexible JSON metadata
+    metadata: {
+      type: Schema.Types.Mixed,
+      default: {},
+    },
   },
-  { timestamps: true }
+  {
+    timestamps: true, // createdAt, updatedAt
+  }
 );
 
-export default mongoose.model("ActivityLog", activityLogSchema);
+// Create model
+const ActivityLog = mongoose.model("ActivityLog", activityLogSchema);
+
+// ⭐ BOTH EXPORTS (Default + Named)
+export default ActivityLog;
+export { ActivityLog };

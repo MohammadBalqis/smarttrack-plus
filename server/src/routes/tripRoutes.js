@@ -4,11 +4,12 @@ import Trip from "../models/Trip.js";
 import Vehicle from "../models/Vehicle.js";
 import Payment from "../models/Payment.js";
 import User from "../models/User.js";
-import Notification from "../models/Notification.js"; // 🆕 notifications
+import Notification from "../models/Notification.js";
 import { protect } from "../middleware/authMiddleware.js";
 import { authorizeRoles } from "../middleware/roleMiddleware.js";
 import QRCode from "qrcode";
 import jwt from "jsonwebtoken";
+import { logActivity } from "../utils/activityLogger.js";
 
 const router = Router();
 
@@ -41,7 +42,6 @@ const getPopulatedTripForNotify = async (tripId) => {
 };
 
 // Create notification in DB + emit via socket
-// ✅ Supports full Option C fields (image, actionUrl, priority, sound, extraData)
 const createNotification = async (
   req,
   {
@@ -61,7 +61,6 @@ const createNotification = async (
 ) => {
   if (!userId) return;
 
-  // Backwards compatibility: if extraData not sent, use extra
   const finalExtraData = extraData ?? extra ?? {};
 
   const noti = await Notification.create({
@@ -126,7 +125,6 @@ const broadcastTripStatus = async (req, tripId) => {
       customerConfirmed: trip.customerConfirmed,
       totalDistance: trip.totalDistance,
 
-      // relations
       driver: trip.driverId,
       vehicle: trip.vehicleId,
       customer: trip.customerId,
@@ -149,12 +147,12 @@ const broadcastTripStatus = async (req, tripId) => {
 };
 
 /* ==========================================================
-   🟢 1. Create a Trip (Company / Manager / Superadmin)
+   🟢 1. Create a Trip (Company / Manager / Superadmin / Owner)
    ========================================================== */
 router.post(
   "/create",
   protect,
-  authorizeRoles("company", "manager", "superadmin"),
+  authorizeRoles("company", "manager", "superadmin", "owner"),
   async (req, res) => {
     try {
       const {
@@ -164,11 +162,12 @@ router.post(
         pickupLocation,
         dropoffLocation,
         deliveryFee,
-        companyId: bodyCompanyId, // ✅ used for superadmin
+        companyId: bodyCompanyId, // for superadmin/owner
       } = req.body;
 
-      if (!driverId || !vehicleId || !customerId)
+      if (!driverId || !vehicleId || !customerId) {
         return res.status(400).json({ error: "Missing required fields" });
+      }
 
       let companyId;
 
@@ -194,24 +193,26 @@ router.post(
         companyId,
       });
 
-      if (!driver)
+      if (!driver) {
         return res.status(400).json({
           error: "Driver not found or does not belong to this company",
         });
+      }
 
       // Validate vehicle belongs to company
       const vehicle = await Vehicle.findOne({ _id: vehicleId, companyId });
-      if (!vehicle)
+      if (!vehicle) {
         return res.status(400).json({
           error: "Vehicle not found or not part of this company",
         });
+      }
 
-      if (vehicle.status === "maintenance")
+      if (vehicle.status === "maintenance") {
         return res.status(400).json({
           error: "Vehicle under maintenance — cannot assign",
         });
+      }
 
-      // Create trip
       const trip = await Trip.create({
         driverId,
         vehicleId,
@@ -229,7 +230,7 @@ router.post(
       vehicle.driverId = driverId;
       await vehicle.save();
 
-      // 🔔 Notifications: driver + customer
+      // 🔔 Notifications
       const populatedTrip = await getPopulatedTripForNotify(trip._id);
 
       const payloadCommon = {
@@ -269,6 +270,22 @@ router.post(
       // 🔁 Realtime broadcast
       await broadcastTripStatus(req, trip._id);
 
+      // 🧾 Activity log — critical event
+      await logActivity({
+        userId: req.user._id,
+        action: "TRIP_CREATE",
+        description: `Created trip ${trip._id} for customer ${customerId} using vehicle ${vehicleId}`,
+        ipAddress: req.ip,
+        deviceInfo: req.headers["user-agent"],
+        meta: {
+          tripId: trip._id,
+          driverId,
+          vehicleId,
+          customerId,
+          companyId,
+        },
+      });
+
       res.status(201).json({
         ok: true,
         message: "Trip created & driver/vehicle assigned",
@@ -282,12 +299,12 @@ router.post(
 );
 
 /* ==========================================================
-   🟣 1B. ASSIGN Driver + Vehicle to a Customer Order (Option 2)
+   🟣 1B. ASSIGN Driver + Vehicle to a Customer Order
    ========================================================== */
 router.post(
   "/assign",
   protect,
-  authorizeRoles("company", "manager", "superadmin"),
+  authorizeRoles("company", "manager", "superadmin", "owner"),
   async (req, res) => {
     try {
       const {
@@ -295,13 +312,14 @@ router.post(
         driverId,
         vehicleId,
         deliveryFee,
-        companyId: bodyCompanyId, // ✅ for superadmin/owner
+        companyId: bodyCompanyId, // for superadmin/owner
       } = req.body;
 
-      if (!tripId || !driverId || !vehicleId)
+      if (!tripId || !driverId || !vehicleId) {
         return res.status(400).json({
           error: "tripId, driverId, vehicleId are required",
         });
+      }
 
       let companyId;
 
@@ -322,15 +340,17 @@ router.post(
 
       // Get pending trip
       const trip = await Trip.findOne({ _id: tripId, companyId });
-      if (!trip)
+      if (!trip) {
         return res.status(404).json({
           error: "Trip not found for this company",
         });
+      }
 
-      if (trip.status !== "pending")
+      if (trip.status !== "pending") {
         return res.status(400).json({
           error: `Trip cannot be assigned. Current status: ${trip.status}`,
         });
+      }
 
       // Validate driver
       const driver = await User.findOne({
@@ -339,22 +359,25 @@ router.post(
         companyId,
       });
 
-      if (!driver)
+      if (!driver) {
         return res.status(400).json({
           error: "Driver not found or not part of this company",
         });
+      }
 
       // Validate vehicle
       const vehicle = await Vehicle.findOne({ _id: vehicleId, companyId });
-      if (!vehicle)
+      if (!vehicle) {
         return res.status(400).json({
           error: "Vehicle not found or not part of this company",
         });
+      }
 
-      if (vehicle.status === "maintenance")
+      if (vehicle.status === "maintenance") {
         return res.status(400).json({
           error: "Vehicle under maintenance — cannot assign",
         });
+      }
 
       // Assign trip
       trip.driverId = driverId;
@@ -407,6 +430,21 @@ router.post(
       // 🔁 Realtime broadcast
       await broadcastTripStatus(req, trip._id);
 
+      // 🧾 Activity log — critical event
+      await logActivity({
+        userId: req.user._id,
+        action: "TRIP_ASSIGN",
+        description: `Assigned driver ${driverId} and vehicle ${vehicleId} to trip ${tripId}`,
+        ipAddress: req.ip,
+        deviceInfo: req.headers["user-agent"],
+        meta: {
+          tripId,
+          driverId,
+          vehicleId,
+          companyId,
+        },
+      });
+
       res.json({
         ok: true,
         message: "Trip assigned successfully",
@@ -420,9 +458,9 @@ router.post(
     }
   }
 );
-
 /* ==========================================================
    🛰️ 2. Update Driver Location (Route Tracking)
+   (NO activity log to avoid huge logs)
    ========================================================== */
 router.post(
   "/update-location",
@@ -432,8 +470,9 @@ router.post(
     try {
       const { tripId, lat, lng } = req.body;
 
-      if (!tripId || !lat || !lng)
+      if (!tripId || !lat || !lng) {
         return res.status(400).json({ error: "Missing required fields" });
+      }
 
       const trip = await Trip.findById(tripId);
       if (!trip) return res.status(404).json({ error: "Trip not found" });
@@ -467,13 +506,14 @@ router.post(
 router.post(
   "/complete",
   protect,
-  authorizeRoles("driver", "manager", "company", "superadmin"),
+  authorizeRoles("driver", "manager", "company", "superadmin", "owner"),
   async (req, res) => {
     try {
       const { tripId, totalDistance } = req.body;
 
-      if (!tripId)
+      if (!tripId) {
         return res.status(400).json({ error: "Missing tripId" });
+      }
 
       const trip = await Trip.findById(tripId);
       if (!trip) return res.status(404).json({ error: "Trip not found" });
@@ -508,7 +548,7 @@ router.post(
         });
       }
 
-      // 🔔 Notifications on completion
+      // 🔔 Notifications
       const populatedTrip = await getPopulatedTripForNotify(trip._id);
       const payloadCommon = {
         trip: populatedTrip,
@@ -517,7 +557,6 @@ router.post(
         customer: populatedTrip.customerId,
       };
 
-      // Notify customer
       await createNotification(req, {
         userId: populatedTrip.customerId?._id,
         title: "Delivery Completed",
@@ -532,6 +571,22 @@ router.post(
 
       // 🔁 Realtime broadcast
       await broadcastTripStatus(req, trip._id);
+
+      // 🧾 Activity log — critical event
+      await logActivity({
+        userId: req.user._id,
+        action: "TRIP_COMPLETE",
+        description: `Completed trip ${trip._id} for customer ${trip.customerId}`,
+        ipAddress: req.ip,
+        deviceInfo: req.headers["user-agent"],
+        meta: {
+          tripId: trip._id,
+          driverId: trip.driverId,
+          vehicleId: trip.vehicleId,
+          companyId: trip.companyId,
+          totalDistance: trip.totalDistance,
+        },
+      });
 
       res.json({
         ok: true,
@@ -578,7 +633,7 @@ router.get(
 );
 
 /* ==========================================================
-   🌍 5. Company/Manager/Owner/Superadmin — route history
+   🌍 5. Route history (Company / Manager / Owner / Superadmin)
    ========================================================== */
 router.get(
   "/:tripId/route",
@@ -620,7 +675,6 @@ router.get(
       } else if (req.user.role === "manager") {
         filter.companyId = req.user.companyId;
       } else if (req.user.role === "owner" || req.user.role === "superadmin") {
-        // optional ?companyId=...
         if (req.query.companyId) {
           filter.companyId = req.query.companyId;
         }
@@ -648,14 +702,13 @@ router.get(
     }
   }
 );
-
 /* ==========================================================
    🟢 7. Generate Secure QR Code for Customer Delivery Confirm
    ========================================================== */
 router.get(
   "/:tripId/generate-qr",
   protect,
-  authorizeRoles("company", "manager", "driver", "superadmin"),
+  authorizeRoles("company", "manager", "driver", "superadmin", "owner"),
   async (req, res) => {
     try {
       const { tripId } = req.params;
@@ -694,7 +747,7 @@ router.get(
 );
 
 /* ==========================================================
-   🟣 8. Confirm Delivery (Customer scan)
+   🟣 8. Confirm Delivery (Customer scan) — Critical Event
    ========================================================== */
 router.post("/confirm-delivery", async (req, res) => {
   try {
@@ -753,6 +806,21 @@ router.post("/confirm-delivery", async (req, res) => {
 
     // 🔁 Realtime broadcast
     await broadcastTripStatus(req, trip._id);
+
+    // 🧾 Activity log — critical event
+    await logActivity({
+      userId: null, // customer is anonymous here (no auth)
+      action: "TRIP_CONFIRM_DELIVERY",
+      description: `Customer confirmed delivery for trip ${trip._id} via QR scan`,
+      ipAddress: req.ip,
+      deviceInfo: req.headers["user-agent"],
+      meta: {
+        tripId: trip._id,
+        companyId: trip.companyId,
+        driverId: trip.driverId,
+        customerId: trip.customerId,
+      },
+    });
 
     res.json({
       ok: true,
@@ -818,7 +886,7 @@ router.get(
 );
 
 /* ==========================================================
-   📦 MANAGER / COMPANY / OWNER / SUPERADMIN — Filtered Orders
+   📦 Filtered Orders (Manager / Company / Owner / Superadmin)
    ========================================================== */
 router.get(
   "/manager/search",
@@ -915,14 +983,9 @@ router.get(
     }
   }
 );
-
 /* ==========================================================
-   6D — MANAGER / COMPANY / OWNER / SUPERADMIN — Cancel a Trip
+   6D — Cancel a Trip (Manager / Company / Owner / Superadmin)
    ========================================================== */
-/*
-PATCH /api/trip/cancel/:tripId
-Body: { "reason": "Customer unreachable", "companyId": "..." } // companyId optional for owner/superadmin
-*/
 router.patch(
   "/cancel/:tripId",
   protect,
@@ -964,14 +1027,12 @@ router.patch(
         });
       }
 
-      // ❌ Cannot cancel if already done
       if (["delivered", "cancelled"].includes(trip.status)) {
         return res.status(400).json({
           error: `Trip cannot be cancelled. Current status: ${trip.status}`,
         });
       }
 
-      // Allowed statuses: pending, assigned, in_progress
       trip.status = "cancelled";
       trip.cancelReason = reason;
       trip.cancelledAt = new Date();
@@ -995,7 +1056,6 @@ router.patch(
         customer: populatedTrip.customerId,
       };
 
-      // Notify driver
       if (populatedTrip.driverId?._id) {
         await createNotification(req, {
           userId: populatedTrip.driverId._id,
@@ -1009,7 +1069,6 @@ router.patch(
         });
       }
 
-      // Notify customer
       if (populatedTrip.customerId?._id) {
         await createNotification(req, {
           userId: populatedTrip.customerId._id,
@@ -1026,6 +1085,21 @@ router.patch(
       // 🔁 Realtime broadcast
       await broadcastTripStatus(req, trip._id);
 
+      // 🧾 Activity log — critical event
+      await logActivity({
+        userId: req.user._id,
+        action: "TRIP_CANCEL",
+        description: `Cancelled trip ${trip._id} — reason: ${reason}`,
+        ipAddress: req.ip,
+        deviceInfo: req.headers["user-agent"],
+        meta: {
+          tripId: trip._id,
+          companyId: trip.companyId,
+          driverId: trip.driverId,
+          customerId: trip.customerId,
+        },
+      });
+
       res.json({
         ok: true,
         message: "Trip cancelled successfully",
@@ -1041,7 +1115,7 @@ router.patch(
 );
 
 /* ==========================================================
-   6E — MANAGER / COMPANY / OWNER / SUPERADMIN — Update Trip
+   6E — Update Trip (Manager / Company / Owner / Superadmin)
    ========================================================== */
 router.patch(
   "/update/:tripId",
@@ -1087,7 +1161,6 @@ router.patch(
           .status(404)
           .json({ error: "Trip not found in your scope" });
 
-      // Validate allowed statuses
       if (["delivered", "cancelled"].includes(trip.status)) {
         return res.status(400).json({
           error: `Cannot update trip with status '${trip.status}'.`,
@@ -1109,7 +1182,6 @@ router.patch(
             error: "Driver not found or not part of this company",
           });
 
-        // Check if driver already has an active trip
         const activeTrip = await Trip.findOne({
           driverId,
           status: { $in: ["assigned", "in_progress"] },
@@ -1140,7 +1212,6 @@ router.patch(
           });
         }
 
-        // Check if vehicle is busy
         const busyVehicle = await Trip.findOne({
           vehicleId,
           status: { $in: ["assigned", "in_progress"] },
@@ -1180,7 +1251,7 @@ router.patch(
 
       await trip.save();
 
-      // 🔔 Notifications — inform driver + customer of updates
+      // 🔔 Notifications
       const populatedTrip = await getPopulatedTripForNotify(trip._id);
       const payloadCommon = {
         trip: populatedTrip,
@@ -1218,6 +1289,21 @@ router.patch(
       // 🔁 Realtime broadcast
       await broadcastTripStatus(req, trip._id);
 
+      // 🧾 Activity log — critical event
+      await logActivity({
+        userId: req.user._id,
+        action: "TRIP_UPDATE",
+        description: `Updated trip ${trip._id}`,
+        ipAddress: req.ip,
+        deviceInfo: req.headers["user-agent"],
+        meta: {
+          tripId: trip._id,
+          companyId: trip.companyId,
+          driverId: trip.driverId,
+          vehicleId: trip.vehicleId,
+        },
+      });
+
       res.json({
         ok: true,
         message: "Trip updated successfully",
@@ -1232,16 +1318,8 @@ router.patch(
 
 /* ==========================================================
    7E — DRIVER SENDS LIVE STATUS UPDATE
+   (Not logged to avoid noise)
    ========================================================== */
-/*
-POST /api/trip/live-status
-Body:
-{
-  "tripId": "",
-  "status": "Arrived at pickup" // any custom message
-}
-*/
-
 router.post(
   "/live-status",
   protect,
@@ -1265,7 +1343,6 @@ router.post(
         return res.status(404).json({ error: "Trip not found" });
       }
 
-      // Update trip liveStatus (not the main status)
       trip.liveStatus = status;
       await trip.save();
 
@@ -1281,17 +1358,12 @@ router.post(
       };
 
       if (io) {
-        // Notify customer
         if (trip.customerId?._id) {
           io.to(String(trip.customerId._id)).emit(TRIP_STATUS_EVENT, payload);
         }
-
-        // Notify manager/company
         if (trip.companyId?._id) {
           io.to(String(trip.companyId._id)).emit(TRIP_STATUS_EVENT, payload);
         }
-
-        // Notify driver himself (for sync)
         if (trip.driverId?._id) {
           io.to(String(trip.driverId._id)).emit(TRIP_STATUS_EVENT, payload);
         }
