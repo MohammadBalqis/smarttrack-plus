@@ -1,3 +1,4 @@
+// server/src/routes/driverRoutes.js
 import { Router } from "express";
 import bcrypt from "bcryptjs";
 import multer from "multer";
@@ -6,6 +7,7 @@ import fs from "fs";
 import User from "../models/User.js";
 import { protect } from "../middleware/authMiddleware.js";
 import { authorizeRoles } from "../middleware/roleMiddleware.js";
+import { logActivity } from "../utils/activityLogger.js";
 
 const router = Router();
 
@@ -38,6 +40,14 @@ const upload = multer({
 /* ==========================================================
    🚚 CREATE DRIVER (with optional face image)
    ========================================================== */
+/*
+POST /api/drivers/create
+Body (form-data):
+  - name
+  - email
+  - password
+  - profileImage (file, optional)
+*/
 router.post(
   "/create",
   protect,
@@ -60,6 +70,9 @@ router.post(
       const companyId =
         req.user.role === "company" ? req.user._id : req.user.companyId;
 
+      // if manager creates driver -> set managerId
+      const managerId = req.user.role === "manager" ? req.user._id : null;
+
       const profileImage = req.file
         ? `/uploads/drivers/${req.file.filename}`
         : null;
@@ -70,7 +83,17 @@ router.post(
         passwordHash,
         role: "driver",
         companyId,
+        managerId,
         profileImage,
+      });
+
+      await logActivity({
+        userId: req.user._id,
+        action: "CREATE_DRIVER",
+        description: `Created driver ${driver._id} (${driver.email})`,
+        targetUserId: driver._id,
+        ipAddress: req.ip,
+        deviceInfo: req.headers["user-agent"],
       });
 
       res.status(201).json({
@@ -81,6 +104,7 @@ router.post(
           name: driver.name,
           email: driver.email,
           companyId: driver.companyId,
+          managerId: driver.managerId,
           profileImage: driver.profileImage,
         },
       });
@@ -90,9 +114,13 @@ router.post(
     }
   }
 );
+
 /* ==========================================================
    📋 GET ALL DRIVERS — For company or manager
    ========================================================== */
+/*
+GET /api/drivers/get-all
+*/
 router.get(
   "/get-all",
   protect,
@@ -102,10 +130,19 @@ router.get(
       const companyId =
         req.user.role === "company" ? req.user._id : req.user.companyId;
 
-      const drivers = await User.find({
+      const filter = {
         companyId,
         role: "driver",
-      }).select("name email profileImage isActive createdAt");
+      };
+
+      // if manager → only his drivers (based on managerId)
+      if (req.user.role === "manager") {
+        filter.managerId = req.user._id;
+      }
+
+      const drivers = await User.find(filter).select(
+        "name email profileImage isActive createdAt managerId"
+      );
 
       res.json({
         ok: true,

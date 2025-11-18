@@ -4,18 +4,22 @@ import User from "../models/User.js";
 import Trip from "../models/Trip.js";
 import Vehicle from "../models/Vehicle.js";
 import Payment from "../models/Payment.js";
-import Notification from "../models/Notification.js"; // 🆕
+import Notification from "../models/Notification.js";
 import { protect } from "../middleware/authMiddleware.js";
 import { authorizeRoles } from "../middleware/roleMiddleware.js";
+import { logActivity } from "../utils/activityLogger.js";
 
 const router = Router();
 
 /* ==========================================================
    🧠 Helpers
    ========================================================== */
+
+// Get companyId depending on role
 const getCompanyId = (user) =>
   user.role === "company" ? user._id : user.companyId;
 
+// Build filter for drivers visible to the current user
 const buildDriverFilter = (req) => {
   const companyId = getCompanyId(req.user);
   const filter = { companyId, role: "driver" };
@@ -48,7 +52,10 @@ const getPopulatedTripForNotify = async (tripId) => {
     .populate("companyId", "name email companyName");
 };
 
-const createNotification = async (req, { userId, title, message, type, relatedTripId, extra = {} }) => {
+const createNotification = async (
+  req,
+  { userId, title, message, type, relatedTripId, extra = {} }
+) => {
   if (!userId) return;
 
   const noti = await Notification.create({
@@ -352,6 +359,15 @@ router.patch(
           .json({ error: "Driver not found or not in your company/team" });
       }
 
+      await logActivity({
+        userId: req.user._id,
+        action: "MANAGER_TOGGLE_DRIVER_ACTIVE",
+        description: `Set driver ${driver._id} active=${isActive}`,
+        targetUserId: driver._id,
+        ipAddress: req.ip,
+        deviceInfo: req.headers["user-agent"],
+      });
+
       res.json({
         ok: true,
         message: `Driver set to ${isActive ? "active" : "inactive"}`,
@@ -394,6 +410,15 @@ router.patch(
           .status(404)
           .json({ error: "Driver not found or not in your company/team" });
       }
+
+      await logActivity({
+        userId: req.user._id,
+        action: "MANAGER_UPDATE_DRIVER_NOTES",
+        description: `Updated notes for driver ${driver._id}`,
+        targetUserId: driver._id,
+        ipAddress: req.ip,
+        deviceInfo: req.headers["user-agent"],
+      });
 
       res.json({
         ok: true,
@@ -732,6 +757,14 @@ router.post(
         extra: payloadCommon,
       });
 
+      await logActivity({
+        userId: req.user._id,
+        action: "MANAGER_ASSIGN_TRIP",
+        description: `Assigned driver ${driverId} and vehicle ${vehicleId} to trip ${tripId}`,
+        ipAddress: req.ip,
+        deviceInfo: req.headers["user-agent"],
+      });
+
       res.json({
         ok: true,
         message: "Trip assigned successfully",
@@ -871,14 +904,23 @@ router.patch(
         extra: payloadCommon,
       });
 
-      // Notify customer – IMPORTANT: new driver (face & data)
+      // Notify customer – new driver details
       await createNotification(req, {
         userId: populatedTrip.customerId?._id,
         title: "Driver Changed",
-        message: "Your delivery driver has been changed. Please check the new driver details.",
+        message:
+          "Your delivery driver has been changed. Please check the new driver details.",
         type: "update",
         relatedTripId: populatedTrip._id,
-        extra: payloadCommon, // includes full driver data for UI (image, etc.)
+        extra: payloadCommon,
+      });
+
+      await logActivity({
+        userId: req.user._id,
+        action: "MANAGER_REASSIGN_TRIP",
+        description: `Reassigned trip ${tripId} to driver ${newDriverId} & vehicle ${newVehicleId}`,
+        ipAddress: req.ip,
+        deviceInfo: req.headers["user-agent"],
       });
 
       res.json({

@@ -76,8 +76,31 @@ const userSchema = new mongoose.Schema(
       default: null,
     },
 
-    // Only for company accounts
+    // Company accounts
     companyName: { type: String, trim: true },
+        /* =====================================================
+       🧾 COMPANY BILLING SETTINGS (10B / 10E)
+       ===================================================== */
+    commissionDeliveryPercentage: {
+      type: Number,
+      default: 20, // 20% on delivery fee
+      min: 0,
+      max: 100,
+    },
+    commissionProductPercentage: {
+      type: Number,
+      default: 10, // 10% on products
+      min: 0,
+      max: 100,
+    },
+    enableProductCommission: {
+      type: Boolean,
+      default: false, // you decided: OFF by default
+    },
+    enableProductSales: {
+      type: Boolean,
+      default: true, // you are selling products by default
+    },
 
     /* =====================================================
        👤 PROFILE INFO
@@ -90,34 +113,28 @@ const userSchema = new mongoose.Schema(
        🚚 DRIVER-SPECIFIC FIELDS
        ===================================================== */
 
-    // Driver availability
     driverStatus: {
       type: String,
       enum: ["offline", "available", "on_trip"],
       default: "offline",
     },
 
-    // Driver ratings
     driverRating: { type: Number, default: 0 },
     totalRatings: { type: Number, default: 0 },
 
-    // Live GPS tracking
     currentLat: { type: Number, default: null },
     currentLng: { type: Number, default: null },
 
-    // Performance metrics
     totalTripsCompleted: { type: Number, default: 0 },
     driverOrdersCount: { type: Number, default: 0 },
     performanceScore: { type: Number, default: 0 },
 
-    // Optional assigned vehicle
     vehicleAssigned: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Vehicle",
       default: null,
     },
 
-    // Driver notes (company writes about driver)
     driverNotes: { type: String, trim: true },
 
     /* =====================================================
@@ -126,6 +143,27 @@ const userSchema = new mongoose.Schema(
     managerDepartment: { type: String, trim: true },
     managerNotes: { type: String, trim: true },
     managerPermissions: { type: Array, default: [] },
+
+    /* =====================================================
+       🟩 CUSTOMER-SPECIFIC FIELDS (10C Option A)
+       ===================================================== */
+
+    customerNotes: { type: String, trim: true },
+
+    customerRating: { type: Number, default: 0 },
+
+    customerDocuments: [
+      {
+        fileName: { type: String },
+        filePath: { type: String },
+        uploadedAt: { type: Date, default: Date.now },
+      },
+    ],
+
+    isCustomerVerified: {
+      type: Boolean,
+      default: false,
+    },
 
     /* =====================================================
        ⚙️ ACCOUNT STATUS

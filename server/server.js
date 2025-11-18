@@ -32,7 +32,7 @@ import customerRoutes from "./src/routes/customerRoutes.js";
 import notificationRoutes from "./src/routes/notificationRoutes.js";
 import superAdminRoutes from "./src/routes/superAdminRoutes.js";
 import globalSettingsRoutes from "./src/routes/globalSettingsRoutes.js";
-
+import billingSettingsRoutes from "./src/routes/billingSettingsRoutes.js";
 dotenv.config();
 const app = express();
 
@@ -96,7 +96,7 @@ app.use("/api/customer/trips", customerTripRoutes);
 app.use("/api/company/drivers", companyDriversRoutes);
 app.use("/api/customer", customerCompanyRoutes);
 app.use("/api/products", productRoutes);
-
+app.use("/api/billing-settings", billingSettingsRoutes);
 app.use("/api/manager-dashboard", managerDashboardRoutes);
 app.use("/api/manager", managerDriverRoutes);
 app.use("/api/manager", managerVehicleRoutes);

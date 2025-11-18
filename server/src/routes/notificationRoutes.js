@@ -1,155 +1,149 @@
 // server/src/routes/notificationRoutes.js
 import { Router } from "express";
 import Notification from "../models/Notification.js";
+import GlobalSettings from "../models/GlobalSettings.js";
 import { protect } from "../middleware/authMiddleware.js";
 
 const router = Router();
 
 /* ==========================================================
-   1️⃣ LIST NOTIFICATIONS (logged-in user)
-   ==========================================================
-GET /api/notifications
-Query:
-  page=1
-  limit=20
-  unreadOnly=true|false
-  type=status|assignment|update|payment|system
-  category=driver|manager|customer|company|owner|system
-========================================================== */
-router.get("/", protect, async (req, res) => {
+   📋 1. GET notifications (all roles)
+   Filters + pagination + sorting
+   ========================================================== */
+router.get("/list", protect, async (req, res) => {
   try {
-    const userId = req.user._id;
+    const settings = await GlobalSettings.findOne();
+    if (settings?.maintenanceMode && req.user.role !== "superadmin") {
+      return res.status(503).json({
+        ok: false,
+        error: "System is under maintenance.",
+      });
+    }
 
-    let {
+    const {
       page = 1,
       limit = 20,
-      unreadOnly = "false",
+      status,
       type,
       category,
+      priority,
     } = req.query;
 
-    page = Number(page) || 1;
-    limit = Number(limit) || 20;
-    const skip = (page - 1) * limit;
+    const filter = { userId: req.user._id };
 
-    const filter = { userId };
-
-    if (unreadOnly === "true") filter.isRead = false;
+    if (status === "unread") filter.read = false;
+    if (status === "read") filter.read = true;
     if (type) filter.type = type;
     if (category) filter.category = category;
+    if (priority) filter.priority = priority;
+
+    const skip = (page - 1) * limit;
 
     const [total, notifications] = await Promise.all([
       Notification.countDocuments(filter),
       Notification.find(filter)
         .sort({ createdAt: -1 })
         .skip(skip)
-        .limit(limit),
+        .limit(Number(limit)),
     ]);
 
     res.json({
       ok: true,
-      page,
-      limit,
       total,
+      page: Number(page),
       totalPages: Math.ceil(total / limit),
       notifications,
     });
-
   } catch (err) {
-    console.error("❌ Get notifications error:", err.message);
-    res.status(500).json({ error: "Server error loading notifications" });
-  }
-});
-
-/* ==========================================================
-   2️⃣ UNREAD COUNT
-   ========================================================== */
-router.get("/unread-count", protect, async (req, res) => {
-  try {
-    const count = await Notification.countDocuments({
-      userId: req.user._id,
-      isRead: false,
+    console.error("❌ List notifications error:", err.message);
+    res.status(500).json({
+      error: "Server error loading notifications",
     });
-
-    res.json({ ok: true, count });
-  } catch (err) {
-    console.error("❌ Unread count error:", err.message);
-    res.status(500).json({ error: "Server error loading unread count" });
   }
 });
 
 /* ==========================================================
-   3️⃣ MARK ONE AS READ
+   📌 2. MARK ONE NOTIFICATION AS READ
    ========================================================== */
 router.patch("/mark-read/:id", protect, async (req, res) => {
   try {
-    const { id } = req.params;
-
-    const notification = await Notification.findOneAndUpdate(
-      { _id: id, userId: req.user._id },
-      { isRead: true },
+    const notif = await Notification.findOneAndUpdate(
+      { _id: req.params.id, userId: req.user._id },
+      { read: true },
       { new: true }
     );
 
-    if (!notification) {
+    if (!notif)
       return res.status(404).json({ error: "Notification not found" });
-    }
 
-    res.json({ ok: true, notification });
-
+    res.json({
+      ok: true,
+      message: "Notification marked as read",
+      notif,
+    });
   } catch (err) {
-    console.error("❌ Mark read error:", err.message);
-    res.status(500).json({ error: "Server error updating notification" });
+    console.error("❌ mark read error:", err.message);
+    res.status(500).json({ error: "Server error marking as read" });
   }
 });
 
 /* ==========================================================
-   4️⃣ MARK ALL AS READ
+   📌 3. MARK ALL NOTIFICATIONS AS READ
    ========================================================== */
-router.patch("/mark-all-read", protect, async (req, res) => {
+router.patch("/mark-all", protect, async (req, res) => {
   try {
-    const result = await Notification.updateMany(
-      { userId: req.user._id, isRead: false },
-      { isRead: true }
+    await Notification.updateMany(
+      { userId: req.user._id, read: false },
+      { read: true }
     );
 
     res.json({
       ok: true,
-      modifiedCount: result.modifiedCount,
       message: "All notifications marked as read",
     });
   } catch (err) {
     console.error("❌ Mark all read error:", err.message);
-    res.status(500).json({ error: "Server error marking notifications" });
+    res.status(500).json({ error: "Server error marking all" });
   }
 });
 
 /* ==========================================================
-   5️⃣ DELETE NOTIFICATION
+   🗑️ 4. DELETE ONE NOTIFICATION (optional)
    ========================================================== */
-router.delete("/:id", protect, async (req, res) => {
+router.delete("/delete/:id", protect, async (req, res) => {
   try {
-    const { id } = req.params;
-
     const deleted = await Notification.findOneAndDelete({
-      _id: id,
+      _id: req.params.id,
       userId: req.user._id,
     });
 
-    if (!deleted) {
-      return res.status(404).json({
-        error: "Notification not found",
-      });
-    }
+    if (!deleted)
+      return res.status(404).json({ error: "Notification not found" });
 
     res.json({
       ok: true,
       message: "Notification deleted",
     });
-
   } catch (err) {
     console.error("❌ Delete notification error:", err.message);
-    res.status(500).json({ error: "Server error deleting notification" });
+    res.status(500).json({ error: "Server error deleting" });
+  }
+});
+
+/* ==========================================================
+   🗑️ 5. DELETE ALL NOTIFICATIONS (optional)
+   ========================================================== */
+router.delete("/delete-all", protect, async (req, res) => {
+  try {
+    await Notification.deleteMany({ userId: req.user._id });
+
+    res.json({
+      ok: true,
+      message: "All notifications deleted",
+    });
+  } catch (err) {
+    console.error("❌ Delete all error:", err.message);
+    res.status(500).json({ error: "Server error deleting all" });
   }
 });
 

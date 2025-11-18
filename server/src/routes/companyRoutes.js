@@ -6,8 +6,13 @@ import { authorizeRoles } from "../middleware/roleMiddleware.js";
 import User from "../models/User.js";
 import Trip from "../models/Trip.js";
 import Vehicle from "../models/Vehicle.js";
+import Payment from "../models/Payment.js";
 import bcrypt from "bcryptjs";
 import { logActivity } from "../utils/activityLogger.js";
+
+import multer from "multer";
+import path from "path";
+import fs from "fs";
 
 const router = Router();
 
@@ -112,11 +117,8 @@ router.patch(
   authorizeRoles("superadmin"),
   async (req, res) => {
     try {
-      const updateData = {
-        ...req.body,
-      };
+      const updateData = { ...req.body };
 
-      // Only allow profile fields to be updated (10A)
       const allowedFields = [
         "name",
         "email",
@@ -297,7 +299,7 @@ router.get(
 );
 
 /* ==========================================================
-   🟦 OWNER — CREATE COMPANY (Your original feature)
+   🟦 OWNER — CREATE COMPANY (Your Original Feature)
 ========================================================== */
 router.post(
   "/create",
@@ -322,7 +324,6 @@ router.post(
         address,
         ownerId: req.user._id,
 
-        // 10A new fields:
         logo: logo || null,
         taxNumber: taxNumber || "",
         crNumber: crNumber || "",
@@ -350,7 +351,7 @@ router.post(
 );
 
 /* ==========================================================
-   📊 COMPANY DASHBOARD SUMMARY (Your original code)
+   📊 COMPANY DASHBOARD (Your Original Code)
 ========================================================== */
 router.get(
   "/dashboard",
@@ -457,6 +458,207 @@ router.get(
     } catch (err) {
       console.error("❌ Dashboard error:", err.message);
       res.status(500).json({ error: "Server error loading company dashboard" });
+    }
+  }
+);
+
+/* ==========================================================
+   🔵 (NEW) CUSTOMER MANAGEMENT ROUTES FOR COMPANY + MANAGER
+========================================================== */
+
+/* ---------- MULTER STORAGE FOR CUSTOMER DOCUMENT UPLOADS ---------- */
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadDir = path.join("uploads", "customers", "documents");
+    if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    const unique = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(null, unique + ext);
+  },
+});
+const upload = multer({ storage });
+
+/* 1️⃣ LIST ALL CUSTOMERS */
+router.get(
+  "/customers/list",
+  protect,
+  authorizeRoles("company", "manager"),
+  async (req, res) => {
+    try {
+      const customers = await User.find({ role: "customer" })
+        .select("-passwordHash")
+        .sort({ createdAt: -1 });
+
+      res.json({ ok: true, customers });
+    } catch (err) {
+      res.status(500).json({ error: "Error loading customers" });
+    }
+  }
+);
+
+/* 2️⃣ SEARCH CUSTOMERS */
+router.get(
+  "/customers/search",
+  protect,
+  authorizeRoles("company", "manager"),
+  async (req, res) => {
+    try {
+      const q = req.query.q || "";
+
+      const customers = await User.find({
+        role: "customer",
+        $or: [
+          { name: { $regex: q, $options: "i" } },
+          { email: { $regex: q, $options: "i" } },
+          { phone: { $regex: q, $options: "i" } },
+        ],
+      }).select("-passwordHash");
+
+      res.json({ ok: true, customers });
+    } catch (err) {
+      res.status(500).json({ error: "Search failed" });
+    }
+  }
+);
+
+/* 3️⃣ CUSTOMER FULL DETAILS */
+router.get(
+  "/customers/:customerId/details",
+  protect,
+  authorizeRoles("company", "manager"),
+  async (req, res) => {
+    try {
+      const customer = await User.findById(req.params.customerId).select(
+        "-passwordHash"
+      );
+
+      if (!customer || customer.role !== "customer")
+        return res.status(404).json({ error: "Customer not found" });
+
+      res.json({ ok: true, customer });
+    } catch (err) {
+      res.status(500).json({ error: "Error loading customer" });
+    }
+  }
+);
+
+/* 4️⃣ CUSTOMER TRIP HISTORY */
+router.get(
+  "/customers/:customerId/trips",
+  protect,
+  authorizeRoles("company", "manager"),
+  async (req, res) => {
+    try {
+      const trips = await Trip.find({ customerId: req.params.customerId }).sort(
+        { createdAt: -1 }
+      );
+
+      res.json({ ok: true, trips });
+    } catch {
+      res.status(500).json({ error: "Error loading trips" });
+    }
+  }
+);
+
+/* 5️⃣ CUSTOMER PAYMENT HISTORY */
+router.get(
+  "/customers/:customerId/payments",
+  protect,
+  authorizeRoles("company", "manager"),
+  async (req, res) => {
+    try {
+      const payments = await Payment.find({ customerId: req.params.customerId }).sort(
+        { createdAt: -1 }
+      );
+
+      res.json({ ok: true, payments });
+    } catch {
+      res.status(500).json({ error: "Error loading payments" });
+    }
+  }
+);
+
+/* 6️⃣ SUSPEND / ACTIVATE CUSTOMER */
+router.patch(
+  "/customers/:customerId/toggle-active",
+  protect,
+  authorizeRoles("company", "manager"),
+  async (req, res) => {
+    try {
+      const customer = await User.findById(req.params.customerId);
+
+      if (!customer || customer.role !== "customer")
+        return res.status(404).json({ error: "Customer not found" });
+
+      customer.isActive = !customer.isActive;
+      await customer.save();
+
+      res.json({
+        ok: true,
+        message: `Customer is now ${
+          customer.isActive ? "active" : "suspended"
+        }`,
+      });
+    } catch {
+      res.status(500).json({ error: "Error updating status" });
+    }
+  }
+);
+
+/* 7️⃣ ADD NOTES TO CUSTOMER */
+router.patch(
+  "/customers/:customerId/notes",
+  protect,
+  authorizeRoles("company", "manager"),
+  async (req, res) => {
+    try {
+      const { notes } = req.body;
+
+      const updated = await User.findByIdAndUpdate(
+        req.params.customerId,
+        { customerNotes: notes },
+        { new: true }
+      ).select("-passwordHash");
+
+      res.json({ ok: true, updated });
+    } catch {
+      res.status(500).json({ error: "Error updating notes" });
+    }
+  }
+);
+
+/* 8️⃣ CUSTOMER DOCUMENT UPLOAD */
+router.post(
+  "/customers/:customerId/upload-document",
+  protect,
+  authorizeRoles("company", "manager"),
+  upload.single("document"),
+  async (req, res) => {
+    try {
+      if (!req.file)
+        return res.status(400).json({ error: "Document file is required" });
+
+      const filePath = `/uploads/customers/documents/${req.file.filename}`;
+
+      const updated = await User.findByIdAndUpdate(
+        req.params.customerId,
+        {
+          $push: {
+            customerDocuments: {
+              fileName: req.file.originalname,
+              filePath: filePath,
+            },
+          },
+        },
+        { new: true }
+      );
+
+      res.json({ ok: true, updated });
+    } catch {
+      res.status(500).json({ error: "Error uploading document" });
     }
   }
 );
