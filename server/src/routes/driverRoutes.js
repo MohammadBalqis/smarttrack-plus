@@ -13,7 +13,7 @@ const router = Router();
 
 /* ==========================================================
    📸 MULTER CONFIG — Save profile images locally (uploads/drivers)
-   ========================================================== */
+========================================================== */
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const uploadDir = path.join("uploads", "drivers");
@@ -39,7 +39,7 @@ const upload = multer({
 
 /* ==========================================================
    🚚 CREATE DRIVER (with optional face image)
-   ========================================================== */
+========================================================== */
 /*
 POST /api/drivers/create
 Body (form-data):
@@ -57,20 +57,20 @@ router.post(
     try {
       const { name, email, password } = req.body;
 
-      if (!name || !email || !password)
+      if (!name || !email || !password) {
         return res.status(400).json({ error: "Missing required fields" });
+      }
 
       const existing = await User.findOne({ email });
-      if (existing)
+      if (existing) {
         return res.status(409).json({ error: "Email already registered" });
+      }
 
       const passwordHash = await bcrypt.hash(password, 10);
 
-      // determine company association
       const companyId =
         req.user.role === "company" ? req.user._id : req.user.companyId;
 
-      // if manager creates driver -> set managerId
       const managerId = req.user.role === "manager" ? req.user._id : null;
 
       const profileImage = req.file
@@ -117,7 +117,7 @@ router.post(
 
 /* ==========================================================
    📋 GET ALL DRIVERS — For company or manager
-   ========================================================== */
+========================================================== */
 /*
 GET /api/drivers/get-all
 */
@@ -135,7 +135,6 @@ router.get(
         role: "driver",
       };
 
-      // if manager → only his drivers (based on managerId)
       if (req.user.role === "manager") {
         filter.managerId = req.user._id;
       }

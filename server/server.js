@@ -1,16 +1,64 @@
+// server.js (FINAL SECURITY-HARDENED VERSION)
+
 import express from "express";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
-import cors from "cors";
-import morgan from "morgan";
 import path from "path";
 import http from "http";
 import { Server } from "socket.io";
+import morgan from "morgan";
+import helmet from "helmet";
+import mongoSanitize from "express-mongo-sanitize";
+import xss from "xss-clean";
+import compression from "compression";
+import cors from "cors";
 
-// MODELS
-import GlobalSettings from "./src/models/GlobalSettings.js"; // ✅ Required for maintenance mode middleware
+import { applySecurityMiddlewares } from "./src/middleware/securityMiddleware.js";
+import { apiLimiter } from "./src/middleware/rateLimitMiddleware.js";
 
-// ROUTES
+// Models
+import GlobalSettings from "./src/models/GlobalSettings.js";
+
+dotenv.config();
+const app = express();
+
+/* ==========================================================
+   🧩 BASE MIDDLEWARE (Logging + Body Parsing)
+========================================================== */
+app.use(express.json({ limit: "1mb" }));
+app.use(express.urlencoded({ extended: true, limit: "1mb" }));
+app.use(morgan("dev"));
+
+/* ==========================================================
+   🔐 GLOBAL SECURITY MIDDLEWARES
+========================================================== */
+applySecurityMiddlewares(app);
+
+app.use(
+  helmet.crossOriginResourcePolicy({
+    policy: "cross-origin",
+  })
+);
+
+/* ==========================================================
+   🚀 PERFORMANCE BOOST
+========================================================== */
+app.use(compression());
+
+/* ==========================================================
+   🚦 PREVENT MONGO INJECTION & XSS
+========================================================== */
+app.use(mongoSanitize());
+app.use(xss());
+
+/* ==========================================================
+   🌍 STATIC FILES
+========================================================== */
+app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
+
+/* ==========================================================
+   🔗 ROUTES
+========================================================== */
 import authRoutes from "./src/routes/authRoutes.js";
 import companyRoutes from "./src/routes/companyRoutes.js";
 import managerRoutes from "./src/routes/managerRoutes.js";
@@ -33,49 +81,18 @@ import notificationRoutes from "./src/routes/notificationRoutes.js";
 import superAdminRoutes from "./src/routes/superAdminRoutes.js";
 import globalSettingsRoutes from "./src/routes/globalSettingsRoutes.js";
 import billingSettingsRoutes from "./src/routes/billingSettingsRoutes.js";
-dotenv.config();
-const app = express();
+import invoiceRoutes from "./src/routes/invoiceRoutes.js";
+import brandingRoutes from "./src/routes/brandingRoutes.js";
+import publicApiRoutes from "./src/routes/publicApiRoutes.js";
 
 /* ==========================================================
-   🧩 GLOBAL MIDDLEWARE
+   🌐 PUBLIC API (Rate Limited)
 ========================================================== */
-app.use(express.json());
-app.use(cors());
-app.use(morgan("dev"));
-
-// Serve uploads folder
-app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
+app.use("/api/public", apiLimiter);
+app.use("/api/public/company", publicApiRoutes);
 
 /* ==========================================================
-   🚧 GLOBAL MAINTENANCE MODE CHECK
-   IMPORTANT:
-   - If system is in maintenance mode:
-   - All users are blocked EXCEPT superadmin
-========================================================== */
-app.use(async (req, res, next) => {
-  try {
-    const settings = await GlobalSettings.findOne();
-
-    if (settings?.maintenanceMode === true) {
-      // Allow superadmin to bypass maintenance mode
-      if (req.user && req.user.role === "superadmin") {
-        return next();
-      }
-
-      return res.status(503).json({
-        ok: false,
-        message: "🚧 System is currently under maintenance. Please try again later.",
-      });
-    }
-  } catch (err) {
-    console.error("⚠ Maintenance middleware error:", err.message);
-  }
-
-  next();
-});
-
-/* ==========================================================
-   🚦 API ROUTES
+   📌 MAIN ROUTES
 ========================================================== */
 app.use("/api/auth", authRoutes);
 app.use("/api/company", companyRoutes);
@@ -88,27 +105,29 @@ app.use("/api/trip", tripRoutes);
 app.use("/api/trip/analytics", tripAnalyticsRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/notifications", notificationRoutes);
-
 app.use("/api/superadmin", superAdminRoutes);
 app.use("/api/settings", globalSettingsRoutes);
-
+app.use("/api/company/branding", brandingRoutes);
 app.use("/api/customer/trips", customerTripRoutes);
 app.use("/api/company/drivers", companyDriversRoutes);
 app.use("/api/customer", customerCompanyRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/billing-settings", billingSettingsRoutes);
 app.use("/api/manager-dashboard", managerDashboardRoutes);
-app.use("/api/manager", managerDriverRoutes);
-app.use("/api/manager", managerVehicleRoutes);
-app.use("/api/customer", customerRoutes);
+app.use("/api/manager/drivers", managerDriverRoutes);
+app.use("/api/manager/vehicles", managerVehicleRoutes);
+app.use("/api/customer/profile", customerRoutes);
+app.use("/api/invoices", invoiceRoutes);
 
-// Health Check
+/* ==========================================================
+   🌡️ HEALTH CHECK
+========================================================== */
 app.get("/api/health", (req, res) => {
   res.json({ status: "✅ SmartTrack API is running" });
 });
 
 /* ==========================================================
-   ⚙️ DATABASE CONNECTION
+   💾 DATABASE CONNECTION
 ========================================================== */
 const connectDB = async () => {
   try {
@@ -121,23 +140,25 @@ const connectDB = async () => {
 };
 
 /* ==========================================================
-   🔌 SOCKET.IO SETUP
+   🔌 SOCKET.IO SETUP (HARDENED)
 ========================================================== */
 const server = http.createServer(app);
 
 export const io = new Server(server, {
-  cors: { origin: "*", methods: ["GET", "POST", "PATCH", "PUT"] },
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST", "PATCH", "PUT", "DELETE"],
+  },
+  pingTimeout: 30000,
 });
 
-// Make io available for all routes
 app.set("io", io);
 
 io.on("connection", (socket) => {
   console.log("🔵 Socket connected:", socket.id);
 
   socket.on("register", (userId) => {
-    socket.join(String(userId));
-    console.log(`🟢 User ${userId} joined their private room`);
+    if (userId) socket.join(String(userId));
   });
 
   socket.on("disconnect", () => {
@@ -152,5 +173,5 @@ const PORT = process.env.PORT || 5000;
 
 server.listen(PORT, async () => {
   await connectDB();
-  console.log(`🚀 Server with Socket.io running on port ${PORT}`);
+  console.log(`🚀 SmartTrack Server running on port ${PORT}`);
 });

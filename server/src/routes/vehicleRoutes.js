@@ -7,9 +7,12 @@ import { authorizeRoles } from "../middleware/roleMiddleware.js";
 
 const router = Router();
 
+const resolveCompanyIdFromUser = (user) =>
+  user.role === "company" ? user._id : user.companyId;
+
 /* ==========================================================
    🚗 CREATE VEHICLE (Company / Manager)
-   ========================================================== */
+========================================================== */
 router.post(
   "/create",
   protect,
@@ -18,11 +21,11 @@ router.post(
     try {
       const { type, brand, model, plateNumber, notes, vehicleImage } = req.body;
 
-      if (!type || !brand || !model || !plateNumber)
+      if (!type || !brand || !model || !plateNumber) {
         return res.status(400).json({ error: "Missing fields" });
+      }
 
-      const companyId =
-        req.user.role === "company" ? req.user._id : req.user.companyId;
+      const companyId = resolveCompanyIdFromUser(req.user);
 
       const vehicle = await Vehicle.create({
         type,
@@ -31,7 +34,7 @@ router.post(
         plateNumber,
         companyId,
         notes,
-        vehicleImage: vehicleImage || null, // URL or null
+        vehicleImage: vehicleImage || null,
       });
 
       res.status(201).json({
@@ -48,15 +51,14 @@ router.post(
 
 /* ==========================================================
    🧾 GET ALL VEHICLES FOR COMPANY
-   ========================================================== */
+========================================================== */
 router.get(
   "/get-all",
   protect,
   authorizeRoles("company", "manager"),
   async (req, res) => {
     try {
-      const companyId =
-        req.user.role === "company" ? req.user._id : req.user.companyId;
+      const companyId = resolveCompanyIdFromUser(req.user);
 
       const vehicles = await Vehicle.find({ companyId }).populate(
         "driverId",
@@ -73,7 +75,9 @@ router.get(
 
 /* ==========================================================
    🔄 ASSIGN / REMOVE DRIVER FROM VEHICLE
-   ========================================================== */
+   - Ensures vehicle belongs to this company
+   - Ensures driver belongs to this company (if provided)
+========================================================== */
 router.put(
   "/assign-driver/:vehicleId",
   protect,
@@ -83,18 +87,38 @@ router.put(
       const { vehicleId } = req.params;
       const { driverId } = req.body;
 
-      const vehicle = await Vehicle.findById(vehicleId);
-      if (!vehicle) return res.status(404).json({ error: "Vehicle not found" });
+      const companyId = resolveCompanyIdFromUser(req.user);
 
-      if (vehicle.status === "maintenance")
+      const vehicle = await Vehicle.findOne({ _id: vehicleId, companyId });
+      if (!vehicle) {
+        return res.status(404).json({ error: "Vehicle not found" });
+      }
+
+      if (vehicle.status === "maintenance") {
         return res.status(400).json({
           error: "Vehicle is under maintenance — cannot assign driver",
         });
+      }
 
-      vehicle.driverId = driverId || null;
+      if (driverId) {
+        const driver = await User.findOne({
+          _id: driverId,
+          role: "driver",
+          companyId,
+        });
 
-      // Update status based on assignment
-      vehicle.status = driverId ? "in_use" : "available";
+        if (!driver) {
+          return res.status(400).json({
+            error: "Driver not found or not part of this company",
+          });
+        }
+
+        vehicle.driverId = driverId;
+        vehicle.status = "in_use";
+      } else {
+        vehicle.driverId = null;
+        vehicle.status = "available";
+      }
 
       await vehicle.save();
 
@@ -114,7 +138,8 @@ router.put(
 
 /* ==========================================================
    🧰 UPDATE VEHICLE STATUS (manual)
-   ========================================================== */
+   - Ensures vehicle belongs to this company
+========================================================== */
 router.put(
   "/update-status/:vehicleId",
   protect,
@@ -125,16 +150,19 @@ router.put(
       const { status } = req.body;
 
       const allowedStatuses = ["available", "in_use", "maintenance"];
-      if (!allowedStatuses.includes(status))
+      if (!allowedStatuses.includes(status)) {
         return res.status(400).json({
           error: "Invalid status. Must be: available, in_use, or maintenance.",
         });
+      }
 
-      const vehicle = await Vehicle.findById(vehicleId);
-      if (!vehicle)
+      const companyId = resolveCompanyIdFromUser(req.user);
+
+      const vehicle = await Vehicle.findOne({ _id: vehicleId, companyId });
+      if (!vehicle) {
         return res.status(404).json({ error: "Vehicle not found" });
+      }
 
-      // Rule: cannot set available if driver assigned
       if (vehicle.driverId && status === "available") {
         return res.status(400).json({
           error:

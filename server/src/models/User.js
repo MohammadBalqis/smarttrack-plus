@@ -4,18 +4,18 @@ import bcrypt from "bcryptjs";
 
 /* =====================================================
    🧩 ROLE-BASED ACCESS CONTROL (RBAC)
-   ===================================================== */
+===================================================== */
 export const ROLES_LIST = [
   "superadmin",   // Full system access
-  "company",      // Company owner / company account
+  "company",      // Company owner account
   "manager",      // Works under company
-  "driver",       // Works under manager or company
-  "customer",     // End user requesting delivery
+  "driver",       // Works under manager/company
+  "customer",     // End user
 ];
 
 /* =====================================================
    🧩 USER SCHEMA
-   ===================================================== */
+===================================================== */
 const userSchema = new mongoose.Schema(
   {
     /* -------------------------------
@@ -44,75 +44,80 @@ const userSchema = new mongoose.Schema(
     },
 
     /* =====================================================
-         🏰 SUPERADMIN PROPERTIES
-       ===================================================== */
-    isSystemOwner: {
-      type: Boolean,
-      default: false,
-    },
+       🟦 SUPERADMIN PROPERTIES
+    ===================================================== */
+    isSystemOwner: { type: Boolean, default: false },
 
     systemAccessLevel: {
-      type: Number,        // 1 = view, 2 = edit, 3 = full access
+      type: Number, // 1=view, 2=edit, 3=full
       default: 3,
       min: 1,
       max: 3,
     },
 
     /* =====================================================
-       🏢 COMPANY & TEAM RELATIONS
-       ===================================================== */
+       🏢 COMPANY RELATIONS (FIXED)
+       - Drivers/Managers/Company Owner → companyId
+       - Customers → companyIds (multi-company)
+    ===================================================== */
 
-    // Used by MANAGER and DRIVER
+    // Single-company link (driver/manager/company)
     companyId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: "Company",
       default: null,
+      index: true,
     },
 
-    // Used only by DRIVER
+    // NEW — Multi-company support (customers)
+    companyIds: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Company",
+      },
+    ],
+
+    // Drivers created by a manager
     managerId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       default: null,
     },
 
-    // Company accounts
+    // Company accounts (optional label)
     companyName: { type: String, trim: true },
-        /* =====================================================
+
+    /* =====================================================
        🧾 COMPANY BILLING SETTINGS (10B / 10E)
-       ===================================================== */
+    ===================================================== */
     commissionDeliveryPercentage: {
       type: Number,
-      default: 20, // 20% on delivery fee
+      default: 20,
       min: 0,
       max: 100,
     },
+
     commissionProductPercentage: {
       type: Number,
-      default: 10, // 10% on products
+      default: 10,
       min: 0,
       max: 100,
     },
-    enableProductCommission: {
-      type: Boolean,
-      default: false, // you decided: OFF by default
-    },
-    enableProductSales: {
-      type: Boolean,
-      default: true, // you are selling products by default
-    },
+
+    enableProductCommission: { type: Boolean, default: false },
+
+    enableProductSales: { type: Boolean, default: true },
 
     /* =====================================================
        👤 PROFILE INFO
-       ===================================================== */
+    ===================================================== */
     profileImage: { type: String, default: null },
     phone: { type: String, trim: true },
     address: { type: String, trim: true },
 
     /* =====================================================
        🚚 DRIVER-SPECIFIC FIELDS
-       ===================================================== */
-
+    ===================================================== */
     driverStatus: {
       type: String,
       enum: ["offline", "available", "on_trip"],
@@ -139,15 +144,15 @@ const userSchema = new mongoose.Schema(
 
     /* =====================================================
        🟦 MANAGER-SPECIFIC FIELDS
-       ===================================================== */
+    ===================================================== */
     managerDepartment: { type: String, trim: true },
     managerNotes: { type: String, trim: true },
     managerPermissions: { type: Array, default: [] },
 
     /* =====================================================
-       🟩 CUSTOMER-SPECIFIC FIELDS (10C Option A)
-       ===================================================== */
-
+       🟩 CUSTOMER-SPECIFIC FIELDS
+       Supports multi-company customers
+    ===================================================== */
     customerNotes: { type: String, trim: true },
 
     customerRating: { type: Number, default: 0 },
@@ -160,14 +165,11 @@ const userSchema = new mongoose.Schema(
       },
     ],
 
-    isCustomerVerified: {
-      type: Boolean,
-      default: false,
-    },
+    isCustomerVerified: { type: Boolean, default: false },
 
     /* =====================================================
        ⚙️ ACCOUNT STATUS
-       ===================================================== */
+    ===================================================== */
     isActive: { type: Boolean, default: true },
   },
 
@@ -175,21 +177,21 @@ const userSchema = new mongoose.Schema(
 );
 
 /* =====================================================
-   🔐 COMPARE PASSWORD
-   ===================================================== */
+   🔐 PASSWORD CHECK
+===================================================== */
 userSchema.methods.matchPassword = async function (enteredPassword) {
   return bcrypt.compare(enteredPassword, this.passwordHash);
 };
 
 /* =====================================================
    🧠 VIRTUAL: SUPERADMIN CHECK
-   ===================================================== */
+===================================================== */
 userSchema.virtual("isSuperAdmin").get(function () {
   return this.role === "superadmin";
 });
 
 /* =====================================================
    📦 EXPORT MODEL
-   ===================================================== */
+===================================================== */
 const User = mongoose.model("User", userSchema);
 export default User;

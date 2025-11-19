@@ -1,92 +1,76 @@
 // server/src/routes/globalSettingsRoutes.js
-
 import { Router } from "express";
 import GlobalSettings from "../models/GlobalSettings.js";
 import { protect } from "../middleware/authMiddleware.js";
 import { authorizeRoles } from "../middleware/roleMiddleware.js";
-
-// SETTINGS CACHE HELPERS
 import {
   loadGlobalSettings,
   refreshGlobalSettings,
 } from "../middleware/globalSettingsMiddleware.js";
 
 const router = Router();
-const superAdminOnly = [protect, authorizeRoles("superadmin")];
+const superOnly = [protect, authorizeRoles("superadmin")];
 
 /* ==========================================================
-   1️⃣ GET ALL GLOBAL SETTINGS
-   GET /api/settings
+   1. Get (cached) Global Settings
 ========================================================== */
-router.get("/", superAdminOnly, async (req, res) => {
+router.get("/", superOnly, async (req, res) => {
   try {
-    const settings = await loadGlobalSettings(); // load cached version
-
-    res.json({
-      ok: true,
-      settings,
-    });
+    const settings = await loadGlobalSettings();
+    res.json({ ok: true, settings });
   } catch (err) {
-    console.error("❌ Global settings fetch error:", err.message);
-    res.status(500).json({ error: "Failed to load global settings" });
+    console.error("❌ Error loading global settings:", err);
+    res.status(500).json({ error: "Cannot load global settings" });
   }
 });
 
 /* ==========================================================
-   2️⃣ UPDATE GLOBAL SETTINGS
-   PATCH /api/settings
+   2. Update Settings
 ========================================================== */
-router.patch("/", superAdminOnly, async (req, res) => {
+router.patch("/", superOnly, async (req, res) => {
   try {
     const updates = req.body;
 
-    const settings = await GlobalSettings.findOneAndUpdate({}, updates, {
+    const updated = await GlobalSettings.findOneAndUpdate({}, updates, {
       new: true,
       upsert: true,
     });
 
-    // IMPORTANT — refresh cache
     await refreshGlobalSettings();
 
     res.json({
       ok: true,
-      message: "Global settings updated successfully",
-      settings,
+      message: "Settings updated",
+      settings: updated,
     });
   } catch (err) {
-    console.error("❌ Global settings update error:", err.message);
-    res.status(500).json({ error: "Failed to update settings" });
+    console.error("❌ Global settings update error:", err);
+    res.status(500).json({ error: "Cannot update settings" });
   }
 });
 
 /* ==========================================================
-   3️⃣ TOGGLE MAINTENANCE MODE
-   PATCH /api/settings/maintenance/toggle
+   3. Toggle Maintenance Mode
 ========================================================== */
-router.patch("/maintenance/toggle", superAdminOnly, async (req, res) => {
+router.patch("/maintenance/toggle", superOnly, async (req, res) => {
   try {
     let settings = await GlobalSettings.findOne();
 
-    if (!settings) {
-      settings = await GlobalSettings.create({});
-    }
+    if (!settings) settings = await GlobalSettings.create({});
 
     settings.maintenanceMode = !settings.maintenanceMode;
     await settings.save();
 
-    // REFRESH cache after toggle
     await refreshGlobalSettings();
 
     res.json({
       ok: true,
       maintenanceMode: settings.maintenanceMode,
-      message: `System is now ${
-        settings.maintenanceMode ? "in maintenance mode" : "active"
-      }`,
+      message: `System now ${settings.maintenanceMode ? "in maintenance" : "active"}`,
     });
   } catch (err) {
-    console.error("❌ Maintenance toggle error:", err.message);
-    res.status(500).json({ error: "Failed to toggle maintenance mode" });
+    console.error("❌ Maintenance toggle error:", err);
+    res.status(500).json({ error: "Toggle failed" });
   }
 });
 

@@ -66,12 +66,18 @@ router.post(
         businessType,
       } = req.body;
 
-      if (!name || !email)
-        return res.status(400).json({ error: "Company name and email required" });
+      if (!name || !email) {
+        return res.status(400).json({
+          error: "Company name and email required",
+        });
+      }
 
       const existing = await Company.findOne({ email });
-      if (existing)
-        return res.status(409).json({ error: "Company already exists" });
+      if (existing) {
+        return res.status(409).json({
+          error: "Company already exists",
+        });
+      }
 
       const company = await Company.create({
         name,
@@ -79,8 +85,6 @@ router.post(
         phone,
         address,
         ownerId: ownerId || null,
-
-        // 10A new fields:
         logo: logo || null,
         taxNumber: taxNumber || "",
         crNumber: crNumber || "",
@@ -141,8 +145,9 @@ router.patch(
         { new: true }
       );
 
-      if (!company)
+      if (!company) {
         return res.status(404).json({ error: "Company not found" });
+      }
 
       await logActivity({
         userId: req.user._id,
@@ -178,8 +183,9 @@ router.patch(
         { new: true }
       );
 
-      if (!company)
+      if (!company) {
         return res.status(404).json({ error: "Company not found" });
+      }
 
       await logActivity({
         userId: req.user._id,
@@ -212,12 +218,14 @@ router.patch(
   async (req, res) => {
     try {
       const { newPassword } = req.body;
-      if (!newPassword)
+      if (!newPassword) {
         return res.status(400).json({ error: "newPassword is required" });
+      }
 
       const owner = await User.findById(req.params.ownerId);
-      if (!owner || owner.role !== "company")
+      if (!owner || owner.role !== "company") {
         return res.status(404).json({ error: "Company owner not found" });
+      }
 
       owner.passwordHash = await bcrypt.hash(newPassword, 10);
       await owner.save();
@@ -253,11 +261,14 @@ router.get(
     try {
       const companyId = req.params.companyId;
 
-      const company = await Company.findById(companyId)
-        .populate("ownerId", "name email role");
+      const company = await Company.findById(companyId).populate(
+        "ownerId",
+        "name email role"
+      );
 
-      if (!company)
+      if (!company) {
         return res.status(404).json({ error: "Company not found" });
+      }
 
       const totalDrivers = await User.countDocuments({
         companyId,
@@ -307,15 +318,25 @@ router.post(
   authorizeRoles("owner"),
   async (req, res) => {
     try {
-      const { name, email, phone, address, logo, taxNumber, crNumber, businessType } =
-        req.body;
+      const {
+        name,
+        email,
+        phone,
+        address,
+        logo,
+        taxNumber,
+        crNumber,
+        businessType,
+      } = req.body;
 
-      if (!name || !email)
+      if (!name || !email) {
         return res.status(400).json({ error: "Company name and email required" });
+      }
 
       const existing = await Company.findOne({ email });
-      if (existing)
+      if (existing) {
         return res.status(409).json({ error: "Company already exists" });
+      }
 
       const company = await Company.create({
         name,
@@ -323,7 +344,6 @@ router.post(
         phone,
         address,
         ownerId: req.user._id,
-
         logo: logo || null,
         taxNumber: taxNumber || "",
         crNumber: crNumber || "",
@@ -351,7 +371,7 @@ router.post(
 );
 
 /* ==========================================================
-   📊 COMPANY DASHBOARD (Your Original Code)
+   📊 COMPANY DASHBOARD
 ========================================================== */
 router.get(
   "/dashboard",
@@ -365,11 +385,7 @@ router.get(
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      const monthStart = new Date(
-        today.getFullYear(),
-        today.getMonth(),
-        1
-      );
+      const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
 
       const totalDrivers = await User.countDocuments({
         companyId,
@@ -400,12 +416,10 @@ router.get(
           companyId,
           createdAt: { $gte: today },
         }),
-
         Trip.countDocuments({
           companyId,
           createdAt: { $gte: monthStart },
         }),
-
         Trip.countDocuments({ companyId, status: "pending" }),
         Trip.countDocuments({ companyId, status: "assigned" }),
         Trip.countDocuments({ companyId, status: "in_progress" }),
@@ -463,7 +477,9 @@ router.get(
 );
 
 /* ==========================================================
-   🔵 (NEW) CUSTOMER MANAGEMENT ROUTES FOR COMPANY + MANAGER
+   🔵 CUSTOMER MANAGEMENT ROUTES
+   - Company/Manager sees ONLY their own customers
+   - System owner/superadmin can see ALL via other routes
 ========================================================== */
 
 /* ---------- MULTER STORAGE FOR CUSTOMER DOCUMENT UPLOADS ---------- */
@@ -481,25 +497,37 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-/* 1️⃣ LIST ALL CUSTOMERS */
+const resolveCompanyIdFromUser = (user) =>
+  user.role === "company" ? user._id : user.companyId;
+
+/* 1️⃣ LIST ALL CUSTOMERS (OF THIS COMPANY ONLY) */
 router.get(
   "/customers/list",
   protect,
   authorizeRoles("company", "manager"),
   async (req, res) => {
     try {
-      const customers = await User.find({ role: "customer" })
+      const companyId = resolveCompanyIdFromUser(req.user);
+
+      const customers = await User.find({
+        role: "customer",
+        $or: [
+          { companyIds: companyId }, // new multi-company design
+          { companyId: companyId }, // backward compatibility
+        ],
+      })
         .select("-passwordHash")
         .sort({ createdAt: -1 });
 
       res.json({ ok: true, customers });
     } catch (err) {
+      console.error("❌ Error loading customers:", err.message);
       res.status(500).json({ error: "Error loading customers" });
     }
   }
 );
 
-/* 2️⃣ SEARCH CUSTOMERS */
+/* 2️⃣ SEARCH CUSTOMERS (OF THIS COMPANY ONLY) */
 router.get(
   "/customers/search",
   protect,
@@ -507,9 +535,14 @@ router.get(
   async (req, res) => {
     try {
       const q = req.query.q || "";
+      const companyId = resolveCompanyIdFromUser(req.user);
 
       const customers = await User.find({
         role: "customer",
+        $or: [
+          { companyIds: companyId },
+          { companyId: companyId },
+        ],
         $or: [
           { name: { $regex: q, $options: "i" } },
           { email: { $regex: q, $options: "i" } },
@@ -519,79 +552,107 @@ router.get(
 
       res.json({ ok: true, customers });
     } catch (err) {
+      console.error("❌ Search customers error:", err.message);
       res.status(500).json({ error: "Search failed" });
     }
   }
 );
 
-/* 3️⃣ CUSTOMER FULL DETAILS */
+/* 3️⃣ CUSTOMER FULL DETAILS (ONLY IF LINKED TO THIS COMPANY) */
 router.get(
   "/customers/:customerId/details",
   protect,
   authorizeRoles("company", "manager"),
   async (req, res) => {
     try {
-      const customer = await User.findById(req.params.customerId).select(
-        "-passwordHash"
-      );
+      const companyId = resolveCompanyIdFromUser(req.user);
 
-      if (!customer || customer.role !== "customer")
+      const customer = await User.findOne({
+        _id: req.params.customerId,
+        role: "customer",
+        $or: [
+          { companyIds: companyId },
+          { companyId: companyId },
+        ],
+      }).select("-passwordHash");
+
+      if (!customer) {
         return res.status(404).json({ error: "Customer not found" });
+      }
 
       res.json({ ok: true, customer });
     } catch (err) {
+      console.error("❌ Customer details error:", err.message);
       res.status(500).json({ error: "Error loading customer" });
     }
   }
 );
 
-/* 4️⃣ CUSTOMER TRIP HISTORY */
+/* 4️⃣ CUSTOMER TRIP HISTORY (ONLY THIS COMPANY'S TRIPS) */
 router.get(
   "/customers/:customerId/trips",
   protect,
   authorizeRoles("company", "manager"),
   async (req, res) => {
     try {
-      const trips = await Trip.find({ customerId: req.params.customerId }).sort(
-        { createdAt: -1 }
-      );
+      const companyId = resolveCompanyIdFromUser(req.user);
+
+      const trips = await Trip.find({
+        customerId: req.params.customerId,
+        companyId, // ensure only this company's trips
+      }).sort({ createdAt: -1 });
 
       res.json({ ok: true, trips });
-    } catch {
+    } catch (err) {
+      console.error("❌ Customer trips error:", err.message);
       res.status(500).json({ error: "Error loading trips" });
     }
   }
 );
 
-/* 5️⃣ CUSTOMER PAYMENT HISTORY */
+/* 5️⃣ CUSTOMER PAYMENT HISTORY (ONLY THIS COMPANY'S PAYMENTS) */
 router.get(
   "/customers/:customerId/payments",
   protect,
   authorizeRoles("company", "manager"),
   async (req, res) => {
     try {
-      const payments = await Payment.find({ customerId: req.params.customerId }).sort(
-        { createdAt: -1 }
-      );
+      const companyId = resolveCompanyIdFromUser(req.user);
+
+      const payments = await Payment.find({
+        customerId: req.params.customerId,
+        companyId,
+      }).sort({ createdAt: -1 });
 
       res.json({ ok: true, payments });
-    } catch {
+    } catch (err) {
+      console.error("❌ Customer payments error:", err.message);
       res.status(500).json({ error: "Error loading payments" });
     }
   }
 );
 
-/* 6️⃣ SUSPEND / ACTIVATE CUSTOMER */
+/* 6️⃣ SUSPEND / ACTIVATE CUSTOMER (ONLY IF LINKED TO THIS COMPANY) */
 router.patch(
   "/customers/:customerId/toggle-active",
   protect,
   authorizeRoles("company", "manager"),
   async (req, res) => {
     try {
-      const customer = await User.findById(req.params.customerId);
+      const companyId = resolveCompanyIdFromUser(req.user);
 
-      if (!customer || customer.role !== "customer")
+      const customer = await User.findOne({
+        _id: req.params.customerId,
+        role: "customer",
+        $or: [
+          { companyIds: companyId },
+          { companyId: companyId },
+        ],
+      });
+
+      if (!customer) {
         return res.status(404).json({ error: "Customer not found" });
+      }
 
       customer.isActive = !customer.isActive;
       await customer.save();
@@ -602,13 +663,14 @@ router.patch(
           customer.isActive ? "active" : "suspended"
         }`,
       });
-    } catch {
+    } catch (err) {
+      console.error("❌ Toggle customer active error:", err.message);
       res.status(500).json({ error: "Error updating status" });
     }
   }
 );
 
-/* 7️⃣ ADD NOTES TO CUSTOMER */
+/* 7️⃣ ADD NOTES TO CUSTOMER (ONLY IF LINKED TO THIS COMPANY) */
 router.patch(
   "/customers/:customerId/notes",
   protect,
@@ -616,21 +678,34 @@ router.patch(
   async (req, res) => {
     try {
       const { notes } = req.body;
+      const companyId = resolveCompanyIdFromUser(req.user);
 
-      const updated = await User.findByIdAndUpdate(
-        req.params.customerId,
+      const updated = await User.findOneAndUpdate(
+        {
+          _id: req.params.customerId,
+          role: "customer",
+          $or: [
+            { companyIds: companyId },
+            { companyId: companyId },
+          ],
+        },
         { customerNotes: notes },
         { new: true }
       ).select("-passwordHash");
 
+      if (!updated) {
+        return res.status(404).json({ error: "Customer not found" });
+      }
+
       res.json({ ok: true, updated });
-    } catch {
+    } catch (err) {
+      console.error("❌ Update customer notes error:", err.message);
       res.status(500).json({ error: "Error updating notes" });
     }
   }
 );
 
-/* 8️⃣ CUSTOMER DOCUMENT UPLOAD */
+/* 8️⃣ CUSTOMER DOCUMENT UPLOAD (ONLY IF LINKED TO THIS COMPANY) */
 router.post(
   "/customers/:customerId/upload-document",
   protect,
@@ -638,26 +713,41 @@ router.post(
   upload.single("document"),
   async (req, res) => {
     try {
-      if (!req.file)
+      if (!req.file) {
         return res.status(400).json({ error: "Document file is required" });
+      }
+
+      const companyId = resolveCompanyIdFromUser(req.user);
 
       const filePath = `/uploads/customers/documents/${req.file.filename}`;
 
-      const updated = await User.findByIdAndUpdate(
-        req.params.customerId,
+      const updated = await User.findOneAndUpdate(
+        {
+          _id: req.params.customerId,
+          role: "customer",
+          $or: [
+            { companyIds: companyId },
+            { companyId: companyId },
+          ],
+        },
         {
           $push: {
             customerDocuments: {
               fileName: req.file.originalname,
-              filePath: filePath,
+              filePath,
             },
           },
         },
         { new: true }
       );
 
+      if (!updated) {
+        return res.status(404).json({ error: "Customer not found" });
+      }
+
       res.json({ ok: true, updated });
-    } catch {
+    } catch (err) {
+      console.error("❌ Upload customer document error:", err.message);
       res.status(500).json({ error: "Error uploading document" });
     }
   }

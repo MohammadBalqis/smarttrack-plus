@@ -11,7 +11,7 @@ const router = Router();
 
 /* ==========================================================
    📸 MULTER STORAGE FOR PROFILE IMAGE
-   ========================================================== */
+========================================================== */
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const uploadDir = path.join("uploads", "customers");
@@ -38,7 +38,7 @@ const upload = multer({
 
 /* ==========================================================
    🟢 Get MY profile (customer only)
-   ========================================================== */
+========================================================== */
 router.get(
   "/profile",
   protect,
@@ -48,6 +48,7 @@ router.get(
       const user = await User.findById(req.user._id).select("-passwordHash");
       res.json({ ok: true, user });
     } catch (err) {
+      console.error("❌ Get customer profile error:", err.message);
       res.status(500).json({ error: "Error loading profile" });
     }
   }
@@ -55,7 +56,7 @@ router.get(
 
 /* ==========================================================
    🟡 Update MY profile (customer only)
-   ========================================================== */
+========================================================== */
 router.put(
   "/update-profile",
   protect,
@@ -79,6 +80,7 @@ router.put(
         user,
       });
     } catch (err) {
+      console.error("❌ Update customer profile error:", err.message);
       res.status(500).json({ error: "Error updating profile" });
     }
   }
@@ -86,7 +88,7 @@ router.put(
 
 /* ==========================================================
    🟣 Update MY profile image
-   ========================================================== */
+========================================================== */
 router.put(
   "/update-image",
   protect,
@@ -94,8 +96,9 @@ router.put(
   upload.single("image"),
   async (req, res) => {
     try {
-      if (!req.file)
+      if (!req.file) {
         return res.status(400).json({ error: "Image file is required" });
+      }
 
       const imagePath = `/uploads/customers/${req.file.filename}`;
 
@@ -111,6 +114,7 @@ router.put(
         user,
       });
     } catch (err) {
+      console.error("❌ Update customer image error:", err.message);
       res.status(500).json({ error: "Error updating image" });
     }
   }

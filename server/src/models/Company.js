@@ -54,6 +54,38 @@ const companySchema = new mongoose.Schema(
     },
 
     /* ==========================================================
+       🎨 BRANDING & WHITE-LABELING (10H)
+    ========================================================== */
+    branding: {
+      logoUrl: { type: String, default: null },
+
+      primaryColor: { type: String, default: "#3b82f6" },   // blue
+      secondaryColor: { type: String, default: "#1e293b" }, // slate
+      sidebarColor: { type: String, default: "#0f172a" },
+      accentColor: { type: String, default: "#3b82f6" },
+
+      emailBranding: {
+        headerColor: { type: String, default: "#3b82f6" },
+        footerColor: { type: String, default: "#0f172a" },
+        signature: { type: String, default: "SmartTrack Plus" },
+      },
+
+      invoiceBranding: {
+        headerColor: { type: String, default: "#3b82f6" },
+        footerColor: { type: String, default: "#0f172a" },
+        stampImage: { type: String, default: null },
+      },
+
+      // Optional advanced white-labeling
+      customDomain: { type: String, default: null },
+
+      mobileTheme: {
+        splashImage: { type: String, default: null },
+        appPrimaryColor: { type: String, default: "#3b82f6" },
+      },
+    },
+
+    /* ==========================================================
        🧑‍💼 COMPANY OWNERSHIP
     ========================================================== */
     ownerId: {
@@ -85,6 +117,13 @@ const companySchema = new mongoose.Schema(
       enum: ["active", "unpaid", "suspended"],
       default: "active",
     },
+/* ==========================================================
+   🔑 API ACCESS (Public Integration)
+========================================================== */
+apiKey: { type: String, default: null, unique: true },
+apiEnabled: { type: Boolean, default: true },
+apiRateLimitPerMinute: { type: Number, default: 30 },  // protect your server
+apiWebhookUrl: { type: String, default: null },        // to send updates
 
     /* ==========================================================
        ⚙️ STATUS

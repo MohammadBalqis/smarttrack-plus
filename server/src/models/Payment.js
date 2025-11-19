@@ -35,37 +35,34 @@ const paymentSchema = new mongoose.Schema(
     },
 
     /* ==========================================================
-       💰 Amount Breakdown
+       💰 Amount Breakdown (Customer FINAL payment)
        ========================================================== */
 
-    // TOTAL paid (customer final amount)
-    totalAmount: { type: Number, required: true },
-
-    // Delivery Fee (from trip)
-    deliveryFee: { type: Number, default: 0 },
-
-    // Product/service price (future e-commerce expansion)
-    productTotal: { type: Number, default: 0 },
-
-    // Discounts
+    totalAmount: { type: Number, required: true },         // Final customer payment
+    deliveryFee: { type: Number, default: 0 },             // From trip
+    productTotal: { type: Number, default: 0 },            // Future e-commerce
     discountAmount: { type: Number, default: 0 },
     promoCodeUsed: { type: String, default: null },
 
-    // Tax
     taxAmount: { type: Number, default: 0 },
 
-    // If using Wish Money / Online Payment Gateway
-    gatewayFee: { type: Number, default: 0 },
+    gatewayFee: { type: Number, default: 0 },              // Wish Money gateway fee
+
+    currency: { type: String, default: "USD" },            // NEW (clean)
 
     /* ==========================================================
-       🧮 Earnings Breakdown
+       🧮 Earnings Breakdown (snapshot)
        ========================================================== */
 
     driverEarning: { type: Number, default: 0 },
-
     companyEarning: { type: Number, default: 0 },
+    platformEarning: { type: Number, default: 0 },          // System owner earning
 
-    platformEarning: { type: Number, default: 0 }, // for SaaS / system owner
+    /* 🔥 NEW — Clean, organized breakdown for analytics */
+    paymentBreakdown: {
+      type: Object,
+      default: {}, // { deliveryFee, productTotal, discount, tax, gatewayFee }
+    },
 
     /* ==========================================================
        💳 Payment Details
@@ -74,10 +71,12 @@ const paymentSchema = new mongoose.Schema(
     method: {
       type: String,
       enum: [
-        "cod",            // Cash on Delivery
-        "wallet",         // Internal wallet
-        "wish_money",     // Online gateway (your new option)
-        "manual",         // Admin compensation or override
+        "cod",          // Cash on delivery
+        "cash",         // Cash (explicit)
+        "card",         // Debit / credit
+        "wallet",       // Internal wallet
+        "wish_money",   // Wish Money online gateway
+        "manual",       // Adjustments / admin
       ],
       default: "cod",
     },
@@ -86,18 +85,19 @@ const paymentSchema = new mongoose.Schema(
       type: String,
       enum: ["pending", "paid", "failed", "refunded"],
       default: "pending",
+      index: true,
     },
 
-    transactionId: { type: String, default: null }, // From Wish Money API
-    gatewayResponse: { type: Object, default: {} }, // Raw API response
+    transactionId: { type: String, default: null },         // Wish money transaction ref
+    gatewayResponse: { type: Object, default: {} },         // Raw API response
+    isPlatformFeeApplied: { type: Boolean, default: false }, // NEW flag
 
     /* ==========================================================
-       📄 Invoices
+       📄 Invoice Attachments (snapshot)
        ========================================================== */
 
     invoiceNumber: { type: String, default: null },
     invoicePdfUrl: { type: String, default: null },
-
     generationDate: { type: Date, default: null },
 
     /* ==========================================================
@@ -113,6 +113,11 @@ const paymentSchema = new mongoose.Schema(
     },
 
     isActive: { type: Boolean, default: true },
+
+    /* ==========================================================
+       🔧 Meta (Extensible)
+       ========================================================== */
+    meta: { type: Object, default: {} },                    // NEW — for expansion
   },
   { timestamps: true }
 );

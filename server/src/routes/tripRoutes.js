@@ -2,6 +2,7 @@
 import { Router } from "express";
 import { protect } from "../middleware/authMiddleware.js";
 import { authorizeRoles } from "../middleware/roleMiddleware.js";
+import { qrLimiter } from "../middleware/rateLimitMiddleware.js";
 
 // Core controllers
 import {
@@ -32,8 +33,8 @@ import {
 const router = Router();
 
 /* ==========================================================
-   ROUTES MAPPING — same paths & roles as before
-   ========================================================== */
+   TRIP ROUTES
+========================================================== */
 
 // 1. Create trip
 router.post(
@@ -99,8 +100,8 @@ router.get(
   generateTripQr
 );
 
-// 8. Confirm delivery (NO auth, same as before)
-router.post("/confirm-delivery", confirmDelivery);
+// 8. Confirm delivery — secured with rate limiter
+router.post("/confirm-delivery", qrLimiter, confirmDelivery);
 
 // 9. Customer live tracking
 router.get(
@@ -110,7 +111,7 @@ router.get(
   getCustomerLiveTrip
 );
 
-// Filtered manager search
+// Manager search
 router.get(
   "/manager/search",
   protect,
@@ -118,7 +119,7 @@ router.get(
   managerSearchTrips
 );
 
-// 6D. Cancel
+// Cancel
 router.patch(
   "/cancel/:tripId",
   protect,
@@ -126,7 +127,7 @@ router.patch(
   cancelTrip
 );
 
-// 6E. Update
+// Update
 router.patch(
   "/update/:tripId",
   protect,
@@ -134,7 +135,7 @@ router.patch(
   updateTrip
 );
 
-// 7E. Live status
+// Live status
 router.post(
   "/live-status",
   protect,

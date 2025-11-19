@@ -1,7 +1,9 @@
-// server/src/routes/authRoutes.js
+// server/src/routes/authRoutes.js (FINAL SECURITY VERSION)
+
 import { Router } from "express";
 import { protect } from "../middleware/authMiddleware.js";
 import { authorizeRoles } from "../middleware/roleMiddleware.js";
+import { loginLimiter } from "../middleware/rateLimitMiddleware.js";
 
 import {
   register,
@@ -10,22 +12,45 @@ import {
   companyCreateUser,
 } from "../controllers/authController.js";
 
-// ✅ FIXED IMPORT — no other changes
 import { logActivity } from "../utils/activityLogger.js";
+import sanitize from "sanitize-html";
+import Joi from "joi";
 
 const router = Router();
 
 /* ==========================================================
-   🔐 PUBLIC AUTH
+   🧼 INPUT VALIDATION SCHEMAS
+========================================================== */
+const registerSchema = Joi.object({
+  name: Joi.string().min(3).max(40).required(),
+  email: Joi.string().email().required(),
+  password: Joi.string().min(6).max(80).required(),
+  role: Joi.string().valid("customer", "driver", "manager", "company").optional(),
+});
+
+const loginSchema = Joi.object({
+  email: Joi.string().email().required(),
+  password: Joi.string().required(),
+});
+
+/* ==========================================================
+   🔐 PUBLIC AUTH ROUTES
 ========================================================== */
 router.post("/register", async (req, res, next) => {
   try {
+    // Validate & sanitize
+    const { error } = registerSchema.validate(req.body);
+    if (error) {
+      return res.status(400).json({ error: error.details[0].message });
+    }
+
+    req.body.email = sanitize(req.body.email);
+    req.body.name = sanitize(req.body.name);
+
     await register(req, res);
 
-    // 👉 Register success log (ONLY if no error)
     if (res.statusCode === 200 || res.statusCode === 201) {
       await logActivity({
-        userId: null,
         action: "REGISTER_SUCCESS",
         description: `New account registered: ${req.body.email}`,
         ipAddress: req.ip,
@@ -37,11 +62,17 @@ router.post("/register", async (req, res, next) => {
   }
 });
 
-router.post("/login", async (req, res, next) => {
+/* ==========================================================
+   🔐 LOGIN (Rate Limited)
+========================================================== */
+router.post("/login", loginLimiter, async (req, res, next) => {
   try {
+    // Validate login body
+    const { error } = loginSchema.validate(req.body);
+    if (error) return res.status(400).json({ error: error.details[0].message });
+
     await login(req, res);
 
-    // 👉 Login success
     if (res.statusCode === 200) {
       await logActivity({
         userId: res.locals.userId,
@@ -52,21 +83,18 @@ router.post("/login", async (req, res, next) => {
       });
     }
   } catch (err) {
-    // 👉 Login failed
     await logActivity({
-      userId: null,
       action: "LOGIN_FAILED",
-      description: `Failed login attempt for: ${req.body.email}`,
+      description: `Failed login: ${req.body.email}`,
       ipAddress: req.ip,
       deviceInfo: req.headers["user-agent"],
     });
-
     next(err);
   }
 });
 
 /* ==========================================================
-   🟣 SUPERADMIN → CREATE COMPANY
+   👑 SUPERADMIN → CREATE COMPANY
 ========================================================== */
 router.post(
   "/superadmin/create-company",
@@ -74,9 +102,13 @@ router.post(
   authorizeRoles("superadmin"),
   async (req, res, next) => {
     try {
+      // sanitize critical values
+      req.body.email = sanitize(req.body.email || "");
+      req.body.name = sanitize(req.body.name || "");
+
       await superAdminCreateCompany(req, res);
 
-      if (res.statusCode === 200 || res.statusCode === 201) {
+      if (res.statusCode === 201 || res.statusCode === 200) {
         await logActivity({
           userId: req.user._id,
           action: "SUPERADMIN_CREATE_COMPANY",
@@ -92,7 +124,7 @@ router.post(
 );
 
 /* ==========================================================
-   🟠 COMPANY → CREATE MANAGER or DRIVER
+   🟠 COMPANY OWNER → CREATE USER (manager/driver only)
 ========================================================== */
 router.post(
   "/company/create-user",
@@ -100,13 +132,24 @@ router.post(
   authorizeRoles("company"),
   async (req, res, next) => {
     try {
+      const allowedRoles = ["manager", "driver"];
+
+      if (!allowedRoles.includes(req.body.role)) {
+        return res.status(400).json({
+          error: "Company owners can only create managers or drivers.",
+        });
+      }
+
+      req.body.email = sanitize(req.body.email || "");
+      req.body.name = sanitize(req.body.name || "");
+
       await companyCreateUser(req, res);
 
       if (res.statusCode === 200 || res.statusCode === 201) {
         await logActivity({
           userId: req.user._id,
           action: "COMPANY_CREATE_USER",
-          description: `Company created a ${req.body.role}: ${req.body.email}`,
+          description: `Company created ${req.body.role}: ${req.body.email}`,
           ipAddress: req.ip,
           deviceInfo: req.headers["user-agent"],
         });
