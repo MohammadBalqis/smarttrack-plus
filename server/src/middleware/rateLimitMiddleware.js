@@ -49,10 +49,24 @@ export const apiLimiter = rateLimit({
 ------------------------------------------ */
 export const publicApiLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 60, // 60 req/min per IP for partners
+  max: 60,
   message: {
     ok: false,
     error: "Too many public API requests. Please slow down.",
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+/* ------------------------------------------
+   Driver Creation Limiter
+------------------------------------------ */
+export const driverCreateLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 20,
+  message: {
+    ok: false,
+    error: "Too many driver creation requests. Please try again later.",
   },
   standardHeaders: true,
   legacyHeaders: false,

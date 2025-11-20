@@ -3,6 +3,7 @@ import Trip from "../../models/Trip.js";
 import Vehicle from "../../models/Vehicle.js";
 import Payment from "../../models/Payment.js";
 import User from "../../models/User.js";
+import GlobalSettings from "../../models/GlobalSettings.js";
 import { logActivity } from "../../utils/activityLogger.js";
 import {
   getPopulatedTripForNotify,
@@ -10,11 +11,26 @@ import {
   broadcastTripStatus,
 } from "./tripHelpers.js";
 
+/* Helper: maintenance guard (superadmin bypass) */
+const ensureNotInMaintenance = async (req, res) => {
+  const settings = await GlobalSettings.findOne();
+  if (settings?.maintenanceMode && req.user.role !== "superadmin") {
+    res.status(503).json({
+      ok: false,
+      error: "System is under maintenance.",
+    });
+    return false;
+  }
+  return true;
+};
+
 /* ==========================================================
    🟢 1. Create a Trip (Company / Manager / Superadmin / Owner)
    ========================================================== */
 export const createTrip = async (req, res) => {
   try {
+    if (!(await ensureNotInMaintenance(req, res))) return;
+
     const {
       driverId,
       vehicleId,
@@ -162,6 +178,8 @@ export const createTrip = async (req, res) => {
    ========================================================== */
 export const assignTrip = async (req, res) => {
   try {
+    if (!(await ensureNotInMaintenance(req, res))) return;
+
     const {
       tripId,
       driverId,
@@ -318,6 +336,8 @@ export const assignTrip = async (req, res) => {
    ========================================================== */
 export const completeTrip = async (req, res) => {
   try {
+    if (!(await ensureNotInMaintenance(req, res))) return;
+
     const { tripId, totalDistance } = req.body;
 
     if (!tripId) {
@@ -333,97 +353,91 @@ export const completeTrip = async (req, res) => {
     trip.paymentStatus = "paid";
     trip.customerConfirmed = true;
     trip.confirmationTime = new Date();
-
     await trip.save();
 
-      // Free vehicle
-      await Vehicle.findByIdAndUpdate(trip.vehicleId, {
-        status: "available",
-        driverId: null,
+    // Free vehicle
+    await Vehicle.findByIdAndUpdate(trip.vehicleId, {
+      status: "available",
+      driverId: null,
+    });
+
+    // 🔐 Auto payment creation with commission breakdown (10E)
+    const existingPayment = await Payment.findOne({ tripId });
+    if (!existingPayment) {
+      // 1) Load company billing settings from User (role: company)
+      const companyUser = await User.findById(trip.companyId).select(
+        "commissionDeliveryPercentage commissionProductPercentage enableProductCommission enableProductSales"
+      );
+
+      // 2) Base amounts from trip
+      const deliveryFee = trip.deliveryFee || 0;
+      const productTotal = Array.isArray(trip.orderItems)
+        ? trip.orderItems.reduce(
+            (sum, item) => sum + (item.subtotal || 0),
+            0
+          )
+        : 0;
+
+      // Customer paid total
+      const rawBase =
+        (companyUser?.enableProductSales ? productTotal : 0) + deliveryFee;
+
+      const discountAmount = 0;
+      const taxAmount = 0;
+      const gatewayFee = 0;
+
+      const totalAmount =
+        rawBase - discountAmount + taxAmount; // no negative
+
+      // 3) Commission rates (with safe defaults)
+      const deliveryRate =
+        companyUser?.commissionDeliveryPercentage ?? 20;
+      const productRate =
+        companyUser?.commissionProductPercentage ?? 10;
+      const enableProductCommission =
+        companyUser?.enableProductCommission ?? false;
+
+      // 4) Commission amounts
+      const companyDeliveryCommissionAmount =
+        (deliveryFee * deliveryRate) / 100;
+
+      const companyProductCommissionAmount = enableProductCommission
+        ? (productTotal * productRate) / 100
+        : 0;
+
+      const companyEarning =
+        companyDeliveryCommissionAmount + companyProductCommissionAmount;
+
+      // For now, platform commission is 0 from this flow
+      const platformEarning = 0;
+
+      // Driver gets the rest
+      const driverEarning =
+        totalAmount - companyEarning - platformEarning - gatewayFee;
+
+      await Payment.create({
+        tripId,
+        companyId: trip.companyId,
+        driverId: trip.driverId,
+        customerId: trip.customerId,
+
+        totalAmount,
+        deliveryFee,
+        productTotal,
+        discountAmount,
+        taxAmount,
+        gatewayFee,
+
+        driverEarning: Math.max(driverEarning, 0),
+        companyEarning: Math.max(companyEarning, 0),
+        platformEarning: Math.max(platformEarning, 0),
+
+        method: "cod",
+        status: "paid",
+        paidAt: new Date(),
+        createdBy: req.user._id,
       });
-
-      // 🔐 Auto payment creation with commission breakdown (10E)
-      const existingPayment = await Payment.findOne({ tripId });
-      if (!existingPayment) {
-        // 1) Load company billing settings from User (role: company)
-        const companyUser = await User.findById(trip.companyId).select(
-          "commissionDeliveryPercentage commissionProductPercentage enableProductCommission enableProductSales"
-        );
-
-        // 2) Base amounts from trip
-        const deliveryFee = trip.deliveryFee || 0;
-        const productSubtotal = Array.isArray(trip.orderItems)
-          ? trip.orderItems.reduce(
-              (sum, item) => sum + (item.subtotal || 0),
-              0
-            )
-          : 0;
-
-        // If totalAmount exists, trust it; otherwise calculate basic sum
-        const customerPaidTotal =
-          trip.totalAmount && trip.totalAmount > 0
-            ? trip.totalAmount
-            : productSubtotal + deliveryFee;
-
-        // 3) Commission rates (with safe defaults)
-        const deliveryRate =
-          companyUser?.commissionDeliveryPercentage ?? 20;
-        const productRate =
-          companyUser?.commissionProductPercentage ?? 10;
-        const enableProductCommission =
-          companyUser?.enableProductCommission ?? false;
-
-        // 4) Commission amounts
-        const companyDeliveryCommissionAmount =
-          (deliveryFee * deliveryRate) / 100;
-
-        const companyProductCommissionAmount = enableProductCommission
-          ? (productSubtotal * productRate) / 100
-          : 0;
-
-        // 5) Gateway (Wish Money) — 0 for now for COD
-        const gatewayFee = 0;
-
-        // 6) Company revenue & driver earning
-        const companyTotalRevenue =
-          companyDeliveryCommissionAmount +
-          companyProductCommissionAmount -
-          gatewayFee;
-
-        const driverEarning =
-          customerPaidTotal - companyTotalRevenue - gatewayFee;
-
-        // 7) Create payment record
-        await Payment.create({
-          tripId,
-          companyId: trip.companyId,
-          driverId: trip.driverId,
-          customerId: trip.customerId,
-
-          // core
-          amount: customerPaidTotal,
-          method: "cod",
-          status: "paid",
-          collectedBy: "driver",
-
-          // breakdown
-          productSubtotal,
-          deliveryFee,
-          customerPaidTotal,
-          discount: 0,
-          taxAmount: 0,
-          gatewayFee,
-
-          commissionDeliveryRate: deliveryRate,
-          commissionProductRate: productRate,
-          companyDeliveryCommissionAmount,
-          companyProductCommissionAmount,
-          companyTotalRevenue,
-          driverEarning,
-        });
-      }
-
-
+    }
 
     // 🔔 Notifications
     const populatedTrip = await getPopulatedTripForNotify(trip._id);
@@ -483,6 +497,8 @@ export const completeTrip = async (req, res) => {
    ========================================================== */
 export const listTrips = async (req, res) => {
   try {
+    if (!(await ensureNotInMaintenance(req, res))) return;
+
     const filter = {};
 
     if (req.user.role === "company") {
@@ -519,6 +535,8 @@ export const listTrips = async (req, res) => {
    ========================================================== */
 export const managerSearchTrips = async (req, res) => {
   try {
+    if (!(await ensureNotInMaintenance(req, res))) return;
+
     const {
       status,
       driverId,
@@ -613,6 +631,8 @@ export const managerSearchTrips = async (req, res) => {
    ========================================================== */
 export const cancelTrip = async (req, res) => {
   try {
+    if (!(await ensureNotInMaintenance(req, res))) return;
+
     const { tripId } = req.params;
     const { reason, companyId: bodyCompanyId } = req.body;
 
@@ -739,6 +759,8 @@ export const cancelTrip = async (req, res) => {
    ========================================================== */
 export const updateTrip = async (req, res) => {
   try {
+    if (!(await ensureNotInMaintenance(req, res))) return;
+
     const { tripId } = req.params;
     const {
       driverId,

@@ -1,0 +1,54 @@
+.container {
+  display: flex;
+  height: 100vh;
+  background: #f1f5f9;
+  font-family: "Inter", sans-serif;
+}
+
+.sidebar {
+  width: 240px;
+  background: #1e293b;
+  color: white;
+  padding: 25px 15px;
+  display: flex;
+  flex-direction: column;
+}
+
+.logo {
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 40px;
+}
+
+.menu {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.link {
+  color: #cbd5e1;
+  text-decoration: none;
+  font-size: 16px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  transition: 0.25s;
+}
+
+.link:hover {
+  background: #334155;
+  color: white;
+}
+
+.activeLink {
+  background: #475569;
+  color: white;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.content {
+  flex: 1;
+  padding: 25px;
+  overflow-y: auto;
+}

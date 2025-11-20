@@ -5,9 +5,9 @@ import Trip from "../models/Trip.js";
 import Payment from "../models/Payment.js";
 import bcrypt from "bcryptjs";
 
-// Correct imports
-import ActivityLog from "../models/ActivityLog.js";           // default model import
-import { logActivity } from "../utils/activityLogger.js";     // logger import
+import ActivityLog from "../models/ActivityLog.js";
+import GlobalSettings from "../models/GlobalSettings.js";
+import { logActivity } from "../utils/activityLogger.js";
 
 /* ==========================================================
    📊 SUPERADMIN SYSTEM DASHBOARD
@@ -46,7 +46,7 @@ export const getSuperAdminDashboard = async (req, res) => {
     });
   } catch (err) {
     console.error("❌ Dashboard Error:", err.message);
-    res.status(500).json({ error: "Server error loading dashboard" });
+    res.status(500).json({ ok: false, error: "Server error loading dashboard" });
   }
 };
 
@@ -62,7 +62,7 @@ export const listAllCompanies = async (req, res) => {
     res.json({ ok: true, total: companies.length, companies });
   } catch (err) {
     console.error("❌ Fetch companies error:", err.message);
-    res.status(500).json({ error: "Failed to fetch companies" });
+    res.status(500).json({ ok: false, error: "Failed to fetch companies" });
   }
 };
 
@@ -76,16 +76,18 @@ export const toggleCompanyStatus = async (req, res) => {
       role: "company",
     });
 
-    if (!company)
-      return res.status(404).json({ error: "Company not found" });
+    if (!company) {
+      return res.status(404).json({ ok: false, error: "Company not found" });
+    }
 
     company.isActive = !company.isActive;
     await company.save();
 
-    // Log activity
     await logActivity(req, {
       action: "COMPANY_STATUS_TOGGLED",
-      description: `Company ${company.companyName} is now ${company.isActive ? "active" : "inactive"}`,
+      description: `Company ${company.companyName} is now ${
+        company.isActive ? "active" : "inactive"
+      }`,
       targetModel: "User",
       targetId: company._id,
       category: "user",
@@ -98,7 +100,7 @@ export const toggleCompanyStatus = async (req, res) => {
     });
   } catch (err) {
     console.error("❌ Toggle company error:", err.message);
-    res.status(500).json({ error: "Failed to update company status" });
+    res.status(500).json({ ok: false, error: "Failed to update company status" });
   }
 };
 
@@ -109,12 +111,18 @@ export const createCompany = async (req, res) => {
   try {
     const { name, email, password, companyName } = req.body;
 
-    if (!name || !email || !password)
-      return res.status(400).json({ error: "Missing required fields" });
+    if (!name || !email || !password) {
+      return res
+        .status(400)
+        .json({ ok: false, error: "Missing required fields" });
+    }
 
     const exists = await User.findOne({ email });
-    if (exists)
-      return res.status(400).json({ error: "Email already registered" });
+    if (exists) {
+      return res
+        .status(400)
+        .json({ ok: false, error: "Email already registered" });
+    }
 
     const hash = await bcrypt.hash(password, 10);
 
@@ -127,7 +135,6 @@ export const createCompany = async (req, res) => {
       isActive: true,
     });
 
-    // Activity Log
     await logActivity(req, {
       action: "COMPANY_CREATED",
       description: `Company "${company.companyName}" created`,
@@ -139,7 +146,7 @@ export const createCompany = async (req, res) => {
     res.json({ ok: true, message: "Company created", company });
   } catch (err) {
     console.error("❌ Create company error:", err.message);
-    res.status(500).json({ error: "Server error creating company" });
+    res.status(500).json({ ok: false, error: "Server error creating company" });
   }
 };
 
@@ -153,8 +160,9 @@ export const updateCompany = async (req, res) => {
       role: "company",
     });
 
-    if (!company)
-      return res.status(404).json({ error: "Company not found" });
+    if (!company) {
+      return res.status(404).json({ ok: false, error: "Company not found" });
+    }
 
     const { name, email, companyName, isActive } = req.body;
 
@@ -165,7 +173,6 @@ export const updateCompany = async (req, res) => {
 
     await company.save();
 
-    // Log update
     await logActivity(req, {
       action: "COMPANY_UPDATED",
       description: `Company "${company.companyName}" was updated`,
@@ -177,7 +184,7 @@ export const updateCompany = async (req, res) => {
     res.json({ ok: true, message: "Company updated", company });
   } catch (err) {
     console.error("❌ Update company error:", err.message);
-    res.status(500).json({ error: "Server error updating company" });
+    res.status(500).json({ ok: false, error: "Server error updating company" });
   }
 };
 
@@ -191,12 +198,16 @@ export const resetCompanyPassword = async (req, res) => {
       role: "company",
     });
 
-    if (!company)
-      return res.status(404).json({ error: "Company not found" });
+    if (!company) {
+      return res.status(404).json({ ok: false, error: "Company not found" });
+    }
 
     const { newPassword } = req.body;
-    if (!newPassword)
-      return res.status(400).json({ error: "newPassword required" });
+    if (!newPassword) {
+      return res
+        .status(400)
+        .json({ ok: false, error: "newPassword required" });
+    }
 
     company.passwordHash = await bcrypt.hash(newPassword, 10);
     await company.save();
@@ -215,7 +226,7 @@ export const resetCompanyPassword = async (req, res) => {
     });
   } catch (err) {
     console.error("❌ Reset password error:", err.message);
-    res.status(500).json({ error: "Failed to reset password" });
+    res.status(500).json({ ok: false, error: "Failed to reset password" });
   }
 };
 
@@ -229,10 +240,10 @@ export const deleteCompany = async (req, res) => {
       role: "company",
     });
 
-    if (!company)
-      return res.status(404).json({ error: "Company not found" });
+    if (!company) {
+      return res.status(404).json({ ok: false, error: "Company not found" });
+    }
 
-    // Cascade delete
     await User.deleteMany({ companyId: req.params.id });
     await Trip.deleteMany({ companyId: req.params.id });
     await Payment.deleteMany({ companyId: req.params.id });
@@ -252,7 +263,7 @@ export const deleteCompany = async (req, res) => {
     });
   } catch (err) {
     console.error("❌ Delete company error:", err.message);
-    res.status(500).json({ error: "Failed to delete company" });
+    res.status(500).json({ ok: false, error: "Failed to delete company" });
   }
 };
 
@@ -270,7 +281,7 @@ export const listAllTrips = async (req, res) => {
     res.json({ ok: true, total: trips.length, trips });
   } catch (err) {
     console.error("❌ List trips error:", err.message);
-    res.status(500).json({ error: "Failed to load trips" });
+    res.status(500).json({ ok: false, error: "Failed to load trips" });
   }
 };
 
@@ -291,6 +302,169 @@ export const listActivityLogs = async (req, res) => {
     });
   } catch (err) {
     console.error("❌ Activity logs error:", err.message);
-    res.status(500).json({ error: "Unable to load logs" });
+    res.status(500).json({ ok: false, error: "Unable to load logs" });
+  }
+};
+
+/* ==========================================================
+   🔐 GENERATE API KEY FOR COMPANY
+========================================================== */
+export const generateApiKeyForCompany = async (req, res) => {
+  try {
+    const { companyId } = req.params;
+
+    if (!companyId) {
+      return res.status(400).json({
+        ok: false,
+        error: "companyId parameter is required",
+      });
+    }
+
+    const company = await User.findOne({
+      _id: companyId,
+      role: "company",
+    });
+
+    if (!company) {
+      return res.status(404).json({
+        ok: false,
+        error: "Company not found",
+      });
+    }
+
+    const apiKey =
+      Math.random().toString(36).substring(2) +
+      Math.random().toString(36).substring(2) +
+      Date.now().toString(36);
+
+    company.apiKey = apiKey;
+    await company.save();
+
+    await logActivity(req, {
+      action: "API_KEY_GENERATED",
+      description: `API key generated for company "${company.companyName}"`,
+      category: "system",
+      targetModel: "User",
+      targetId: company._id,
+    });
+
+    res.json({
+      ok: true,
+      message: "API key generated successfully",
+      apiKey,
+      company: {
+        id: company._id,
+        companyName: company.companyName,
+      },
+    });
+  } catch (err) {
+    console.error("❌ generateApiKeyForCompany error:", err.message);
+    res.status(500).json({
+      ok: false,
+      error: "Failed to generate API key",
+    });
+  }
+};
+
+/* ==========================================================
+   ⚙️ GET GLOBAL SYSTEM SETTINGS
+========================================================== */
+export const getGlobalSettings = async (req, res) => {
+  try {
+    const settings = await GlobalSettings.findOne();
+
+    if (!settings) {
+      return res.status(404).json({
+        ok: false,
+        error: "Global settings not found",
+      });
+    }
+
+    res.json({
+      ok: true,
+      settings,
+    });
+  } catch (err) {
+    console.error("❌ getGlobalSettings error:", err.message);
+    res.status(500).json({
+      ok: false,
+      error: "Failed to load global settings",
+    });
+  }
+};
+
+/* ==========================================================
+   🔧 UPDATE GLOBAL SYSTEM SETTINGS
+========================================================== */
+export const updateGlobalSettings = async (req, res) => {
+  try {
+    let settings = await GlobalSettings.findOne();
+
+    if (!settings) {
+      settings = await GlobalSettings.create(req.body);
+    } else {
+      Object.assign(settings, req.body);
+      await settings.save();
+    }
+
+    await logActivity(req, {
+      action: "GLOBAL_SETTINGS_UPDATED",
+      description: "System-wide settings updated",
+      category: "system",
+      targetModel: "GlobalSettings",
+      targetId: settings._id,
+    });
+
+    res.json({
+      ok: true,
+      message: "Global settings updated",
+      settings,
+    });
+  } catch (err) {
+    console.error("❌ updateGlobalSettings error:", err.message);
+    res.status(500).json({
+      ok: false,
+      error: "Failed to update settings",
+    });
+  }
+};
+
+/* ==========================================================
+   🛑 TOGGLE MAINTENANCE MODE (ON/OFF)
+========================================================== */
+export const toggleMaintenanceMode = async (req, res) => {
+  try {
+    let settings = await GlobalSettings.findOne();
+
+    if (!settings) {
+      settings = await GlobalSettings.create({
+        maintenanceMode: false,
+      });
+    }
+
+    settings.maintenanceMode = !settings.maintenanceMode;
+    await settings.save();
+
+    await logActivity(req, {
+      action: "MAINTENANCE_MODE_TOGGLED",
+      description: `Maintenance mode set to ${settings.maintenanceMode}`,
+      category: "system",
+      targetModel: "GlobalSettings",
+      targetId: settings._id,
+    });
+
+    res.json({
+      ok: true,
+      message: `Maintenance mode is now: ${
+        settings.maintenanceMode ? "ON" : "OFF"
+      }`,
+      maintenanceMode: settings.maintenanceMode,
+    });
+  } catch (err) {
+    console.error("❌ toggleMaintenanceMode error:", err.message);
+    res.status(500).json({
+      ok: false,
+      error: "Failed to toggle maintenance mode",
+    });
   }
 };

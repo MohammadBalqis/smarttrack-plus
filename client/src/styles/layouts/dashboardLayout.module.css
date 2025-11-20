@@ -1,0 +1,106 @@
+.container {
+  display: flex;
+  height: 100vh;
+  background: #e5e7eb;
+  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* Sidebar */
+.sidebar {
+  width: 240px;
+  background: #0f172a;
+  color: white;
+  padding: 20px 16px;
+  display: flex;
+  flex-direction: column;
+}
+
+.logo {
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.roleLabel {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #9ca3af;
+  margin-bottom: 24px;
+}
+
+.menu {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.link,
+.activeLink {
+  display: block;
+  padding: 9px 10px;
+  border-radius: 8px;
+  font-size: 14px;
+  text-decoration: none;
+  color: #e5e7eb;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.link:hover {
+  background: #1f2937;
+}
+
+.activeLink {
+  background: #2563eb;
+  color: white;
+}
+
+/* Main section */
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Topbar */
+.topbar {
+  height: 56px;
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 18px;
+  box-shadow: 0 2px 4px rgba(15, 23, 42, 0.06);
+}
+
+.userInfo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.roleChip {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #e5e7eb;
+  color: #111827;
+  font-size: 12px;
+}
+
+.logoutBtn {
+  border: none;
+  background: #ef4444;
+  color: white;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+/* Page content */
+.content {
+  flex: 1;
+  padding: 20px 22px;
+  overflow-y: auto;
+  background: #f3f4f6;
+}

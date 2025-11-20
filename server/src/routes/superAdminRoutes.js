@@ -1,10 +1,11 @@
 // server/src/routes/superAdminRoutes.js
-
 import { Router } from "express";
+
+// AUTH & ACCESS
 import { protect } from "../middleware/authMiddleware.js";
 import { authorizeSuperAdmin } from "../middleware/superAdminMiddleware.js";
-import { listActivityLogs } from "../controllers/superAdminController.js";
-// CONTROLLERS (Option A)
+
+// CONTROLLERS
 import {
   getSuperAdminDashboard,
   listAllCompanies,
@@ -13,7 +14,12 @@ import {
   updateCompany,
   resetCompanyPassword,
   deleteCompany,
-  listAllTrips
+  listAllTrips,
+  listActivityLogs,
+  generateApiKeyForCompany,
+  toggleMaintenanceMode,
+  getGlobalSettings,
+  updateGlobalSettings
 } from "../controllers/superAdminController.js";
 
 const router = Router();
@@ -23,37 +29,31 @@ const superAdminOnly = [protect, authorizeSuperAdmin];
 
 /* ==========================================================
    📊 1. SUPERADMIN DASHBOARD
-   GET /api/superadmin/dashboard
 ========================================================== */
 router.get("/dashboard", superAdminOnly, getSuperAdminDashboard);
 
 /* ==========================================================
    🏢 2. LIST ALL COMPANIES
-   GET /api/superadmin/companies
 ========================================================== */
 router.get("/companies", superAdminOnly, listAllCompanies);
 
 /* ==========================================================
-   🧊 3. TOGGLE COMPANY STATUS (activate / suspend)
-   PATCH /api/superadmin/company/:id/toggle
+   🧊 3. ACTIVATE / SUSPEND COMPANY
 ========================================================== */
 router.patch("/company/:id/toggle", superAdminOnly, toggleCompanyStatus);
 
 /* ==========================================================
    🏗️ 4. CREATE COMPANY
-   POST /api/superadmin/companies/create
 ========================================================== */
 router.post("/companies/create", superAdminOnly, createCompany);
 
 /* ==========================================================
    ✏️ 5. UPDATE COMPANY
-   PATCH /api/superadmin/companies/:id/update
 ========================================================== */
 router.patch("/companies/:id/update", superAdminOnly, updateCompany);
 
 /* ==========================================================
-   🔑 6. RESET COMPANY PASSWORD
-   PATCH /api/superadmin/companies/:id/reset-password
+   🔑 6. RESET COMPANY OWNER PASSWORD
 ========================================================== */
 router.patch(
   "/companies/:id/reset-password",
@@ -63,18 +63,41 @@ router.patch(
 
 /* ==========================================================
    ❌ 7. DELETE COMPANY + ALL RELATED DATA
-   DELETE /api/superadmin/companies/:id/delete
 ========================================================== */
 router.delete("/companies/:id/delete", superAdminOnly, deleteCompany);
 
 /* ==========================================================
-   🚚 8. LIST ALL TRIPS (GLOBAL — read only)
-   GET /api/superadmin/trips
+   🚚 8. GLOBAL TRIPS LIST
 ========================================================== */
 router.get("/trips", superAdminOnly, listAllTrips);
 
-
-
+/* ==========================================================
+   📜 9. ACTIVITY LOGS
+========================================================== */
 router.get("/logs", superAdminOnly, listActivityLogs);
+
+/* ==========================================================
+   🔐 10. GENERATE API KEY FOR COMPANY (10I-C)
+========================================================== */
+router.post(
+  "/company/:companyId/generate-api-key",
+  superAdminOnly,
+  generateApiKeyForCompany
+);
+
+/* ==========================================================
+   🛠️ 11. GET GLOBAL SETTINGS (maintenance, commission, etc.)
+========================================================== */
+router.get("/settings", superAdminOnly, getGlobalSettings);
+
+/* ==========================================================
+   🛠️ 12. UPDATE GLOBAL SETTINGS
+========================================================== */
+router.patch("/settings/update", superAdminOnly, updateGlobalSettings);
+
+/* ==========================================================
+   🛠️ 13. TOGGLE MAINTENANCE MODE
+========================================================== */
+router.patch("/settings/maintenance/toggle", superAdminOnly, toggleMaintenanceMode);
 
 export default router;
