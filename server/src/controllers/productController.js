@@ -1,4 +1,7 @@
+// server/src/controllers/productController.js
 import Product from "../models/Product.js";
+import GlobalSettings from "../models/GlobalSettings.js";
+import { logActivity } from "../utils/activityLogger.js";
 
 /* Helper to resolve companyId from user */
 const resolveCompanyId = (user) => {
@@ -7,7 +10,23 @@ const resolveCompanyId = (user) => {
   if (["manager", "driver", "customer"].includes(user.role)) {
     return user.companyId;
   }
+  // superadmin / owner will usually provide companyId in routes if needed
   return null;
+};
+
+/* ==========================================================
+   🛡 MAINTENANCE MODE CHECK
+   ========================================================== */
+const ensureNotInMaintenance = async (req, res) => {
+  const settings = await GlobalSettings.findOne();
+  if (settings?.maintenanceMode && req.user.role !== "superadmin") {
+    res.status(503).json({
+      ok: false,
+      error: "System is under maintenance.",
+    });
+    return false;
+  }
+  return true;
 };
 
 /* ==========================================================
@@ -15,6 +34,8 @@ const resolveCompanyId = (user) => {
    ========================================================== */
 export const createProduct = async (req, res) => {
   try {
+    if (!(await ensureNotInMaintenance(req, res))) return;
+
     const companyId = resolveCompanyId(req.user);
     if (!companyId)
       return res.status(400).json({ error: "Cannot detect company." });
@@ -59,6 +80,15 @@ export const createProduct = async (req, res) => {
       productImage: productImage || null,
     });
 
+    await logActivity({
+      userId: req.user._id,
+      action: "PRODUCT_CREATE",
+      description: `Product "${name}" created`,
+      ipAddress: req.ip,
+      deviceInfo: req.headers["user-agent"],
+      meta: { productId: product._id, companyId },
+    });
+
     res.status(201).json({
       ok: true,
       message: "Product created successfully.",
@@ -66,6 +96,15 @@ export const createProduct = async (req, res) => {
     });
   } catch (error) {
     console.error("❌ createProduct error:", error);
+
+    await logActivity({
+      userId: req.user?._id,
+      action: "PRODUCT_CREATE_FAILED",
+      description: error.message,
+      ipAddress: req.ip,
+      deviceInfo: req.headers["user-agent"],
+    });
+
     res.status(500).json({ error: "Server error creating product." });
   }
 };
@@ -75,6 +114,8 @@ export const createProduct = async (req, res) => {
    ========================================================== */
 export const getCompanyProducts = async (req, res) => {
   try {
+    if (!(await ensureNotInMaintenance(req, res))) return;
+
     const companyId = resolveCompanyId(req.user);
     if (!companyId)
       return res.status(400).json({ error: "Cannot detect company." });
@@ -99,6 +140,8 @@ export const getCompanyProducts = async (req, res) => {
    ========================================================== */
 export const getCustomerProducts = async (req, res) => {
   try {
+    if (!(await ensureNotInMaintenance(req, res))) return;
+
     const companyId = resolveCompanyId(req.user);
     if (!companyId)
       return res.status(400).json({
@@ -126,6 +169,8 @@ export const getCustomerProducts = async (req, res) => {
    ========================================================== */
 export const updateProduct = async (req, res) => {
   try {
+    if (!(await ensureNotInMaintenance(req, res))) return;
+
     const companyId = resolveCompanyId(req.user);
     if (!companyId)
       return res.status(400).json({ error: "Cannot detect company." });
@@ -157,6 +202,15 @@ export const updateProduct = async (req, res) => {
         .status(404)
         .json({ error: "Product not found for this company." });
 
+    await logActivity({
+      userId: req.user._id,
+      action: "PRODUCT_UPDATE",
+      description: `Product "${updated.name}" updated`,
+      ipAddress: req.ip,
+      deviceInfo: req.headers["user-agent"],
+      meta: { productId: updated._id, companyId },
+    });
+
     res.json({
       ok: true,
       message: "Product updated successfully.",
@@ -164,6 +218,15 @@ export const updateProduct = async (req, res) => {
     });
   } catch (error) {
     console.error("❌ updateProduct error:", error);
+
+    await logActivity({
+      userId: req.user?._id,
+      action: "PRODUCT_UPDATE_FAILED",
+      description: error.message,
+      ipAddress: req.ip,
+      deviceInfo: req.headers["user-agent"],
+    });
+
     res.status(500).json({ error: "Server error updating product." });
   }
 };
@@ -173,6 +236,8 @@ export const updateProduct = async (req, res) => {
    ========================================================== */
 export const toggleActiveProduct = async (req, res) => {
   try {
+    if (!(await ensureNotInMaintenance(req, res))) return;
+
     const companyId = resolveCompanyId(req.user);
     if (!companyId)
       return res.status(400).json({ error: "Cannot detect company." });
@@ -188,6 +253,17 @@ export const toggleActiveProduct = async (req, res) => {
     product.isActive = !product.isActive;
     await product.save();
 
+    await logActivity({
+      userId: req.user._id,
+      action: "PRODUCT_TOGGLE_ACTIVE",
+      description: `Product "${product.name}" is now ${
+        product.isActive ? "Active" : "Inactive"
+      }`,
+      ipAddress: req.ip,
+      deviceInfo: req.headers["user-agent"],
+      meta: { productId: product._id, companyId },
+    });
+
     res.json({
       ok: true,
       message: `Product is now ${
@@ -197,6 +273,15 @@ export const toggleActiveProduct = async (req, res) => {
     });
   } catch (error) {
     console.error("❌ toggleActiveProduct error:", error);
+
+    await logActivity({
+      userId: req.user?._id,
+      action: "PRODUCT_TOGGLE_ACTIVE_FAILED",
+      description: error.message,
+      ipAddress: req.ip,
+      deviceInfo: req.headers["user-agent"],
+    });
+
     res.status(500).json({ error: "Server error toggling product." });
   }
 };
@@ -206,6 +291,8 @@ export const toggleActiveProduct = async (req, res) => {
    ========================================================== */
 export const deleteProduct = async (req, res) => {
   try {
+    if (!(await ensureNotInMaintenance(req, res))) return;
+
     const companyId = resolveCompanyId(req.user);
     if (!companyId)
       return res.status(400).json({ error: "Cannot detect company." });
@@ -219,12 +306,30 @@ export const deleteProduct = async (req, res) => {
         .status(404)
         .json({ error: "Product not found for this company." });
 
+    await logActivity({
+      userId: req.user._id,
+      action: "PRODUCT_DELETE",
+      description: `Product "${deleted.name}" deleted`,
+      ipAddress: req.ip,
+      deviceInfo: req.headers["user-agent"],
+      meta: { productId: deleted._id, companyId },
+    });
+
     res.json({
       ok: true,
       message: "Product deleted successfully.",
     });
   } catch (error) {
     console.error("❌ deleteProduct error:", error);
+
+    await logActivity({
+      userId: req.user?._id,
+      action: "PRODUCT_DELETE_FAILED",
+      description: error.message,
+      ipAddress: req.ip,
+      deviceInfo: req.headers["user-agent"],
+    });
+
     res.status(500).json({ error: "Server error deleting product." });
   }
 };

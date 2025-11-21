@@ -84,7 +84,14 @@ import billingSettingsRoutes from "./src/routes/billingSettingsRoutes.js";
 import invoiceRoutes from "./src/routes/invoiceRoutes.js";
 import brandingRoutes from "./src/routes/brandingRoutes.js";
 import publicApiRoutes from "./src/routes/publicApiRoutes.js";
-
+import companyDashboardRoutes from "./src/routes/companyDashboardRoutes.js";
+import adminStatsRoutes from "./src/routes/adminStatsRoutes.js";
+import companyDriverRoutes from "./src/routes/companyDriverRoutes.js";
+import companyTripsRoutes from "./src/routes/companyTripsRoutes.js";
+import companyCustomerRoutes from "./src/routes/companyCustomerRoutes.js";
+import companyProductRoutes from "./src/routes/companyProductRoutes.js";
+import companyVehicleRoutes from "./src/routes/companyVehicleRoutes.js";
+import sessionRoutes from "./src/routes/sessionRoutes.js";
 /* ==========================================================
    🌐 PUBLIC API (Rate Limited)
 ========================================================== */
@@ -118,7 +125,14 @@ app.use("/api/manager/drivers", managerDriverRoutes);
 app.use("/api/manager/vehicles", managerVehicleRoutes);
 app.use("/api/customer/profile", customerRoutes);
 app.use("/api/invoices", invoiceRoutes);
-
+app.use("/api/company/dashboard", companyDashboardRoutes);
+app.use("/api/company/trips", companyTripsRoutes);
+app.use("/api/company/customers", companyCustomerRoutes);
+app.use("/api/company/drivers", companyDriverRoutes);
+app.use("/api/admin", adminStatsRoutes);
+app.use("/api/company/products", companyProductRoutes);
+app.use("/api/company/vehicles", companyVehicleRoutes);
+app.use("/api/sessions", sessionRoutes);
 /* ==========================================================
    🌡️ HEALTH CHECK
 ========================================================== */

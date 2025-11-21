@@ -7,6 +7,7 @@ import User from "../models/User.js";
 import Trip from "../models/Trip.js";
 import Vehicle from "../models/Vehicle.js";
 import Payment from "../models/Payment.js";
+import GlobalSettings from "../models/GlobalSettings.js";
 import bcrypt from "bcryptjs";
 import { logActivity } from "../utils/activityLogger.js";
 
@@ -17,6 +18,21 @@ import fs from "fs";
 const router = Router();
 
 /* ==========================================================
+   🛡 MAINTENANCE MODE CHECK
+   ========================================================== */
+const ensureNotInMaintenance = async (req, res) => {
+  const settings = await GlobalSettings.findOne();
+  if (settings?.maintenanceMode && req.user.role !== "superadmin") {
+    res.status(503).json({
+      ok: false,
+      error: "System is under maintenance.",
+    });
+    return false;
+  }
+  return true;
+};
+
+/* ==========================================================
    🟣 SUPERADMIN — LIST ALL COMPANIES
 ========================================================== */
 router.get(
@@ -25,6 +41,9 @@ router.get(
   authorizeRoles("superadmin"),
   async (req, res) => {
     try {
+      // superadmin is allowed during maintenance (bypass in helper)
+      if (!(await ensureNotInMaintenance(req, res))) return;
+
       const companies = await Company.find()
         .populate("ownerId", "name email role")
         .sort({ createdAt: -1 });
@@ -54,6 +73,8 @@ router.post(
   authorizeRoles("superadmin"),
   async (req, res) => {
     try {
+      if (!(await ensureNotInMaintenance(req, res))) return;
+
       const {
         name,
         email,
@@ -121,6 +142,8 @@ router.patch(
   authorizeRoles("superadmin"),
   async (req, res) => {
     try {
+      if (!(await ensureNotInMaintenance(req, res))) return;
+
       const updateData = { ...req.body };
 
       const allowedFields = [
@@ -175,6 +198,8 @@ router.patch(
   authorizeRoles("superadmin"),
   async (req, res) => {
     try {
+      if (!(await ensureNotInMaintenance(req, res))) return;
+
       const { isActive } = req.body;
 
       const company = await Company.findByIdAndUpdate(
@@ -217,6 +242,8 @@ router.patch(
   authorizeRoles("superadmin"),
   async (req, res) => {
     try {
+      if (!(await ensureNotInMaintenance(req, res))) return;
+
       const { newPassword } = req.body;
       if (!newPassword) {
         return res.status(400).json({ error: "newPassword is required" });
@@ -259,6 +286,8 @@ router.get(
   authorizeRoles("superadmin"),
   async (req, res) => {
     try {
+      if (!(await ensureNotInMaintenance(req, res))) return;
+
       const companyId = req.params.companyId;
 
       const company = await Company.findById(companyId).populate(
@@ -310,7 +339,7 @@ router.get(
 );
 
 /* ==========================================================
-   🟦 OWNER — CREATE COMPANY (Your Original Feature)
+   🟦 OWNER — CREATE COMPANY
 ========================================================== */
 router.post(
   "/create",
@@ -318,6 +347,8 @@ router.post(
   authorizeRoles("owner"),
   async (req, res) => {
     try {
+      if (!(await ensureNotInMaintenance(req, res))) return;
+
       const {
         name,
         email,
@@ -371,7 +402,7 @@ router.post(
 );
 
 /* ==========================================================
-   📊 COMPANY DASHBOARD
+   📊 COMPANY DASHBOARD (Company / Manager)
 ========================================================== */
 router.get(
   "/dashboard",
@@ -379,6 +410,8 @@ router.get(
   authorizeRoles("company", "manager"),
   async (req, res) => {
     try {
+      if (!(await ensureNotInMaintenance(req, res))) return;
+
       const companyId =
         req.user.role === "company" ? req.user._id : req.user.companyId;
 
@@ -478,12 +511,11 @@ router.get(
 
 /* ==========================================================
    🔵 CUSTOMER MANAGEMENT ROUTES
-   - Company/Manager sees ONLY their own customers
-   - System owner/superadmin can see ALL via other routes
+   - Company/Manager sees ONLY their own customers (multi-company)
 ========================================================== */
 
 /* ---------- MULTER STORAGE FOR CUSTOMER DOCUMENT UPLOADS ---------- */
-const storage = multer.diskStorage({
+const customerDocStorage = multer.diskStorage({
   destination: (req, file, cb) => {
     const uploadDir = path.join("uploads", "customers", "documents");
     if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
@@ -495,7 +527,7 @@ const storage = multer.diskStorage({
     cb(null, unique + ext);
   },
 });
-const upload = multer({ storage });
+const uploadCustomerDoc = multer({ storage: customerDocStorage });
 
 const resolveCompanyIdFromUser = (user) =>
   user.role === "company" ? user._id : user.companyId;
@@ -507,13 +539,15 @@ router.get(
   authorizeRoles("company", "manager"),
   async (req, res) => {
     try {
+      if (!(await ensureNotInMaintenance(req, res))) return;
+
       const companyId = resolveCompanyIdFromUser(req.user);
 
       const customers = await User.find({
         role: "customer",
         $or: [
-          { companyIds: companyId }, // new multi-company design
-          { companyId: companyId }, // backward compatibility
+          { companyIds: companyId }, // multi-company link
+          { companyId: companyId },  // backward compatibility
         ],
       })
         .select("-passwordHash")
@@ -534,21 +568,29 @@ router.get(
   authorizeRoles("company", "manager"),
   async (req, res) => {
     try {
+      if (!(await ensureNotInMaintenance(req, res))) return;
+
       const q = req.query.q || "";
       const companyId = resolveCompanyIdFromUser(req.user);
 
-      const customers = await User.find({
+      const filter = {
         role: "customer",
-        $or: [
-          { companyIds: companyId },
-          { companyId: companyId },
-        ],
-        $or: [
-          { name: { $regex: q, $options: "i" } },
-          { email: { $regex: q, $options: "i" } },
-          { phone: { $regex: q, $options: "i" } },
-        ],
-      }).select("-passwordHash");
+        $or: [{ companyIds: companyId }, { companyId }],
+      };
+
+      if (q) {
+        filter.$and = [
+          {
+            $or: [
+              { name: { $regex: q, $options: "i" } },
+              { email: { $regex: q, $options: "i" } },
+              { phone: { $regex: q, $options: "i" } },
+            ],
+          },
+        ];
+      }
+
+      const customers = await User.find(filter).select("-passwordHash");
 
       res.json({ ok: true, customers });
     } catch (err) {
@@ -565,15 +607,14 @@ router.get(
   authorizeRoles("company", "manager"),
   async (req, res) => {
     try {
+      if (!(await ensureNotInMaintenance(req, res))) return;
+
       const companyId = resolveCompanyIdFromUser(req.user);
 
       const customer = await User.findOne({
         _id: req.params.customerId,
         role: "customer",
-        $or: [
-          { companyIds: companyId },
-          { companyId: companyId },
-        ],
+        $or: [{ companyIds: companyId }, { companyId }],
       }).select("-passwordHash");
 
       if (!customer) {
@@ -595,11 +636,13 @@ router.get(
   authorizeRoles("company", "manager"),
   async (req, res) => {
     try {
+      if (!(await ensureNotInMaintenance(req, res))) return;
+
       const companyId = resolveCompanyIdFromUser(req.user);
 
       const trips = await Trip.find({
         customerId: req.params.customerId,
-        companyId, // ensure only this company's trips
+        companyId,
       }).sort({ createdAt: -1 });
 
       res.json({ ok: true, trips });
@@ -617,6 +660,8 @@ router.get(
   authorizeRoles("company", "manager"),
   async (req, res) => {
     try {
+      if (!(await ensureNotInMaintenance(req, res))) return;
+
       const companyId = resolveCompanyIdFromUser(req.user);
 
       const payments = await Payment.find({
@@ -639,15 +684,14 @@ router.patch(
   authorizeRoles("company", "manager"),
   async (req, res) => {
     try {
+      if (!(await ensureNotInMaintenance(req, res))) return;
+
       const companyId = resolveCompanyIdFromUser(req.user);
 
       const customer = await User.findOne({
         _id: req.params.customerId,
         role: "customer",
-        $or: [
-          { companyIds: companyId },
-          { companyId: companyId },
-        ],
+        $or: [{ companyIds: companyId }, { companyId }],
       });
 
       if (!customer) {
@@ -677,6 +721,8 @@ router.patch(
   authorizeRoles("company", "manager"),
   async (req, res) => {
     try {
+      if (!(await ensureNotInMaintenance(req, res))) return;
+
       const { notes } = req.body;
       const companyId = resolveCompanyIdFromUser(req.user);
 
@@ -684,10 +730,7 @@ router.patch(
         {
           _id: req.params.customerId,
           role: "customer",
-          $or: [
-            { companyIds: companyId },
-            { companyId: companyId },
-          ],
+          $or: [{ companyIds: companyId }, { companyId }],
         },
         { customerNotes: notes },
         { new: true }
@@ -710,9 +753,11 @@ router.post(
   "/customers/:customerId/upload-document",
   protect,
   authorizeRoles("company", "manager"),
-  upload.single("document"),
+  uploadCustomerDoc.single("document"),
   async (req, res) => {
     try {
+      if (!(await ensureNotInMaintenance(req, res))) return;
+
       if (!req.file) {
         return res.status(400).json({ error: "Document file is required" });
       }
@@ -725,10 +770,7 @@ router.post(
         {
           _id: req.params.customerId,
           role: "customer",
-          $or: [
-            { companyIds: companyId },
-            { companyId: companyId },
-          ],
+          $or: [{ companyIds: companyId }, { companyId }],
         },
         {
           $push: {

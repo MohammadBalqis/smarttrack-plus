@@ -1,4 +1,3 @@
-// server/src/models/Product.js
 import mongoose from "mongoose";
 
 const productSchema = new mongoose.Schema(
@@ -9,12 +8,13 @@ const productSchema = new mongoose.Schema(
       required: true,
     },
 
+    // Product basic info
     name: { type: String, required: true, trim: true },
     description: { type: String, trim: true },
 
     price: { type: Number, required: true, min: 0 },
 
-    // High-level category (helps UI + filtering)
+    // Unified category (for system-wide filtering)
     category: {
       type: String,
       enum: [
@@ -30,19 +30,21 @@ const productSchema = new mongoose.Schema(
       default: "general",
     },
 
-    // Flexible extra fields per company/product
+    // Flexible structure for company-specific needs
     // Example:
-    //  clothes: { size: "L", color: "Black" }
-    //  fuel: { type: "Diesel", liters: 20 }
+    // attributes: { size: "L", color: "Black" }
+    // attributes: { liters: 20, fuelType: "Diesel" }
     attributes: {
       type: Map,
       of: mongoose.Schema.Types.Mixed,
       default: {},
     },
 
-    // Optional product image URL / path
-    productImage: { type: String, default: null },
+    // Optional image URL
+    images: [{ type: String }],
 
+
+    // Active/inactive status
     isActive: { type: Boolean, default: true },
   },
   { timestamps: true }

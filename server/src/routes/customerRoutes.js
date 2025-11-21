@@ -3,6 +3,7 @@ import { Router } from "express";
 import { protect } from "../middleware/authMiddleware.js";
 import { authorizeRoles } from "../middleware/roleMiddleware.js";
 import User from "../models/User.js";
+import GlobalSettings from "../models/GlobalSettings.js";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -10,7 +11,23 @@ import fs from "fs";
 const router = Router();
 
 /* ==========================================================
+   🛡 MAINTENANCE MODE CHECK
+   ========================================================== */
+const ensureNotInMaintenance = async (req, res) => {
+  const settings = await GlobalSettings.findOne();
+  if (settings?.maintenanceMode && req.user.role !== "superadmin") {
+    res.status(503).json({
+      ok: false,
+      error: "System is under maintenance.",
+    });
+    return false;
+  }
+  return true;
+};
+
+/* ==========================================================
    📸 MULTER STORAGE FOR PROFILE IMAGE
+   (Customer uploads stay in uploads/customers)
 ========================================================== */
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -30,7 +47,7 @@ const upload = multer({
   fileFilter(req, file, cb) {
     const allowed = ["image/jpeg", "image/png", "image/jpg"];
     if (!allowed.includes(file.mimetype)) {
-      return cb(new Error("Only jpg, png files allowed"));
+      return cb(new Error("Only jpg, jpeg, png files allowed"));
     }
     cb(null, true);
   },
@@ -45,6 +62,8 @@ router.get(
   authorizeRoles("customer"),
   async (req, res) => {
     try {
+      if (!(await ensureNotInMaintenance(req, res))) return;
+
       const user = await User.findById(req.user._id).select("-passwordHash");
       res.json({ ok: true, user });
     } catch (err) {
@@ -63,6 +82,8 @@ router.put(
   authorizeRoles("customer"),
   async (req, res) => {
     try {
+      if (!(await ensureNotInMaintenance(req, res))) return;
+
       const { name, phone, address } = req.body;
 
       const update = {};
@@ -96,6 +117,8 @@ router.put(
   upload.single("image"),
   async (req, res) => {
     try {
+      if (!(await ensureNotInMaintenance(req, res))) return;
+
       if (!req.file) {
         return res.status(400).json({ error: "Image file is required" });
       }

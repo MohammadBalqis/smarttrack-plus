@@ -1,0 +1,293 @@
+/* =====================================
+   PAGE LAYOUT
+===================================== */
+.page {
+  padding: 24px;
+  font-family: "Inter", sans-serif;
+  color: #0f172a;
+}
+
+.header h1 {
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.header p {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+/* =====================================
+   FILTERS
+===================================== */
+.filtersRow {
+  display: flex;
+  gap: 10px;
+  margin: 16px 0;
+}
+
+.filtersRow select,
+.filtersRow input {
+  padding: 8px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+/* =====================================
+   TABLE CARD
+===================================== */
+.tableCard {
+  background: #ffffff;
+  border-radius: 14px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+  padding: 16px;
+}
+
+.tableHeaderRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.smallInfo {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.tableWrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+/* =====================================
+   TABLE
+===================================== */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+.table th {
+  text-align: left;
+  padding: 10px;
+  color: #374151;
+  font-weight: 600;
+  font-size: 14px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.table td {
+  padding: 10px;
+  font-size: 14px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.empty {
+  text-align: center;
+  color: #9ca3af;
+  padding: 20px 0;
+}
+
+/* =====================================
+   IMAGES
+===================================== */
+.thumbnail {
+  width: 52px;
+  height: 52px;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 1px solid #e5e7eb;
+}
+
+.noImage {
+  width: 52px;
+  height: 52px;
+  background: #f3f4f6;
+  border-radius: 8px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #9ca3af;
+  font-size: 12px;
+}
+
+/* =====================================
+   STATUS BADGES
+===================================== */
+.badgeAvailable {
+  background: #dcfce7;
+  color: #15803d;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.badgeInUse {
+  background: #dbeafe;
+  color: #1d4ed8;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.badgeMaintenance {
+  background: #fef3c7;
+  color: #b45309;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* =====================================
+   VIEW BUTTON
+===================================== */
+.viewBtn {
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  padding: 6px 12px;
+  font-size: 13px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.viewBtn:hover {
+  background: #1e40af;
+}
+
+/* =====================================
+   DRAWER OVERLAY
+===================================== */
+.drawerOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+  display: flex;
+  justify-content: flex-end;
+  z-index: 2000;
+}
+
+/* =====================================
+   DRAWER PANEL
+===================================== */
+.drawer {
+  width: 480px;
+  max-width: 100%;
+  height: 100%;
+  background: #fff;
+  padding: 24px;
+  overflow-y: auto;
+  box-shadow: -2px 0 10px rgba(0,0,0,0.4);
+  position: relative;
+}
+
+.closeBtn {
+  position: absolute;
+  right: 20px;
+  top: 16px;
+  font-size: 22px;
+  cursor: pointer;
+  background: none;
+  border: none;
+  opacity: 0.7;
+}
+
+.drawerTitle {
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 18px;
+}
+
+/* =====================================
+   IMAGE LARGE
+===================================== */
+.imageContainer {
+  width: 100%;
+  height: 220px;
+  background: #f3f4f6;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
+.vehicleImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.noImageLarge {
+  height: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #9ca3af;
+  font-size: 14px;
+}
+
+/* =====================================
+   SECTION (Boxes inside drawer)
+===================================== */
+.section {
+  margin-bottom: 22px;
+}
+
+.sectionTitle {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+/* Info rows */
+.infoRow {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.driverRow {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.unassigned {
+  font-size: 14px;
+  color: #9ca3af;
+}
+
+/* Notes */
+.notesBox {
+  background: #f1f5f9;
+  padding: 10px;
+  border-radius: 8px;
+  margin-top: 10px;
+}
+
+/* Maintenance warning */
+.dangerText {
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+/* Last Trip Info */
+.routeRow {
+  margin: 6px 0;
+}
+
+.routeText {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.arrow {
+  color: #9ca3af;
+}

@@ -1,26 +1,27 @@
-// server/src/models/Vehicle.js
 import mongoose from "mongoose";
 
 /* ==========================================================
-   🚘 VEHICLE MODEL — Cars, Motors & Fleet Management
-   ========================================================== */
+   🚘 VEHICLE MODEL — Cars, Motors & Full Fleet Management
+========================================================== */
 const vehicleSchema = new mongoose.Schema(
   {
     companyId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User", // company owner
+      ref: "User", // Company Owner
       required: true,
     },
 
+    // 🔗 Driver assigned to the vehicle
     driverId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User", // driver assigned
+      ref: "User",
       default: null,
     },
 
+    // 🚗 Vehicle type
     type: {
       type: String,
-      enum: ["car", "motor"],
+      enum: ["car", "motor", "truck", "van", "pickup"],
       required: true,
     },
 
@@ -28,18 +29,33 @@ const vehicleSchema = new mongoose.Schema(
     model: { type: String, required: true, trim: true },
     plateNumber: { type: String, required: true, unique: true, trim: true },
 
-    // Vehicle status
+    // 📸 Vehicle image
+    vehicleImage: { type: String, default: null },
+
+    // 🔧 Vehicle state
     status: {
       type: String,
       enum: ["available", "in_use", "maintenance"],
       default: "available",
     },
 
-    // 📸 Vehicle image (relative URL)
-    vehicleImage: { type: String, default: null },
-
+    // 🛠 Maintenance tracking
     lastServiceDate: { type: Date, default: null },
+    nextServiceDue: { type: Date, default: null },
 
+    // 🛣 Performance & Usage
+    mileage: { type: Number, default: 0 }, // km
+    fuelType: { type: String, enum: ["petrol", "diesel", "electric", "hybrid", "unknown"], default: "unknown" },
+    engineCapacity: { type: String, default: null }, // 1.6L, 2.0L, etc.
+
+    // 📍 Last known trip for dashboard preview
+    lastTripId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Trip",
+      default: null,
+    },
+
+    // Extra notes
     notes: { type: String, trim: true },
   },
   { timestamps: true }

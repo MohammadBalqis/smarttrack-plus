@@ -3,7 +3,7 @@ import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { logActivity } from "../utils/activityLogger.js";
-
+import { getClientInfo } from "../utils/clientInfo.js";
 
 /* ==========================================================
    🔐 GENERATE JWT TOKEN
@@ -243,4 +243,61 @@ export const companyCreateUser = async (req, res) => {
     console.error("Company create user error:", err.message);
     res.status(500).json({ error: "Server error" });
   }
+};
+// Maximum active sessions per user (you can change to 2, 3, 5...)
+const MAX_ACTIVE_SESSIONS = 3;
+
+/**
+ * Create a secure session record + JWT token.
+ * Call this at the end of your login controller.
+ */
+const createAuthTokenWithSession = async (req, user) => {
+  const client = getClientInfo(req);
+
+  // 1) Enforce max sessions: revoke oldest if too many
+  const activeSessions = await Session.find({
+    userId: user._id,
+    isActive: true,
+    isRevoked: false,
+  })
+    .sort({ createdAt: 1 })
+    .lean();
+
+  if (activeSessions.length >= MAX_ACTIVE_SESSIONS) {
+    const toRevoke = activeSessions.slice(
+      0,
+      activeSessions.length - (MAX_ACTIVE_SESSIONS - 1)
+    );
+    if (toRevoke.length) {
+      await Session.updateMany(
+        { _id: { $in: toRevoke.map((s) => s._id) } },
+        { isActive: false, isRevoked: true }
+      );
+    }
+  }
+
+  // 2) Create new session
+  const session = await Session.create({
+    userId: user._id,
+    ipAddress: client.ipAddress,
+    userAgent: client.userAgent,
+    deviceType: client.deviceType,
+    os: client.os,
+    browser: client.browser,
+    deviceId: client.deviceId,
+  });
+
+  // 3) Create JWT that includes session id (sid)
+  const payload = {
+    id: user._id,
+    role: user.role,
+    companyId: user.companyId || null,
+    sid: session._id.toString(),
+  };
+
+  const token = jwt.sign(payload, process.env.JWT_SECRET, {
+    expiresIn: "12h", // keep your same expiry or adjust
+  });
+
+  return { token, session };
 };
