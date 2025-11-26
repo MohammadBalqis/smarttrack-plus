@@ -1,25 +1,87 @@
 // server/src/controllers/authController.js
 import User from "../models/User.js";
+import Session from "../models/Session.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { logActivity } from "../utils/activityLogger.js";
 import { getClientInfo } from "../utils/clientInfo.js";
 
 /* ==========================================================
-   🔐 GENERATE JWT TOKEN
+   🔐 JWT + SESSION HELPERS
 ========================================================== */
-const generateToken = (user) =>
+
+// Maximum active sessions per user (can tweak: 2, 3, 5…)
+const MAX_ACTIVE_SESSIONS = 3;
+
+/**
+ * Generate JWT keeping your original payload shape
+ * but adding `sid` for the session.
+ */
+const generateTokenWithSession = (user, sessionId) =>
   jwt.sign(
     {
+      // ✅ keep legacy keys so frontend doesn’t break
       uid: user._id,
       role: user.role,
       companyId: user.companyId || null,
       managerId: user.managerId || null,
       isSuperAdmin: user.role === "superadmin",
+      // ➕ new: session id
+      sid: sessionId,
     },
     process.env.JWT_SECRET,
-    { expiresIn: "7d" }
+    { expiresIn: "12h" }
   );
+
+/**
+ * Create / rotate session and return JWT token + session document.
+ * Used inside login + register.
+ */
+const createAuthTokenWithSession = async (req, user) => {
+  const client = getClientInfo(req);
+
+  // 1) Enforce max active sessions: revoke oldest if too many
+  const activeSessions = await Session.find({
+    userId: user._id,
+    isActive: true,
+    isRevoked: false,
+  })
+    .sort({ createdAt: 1 }) // oldest first
+    .lean();
+
+  if (activeSessions.length >= MAX_ACTIVE_SESSIONS) {
+    // How many to revoke to keep (MAX - 1) then add new one
+    const toRevoke = activeSessions.slice(
+      0,
+      activeSessions.length - (MAX_ACTIVE_SESSIONS - 1)
+    );
+
+    if (toRevoke.length) {
+      await Session.updateMany(
+        { _id: { $in: toRevoke.map((s) => s._id) } },
+        { isActive: false, isRevoked: true, revokedAt: new Date() }
+      );
+    }
+  }
+
+  // 2) Create new session
+  const session = await Session.create({
+    userId: user._id,
+    ipAddress: client.ipAddress,
+    userAgent: client.userAgent,
+    deviceType: client.deviceType,
+    os: client.os,
+    browser: client.browser,
+    deviceId: client.deviceId,
+    isActive: true,
+    isRevoked: false,
+  });
+
+  // 3) Create JWT that includes session id (sid)
+  const token = generateTokenWithSession(user, session._id.toString());
+
+  return { token, session };
+};
 
 /* ==========================================================
    🟢 REGISTER — Public (Customer only)
@@ -46,6 +108,7 @@ export const register = async (req, res) => {
       email,
       passwordHash,
       role: "customer",
+      isActive: true,
     });
 
     // ✅ Activity Log
@@ -57,6 +120,9 @@ export const register = async (req, res) => {
       deviceInfo: req.headers["user-agent"],
     });
 
+    // 🔐 Create session + token so user is logged in directly
+    const { token, session } = await createAuthTokenWithSession(req, user);
+
     res.status(201).json({
       ok: true,
       message: "Customer registered",
@@ -66,7 +132,8 @@ export const register = async (req, res) => {
         email: user.email,
         role: "customer",
       },
-      token: generateToken(user),
+      token,
+      sessionId: session._id,
     });
   } catch (err) {
     console.error("Register error:", err.message);
@@ -119,16 +186,24 @@ export const login = async (req, res) => {
       return res.status(401).json({ error: "Invalid password" });
     }
 
-    // Store userId for logging in route wrapper
+    // Store userId for any external middlewares if you use res.locals
     res.locals.userId = user._id;
 
-    // ✅ LOGIN SUCCESS
+    // ✅ LOGIN SUCCESS — create session + token
+    const { token, session } = await createAuthTokenWithSession(req, user);
+
     await logActivity({
       userId: user._id,
       action: "LOGIN_SUCCESS",
       description: `User logged in: ${email}`,
       ipAddress: req.ip,
       deviceInfo: req.headers["user-agent"],
+      meta: {
+        sessionId: session._id,
+        deviceType: session.deviceType,
+        os: session.os,
+        browser: session.browser,
+      },
     });
 
     res.json({
@@ -143,7 +218,8 @@ export const login = async (req, res) => {
         managerId: user.managerId,
         isSuperAdmin: user.role === "superadmin",
       },
-      token: generateToken(user),
+      token,
+      sessionId: session._id,
     });
   } catch (err) {
     console.error("Login error:", err.message);
@@ -223,6 +299,7 @@ export const companyCreateUser = async (req, res) => {
       role,
       companyId: req.user._id,
       managerId: role === "driver" ? managerId || null : null,
+      isActive: true,
     });
 
     // ✅ Activity Log
@@ -243,61 +320,4 @@ export const companyCreateUser = async (req, res) => {
     console.error("Company create user error:", err.message);
     res.status(500).json({ error: "Server error" });
   }
-};
-// Maximum active sessions per user (you can change to 2, 3, 5...)
-const MAX_ACTIVE_SESSIONS = 3;
-
-/**
- * Create a secure session record + JWT token.
- * Call this at the end of your login controller.
- */
-const createAuthTokenWithSession = async (req, user) => {
-  const client = getClientInfo(req);
-
-  // 1) Enforce max sessions: revoke oldest if too many
-  const activeSessions = await Session.find({
-    userId: user._id,
-    isActive: true,
-    isRevoked: false,
-  })
-    .sort({ createdAt: 1 })
-    .lean();
-
-  if (activeSessions.length >= MAX_ACTIVE_SESSIONS) {
-    const toRevoke = activeSessions.slice(
-      0,
-      activeSessions.length - (MAX_ACTIVE_SESSIONS - 1)
-    );
-    if (toRevoke.length) {
-      await Session.updateMany(
-        { _id: { $in: toRevoke.map((s) => s._id) } },
-        { isActive: false, isRevoked: true }
-      );
-    }
-  }
-
-  // 2) Create new session
-  const session = await Session.create({
-    userId: user._id,
-    ipAddress: client.ipAddress,
-    userAgent: client.userAgent,
-    deviceType: client.deviceType,
-    os: client.os,
-    browser: client.browser,
-    deviceId: client.deviceId,
-  });
-
-  // 3) Create JWT that includes session id (sid)
-  const payload = {
-    id: user._id,
-    role: user.role,
-    companyId: user.companyId || null,
-    sid: session._id.toString(),
-  };
-
-  const token = jwt.sign(payload, process.env.JWT_SECRET, {
-    expiresIn: "12h", // keep your same expiry or adjust
-  });
-
-  return { token, session };
 };

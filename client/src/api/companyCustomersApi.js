@@ -1,14 +1,17 @@
-// client/src/api/companyCustomersApi.js
 import api from "./axiosConfig";
 
-// 1️⃣ Get all customers who ordered from this company
-export const getCompanyCustomersApi = () =>
-  api.get("/company/customers");
+// List customers (supports ?status=&search=)
+export const getCompanyCustomersApi = (params = {}) =>
+  api.get("/company/customers", { params });
 
-// 2️⃣ Get stats for one customer
+// Stats for one customer
 export const getCompanyCustomerStatsApi = (customerId) =>
   api.get(`/company/customers/${customerId}/stats`);
 
-// 3️⃣ Get recent trips for one customer
-export const getCompanyCustomerRecentTripsApi = (customerId) =>
-  api.get(`/company/customers/${customerId}/recent-trips`);
+// Orders for one customer
+export const getCompanyCustomerOrdersApi = (customerId) =>
+  api.get(`/company/customers/${customerId}/orders`);
+
+// Toggle active / inactive customer
+export const toggleCompanyCustomerStatusApi = (customerId) =>
+  api.patch(`/company/customers/${customerId}/toggle-active`);

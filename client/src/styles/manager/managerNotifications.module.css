@@ -1,0 +1,174 @@
+/* =====================================
+   PAGE
+===================================== */
+.page {
+  padding: 24px;
+  font-family: "Inter", sans-serif;
+  color: #0f172a;
+}
+
+.page h1 {
+  font-size: 26px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.subtitle {
+  color: #6b7280;
+  font-size: 14px;
+  margin-bottom: 20px;
+}
+
+/* =====================================
+   HEADER ROW
+===================================== */
+.headerRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.filterSelect {
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+/* Mark all as read button */
+.readAllBtn {
+  background: #2563eb;
+  color: white;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.readAllBtn:hover {
+  background: #1e3a8a;
+}
+
+/* =====================================
+   LIST
+===================================== */
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.empty {
+  text-align: center;
+  color: #9ca3af;
+  padding: 30px 0;
+  font-size: 15px;
+}
+
+.loading {
+  font-size: 14px;
+  color: #6b7280;
+  text-align: center;
+}
+
+/* =====================================
+   NOTIFICATION ITEM
+===================================== */
+.item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #ffffff;
+  padding: 14px 16px;
+  border-radius: 12px;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+  border-left: 4px solid transparent;
+  transition: 0.2s;
+}
+
+.unread {
+  border-left-color: #2563eb;
+  background: #f8fafc;
+}
+
+.left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* =====================================
+   BADGES (types)
+===================================== */
+.badge {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+/* Trip */
+.badgeTrip {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+/* Order */
+.badgeOrder {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+/* Driver */
+.badgeDriver {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+/* Vehicle */
+.badgeVehicle {
+  background: #e0e7ff;
+  color: #4338ca;
+}
+
+/* Default (fallback) */
+.badgeDefault {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+/* =====================================
+   TEXT
+===================================== */
+.message {
+  font-size: 14px;
+  font-weight: 500;
+  color: #0f172a;
+}
+
+.time {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 3px;
+}
+
+/* =====================================
+   ACTION BUTTON
+===================================== */
+.readBtn {
+  background: #f3f4f6;
+  border: none;
+  padding: 6px 12px;
+  font-size: 13px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.readBtn:hover {
+  background: #e5e7eb;
+}

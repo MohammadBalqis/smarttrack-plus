@@ -2,19 +2,17 @@
 import { Router } from "express";
 import { protect } from "../middleware/authMiddleware.js";
 import { authorizeRoles } from "../middleware/roleMiddleware.js";
+
 import {
   getCompanyCustomers,
   getCompanyCustomerStats,
-  getCompanyCustomerRecentTrips,
+  getCompanyCustomerOrders,
+  toggleCompanyCustomerStatus,
 } from "../controllers/companyCustomerController.js";
 
 const router = Router();
 
-/* ==========================================================
-   👥 COMPANY CUSTOMERS (Company / Manager)
-   ========================================================== */
-
-// List customers who made trips with this company
+/* List all customers of this company (with summary stats) */
 router.get(
   "/",
   protect,
@@ -22,7 +20,7 @@ router.get(
   getCompanyCustomers
 );
 
-// Customer stats (for this company)
+/* Stats for a single customer in this company */
 router.get(
   "/:id/stats",
   protect,
@@ -30,12 +28,20 @@ router.get(
   getCompanyCustomerStats
 );
 
-// Customer recent trips
+/* Orders list for a single customer in this company */
 router.get(
-  "/:id/recent-trips",
+  "/:id/orders",
   protect,
   authorizeRoles("company", "manager"),
-  getCompanyCustomerRecentTrips
+  getCompanyCustomerOrders
+);
+
+/* Toggle active / inactive */
+router.patch(
+  "/:id/toggle-active",
+  protect,
+  authorizeRoles("company"),
+  toggleCompanyCustomerStatus
 );
 
 export default router;

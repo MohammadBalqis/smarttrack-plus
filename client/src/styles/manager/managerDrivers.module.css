@@ -1,295 +1,276 @@
 .page {
   padding: 24px;
-  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont,
-    "Segoe UI", sans-serif;
+  max-width: 1200px;
+  margin: 0 auto;
+  font-family: system-ui, sans-serif;
 }
 
-/* Header */
-.header {
+.headerRow {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: flex-end;
   margin-bottom: 16px;
 }
 
-.header h1 {
+.title {
   font-size: 24px;
   font-weight: 700;
   color: #0f172a;
+  margin: 0;
 }
 
-.header p {
+.subtitle {
+  margin: 4px 0 0;
   font-size: 14px;
   color: #6b7280;
 }
 
-/* Filters */
-.filtersRow {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 16px;
-}
-
-.filtersRow select,
-.filtersRow input {
-  border-radius: 8px;
-  border: 1px solid #d1d5db;
+.filters select {
   padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
   font-size: 14px;
 }
 
-/* Table card */
-.tableCard {
-  background: #ffffff;
-  border-radius: 14px;
-  padding: 16px 18px;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+.error {
+  margin-bottom: 12px;
+  padding: 10px;
+  border-radius: 6px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 14px;
 }
 
-.tableHeaderRow {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
+.empty {
+  margin-top: 8px;
+  color: #6b7280;
+  font-size: 14px;
 }
 
 .tableWrapper {
-  width: 100%;
+  margin-top: 12px;
   overflow-x: auto;
 }
 
 .table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .table th,
 .table td {
-  padding: 8px 10px;
+  padding: 8px 8px;
   border-bottom: 1px solid #e5e7eb;
   text-align: left;
 }
 
-.smallInfo {
-  font-size: 13px;
-  color: #6b7280;
-}
-
-.error {
-  color: #b91c1c;
-  font-size: 14px;
-  margin-bottom: 8px;
-}
-
-.empty {
-  color: #9ca3af;
-  font-size: 14px;
-}
-
-/* Status badges */
-.statusBadgeActive {
-  background: #dcfce7;
-  color: #15803d;
-  padding: 3px 8px;
-  border-radius: 999px;
-  font-size: 12px;
-}
-
-.statusBadgeInactive {
-  background: #fee2e2;
-  color: #b91c1c;
-  padding: 3px 8px;
-  border-radius: 999px;
-  font-size: 12px;
-}
-
-/* Button */
-.viewBtn {
-  padding: 6px 10px;
-  border-radius: 8px;
-  border: none;
-  background: #2563eb;
-  color: #ffffff;
-  font-size: 13px;
-  cursor: pointer;
-}
-
-/* Drawer shared with manager trips */
-.drawerOverlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.35);
-  display: flex;
-  justify-content: flex-end;
-  z-index: 2000;
-}
-
-.drawer {
-  width: 550px;
-  max-width: 100%;
-  background: #ffffff;
-  height: 100%;
-  padding: 20px;
-  overflow-y: auto;
-  box-shadow: -2px 0 10px rgba(15, 23, 42, 0.4);
-  position: relative;
-}
-
-.closeBtn {
-  position: absolute;
-  right: 16px;
-  top: 14px;
-  background: none;
-  border: none;
-  font-size: 22px;
-  cursor: pointer;
-}
-
-.drawerTitle {
-  font-size: 22px;
-  font-weight: 700;
-  margin-bottom: 14px;
-}
-
-/* Profile card */
-.profileCard {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  padding: 12px;
-  border-radius: 12px;
+.table thead {
   background: #f9fafb;
-  margin-bottom: 16px;
 }
 
-.avatarCircle {
-  width: 46px;
-  height: 46px;
+.table tbody tr:hover {
+  background: #f3f4f6;
+}
+
+.driverCell {
+  min-width: 180px;
+}
+
+.driverInfo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.avatar {
+  width: 32px;
+  height: 32px;
   border-radius: 999px;
-  background: #2563eb;
+  object-fit: cover;
+}
+
+.avatarFallback {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: #e5e7eb;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #ffffff;
-  font-weight: 700;
-  font-size: 18px;
-}
-
-.driverName {
-  font-size: 18px;
-  font-weight: 600;
-}
-
-.driverEmail {
   font-size: 14px;
   color: #4b5563;
 }
 
-.driverPhone {
-  font-size: 14px;
+.statusActive {
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.statusInactive {
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.badgeOnline {
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.badgeOffline {
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  background: #e5e7eb;
   color: #6b7280;
 }
 
-.joinedText {
-  font-size: 12px;
-  color: #9ca3af;
+.actionsCell {
+  white-space: nowrap;
 }
 
-/* KPI grid inside drawer */
-.kpiGrid {
+.smallBtn {
+  padding: 5px 9px;
+  margin-right: 6px;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  background: #f9fafb;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+/* Modal */
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 40;
+}
+
+.modal {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 18px 20px;
+  max-width: 600px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.2);
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.modalHeader h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.closeBtn {
+  border: none;
+  background: transparent;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.modalForm label {
+  display: block;
+  font-size: 13px;
+  color: #4b5563;
+  margin-bottom: 8px;
+}
+
+.modalForm input {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  margin-top: 4px;
+  margin-bottom: 10px;
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.primaryBtn {
+  background: #2563eb;
+  color: #ffffff;
+  border-radius: 6px;
+  padding: 7px 12px;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.secondaryBtn {
+  background: #f3f4f6;
+  color: #111827;
+  border-radius: 6px;
+  padding: 7px 12px;
+  border: 1px solid #d1d5db;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+/* Stats */
+
+.statsGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 12px;
-  margin-bottom: 18px;
+  gap: 10px;
+  margin-bottom: 16px;
 }
 
-.kpiCard {
-  background: #ffffff;
-  border-radius: 10px;
+.statCard {
+  background: #f9fafb;
+  border-radius: 8px;
   padding: 10px 12px;
   border: 1px solid #e5e7eb;
 }
 
-.kpiCard h4 {
+.statLabel {
   font-size: 12px;
   color: #6b7280;
 }
 
-.kpiCard p {
-  font-size: 18px;
-  font-weight: 700;
+.statNumber {
+  display: block;
   margin-top: 4px;
+  font-size: 18px;
+  font-weight: 600;
   color: #111827;
 }
 
-/* Section */
-.section {
-  margin-bottom: 16px;
-}
-
-.section h3 {
-  font-size: 16px;
+.subTitle {
+  margin-top: 4px;
+  font-size: 15px;
   font-weight: 600;
-  margin-bottom: 6px;
+  color: #111827;
 }
 
-/* Status badges for trips (reuse) */
-.badge_pending {
-  background: #fef9c3;
-  color: #b45309;
-  padding: 3px 8px;
-  border-radius: 999px;
-  font-size: 12px;
-}
-
-.badge_assigned {
-  background: #dbeafe;
-  color: #1d4ed8;
-  padding: 3px 8px;
-  border-radius: 999px;
-  font-size: 12px;
-}
-
-.badge_in_progress {
-  background: #fce7f3;
-  color: #be185d;
-  padding: 3px 8px;
-  border-radius: 999px;
-  font-size: 12px;
-}
-
-.badge_delivered {
-  background: #dcfce7;
-  color: #15803d;
-  padding: 3px 8px;
-  border-radius: 999px;
-  font-size: 12px;
-}
-
-.badge_cancelled {
-  background: #fee2e2;
-  color: #b91c1c;
-  padding: 3px 8px;
-  border-radius: 999px;
-  font-size: 12px;
-}
-
-.badge_default {
-  background: #e5e7eb;
-  color: #374151;
-  padding: 3px 8px;
-  border-radius: 999px;
-  font-size: 12px;
-}
-
-/* Route text */
-.routeText {
-  display: flex;
-  gap: 4px;
-  flex-wrap: wrap;
-}
-
-.routeArrow {
-  color: #9ca3af;
+.recentTripsWrapper {
+  margin-top: 8px;
+  overflow-x: auto;
 }

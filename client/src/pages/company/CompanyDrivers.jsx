@@ -1,36 +1,50 @@
+// client/src/pages/company/CompanyDrivers.jsx
 import React, { useEffect, useState } from "react";
 import {
   getCompanyDriversApi,
   createCompanyDriverApi,
   updateCompanyDriverApi,
   toggleCompanyDriverStatusApi,
+  getDriverStatsApi,
+  getDriverRecentTripsApi,
 } from "../../api/companyDriversApi";
+
+import CompanyDriverDrawer from "../../components/company/CompanyDriverDrawer";
 import styles from "../../styles/company/companyDrivers.module.css";
 
 const emptyForm = {
   name: "",
   email: "",
-  phoneNumber: "",
   password: "",
+  phoneNumber: "",
 };
 
 const CompanyDrivers = () => {
   const [drivers, setDrivers] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
-
-  const [form, setForm] = useState(emptyForm);
-  const [editingId, setEditingId] = useState(null);
-  const [statusFilter, setStatusFilter] = useState(""); // "active" | "inactive" | ""
   const [error, setError] = useState("");
+
+  // Filters
+  const [statusFilter, setStatusFilter] = useState("");
+
+  // Form
+  const [form, setForm] = useState(emptyForm);
+  const [saving, setSaving] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+
+  // Drawer
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [selectedDriver, setSelectedDriver] = useState(null);
 
   const loadDrivers = async () => {
     try {
       setLoading(true);
       setError("");
-      const res = await getCompanyDriversApi(
-        statusFilter ? { status: statusFilter } : {}
-      );
+
+      const params = {};
+      if (statusFilter) params.status = statusFilter;
+
+      const res = await getCompanyDriversApi(params);
       setDrivers(res.data.drivers || []);
     } catch (err) {
       console.error(err);
@@ -44,7 +58,7 @@ const CompanyDrivers = () => {
     loadDrivers();
   }, [statusFilter]);
 
-  const handleChange = (e) => {
+  const handleFormChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
   };
@@ -57,35 +71,19 @@ const CompanyDrivers = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setSaving(true);
-    setError("");
+    try {
+      setSaving(true);
+      setError("");
 
-    try{
       if (!editingId) {
-        // create
-        if (!form.password) {
-          setError("Password is required for new drivers.");
-          setSaving(false);
-          return;
-        }
-        const payload = {
-          name: form.name,
-          email: form.email,
-          phoneNumber: form.phoneNumber,
-          password: form.password,
-        };
-        const res = await createCompanyDriverApi(payload);
+        const res = await createCompanyDriverApi(form);
         setDrivers((prev) => [res.data.driver, ...prev]);
       } else {
-        // update
-        const payload = {
-          name: form.name,
-          email: form.email,
-          phoneNumber: form.phoneNumber,
-        };
-        const res = await updateCompanyDriverApi(editingId, payload);
+        const res = await updateCompanyDriverApi(editingId, form);
+        const updated = res.data.driver;
+
         setDrivers((prev) =>
-          prev.map((d) => (d._id === editingId ? res.data.driver : d))
+          prev.map((d) => (d._id === updated._id ? updated : d))
         );
       }
 
@@ -94,102 +92,112 @@ const CompanyDrivers = () => {
       console.error(err);
       const msg =
         err.response?.data?.error ||
-        "Failed to save driver. Please check the data.";
+        "Failed to save driver. Check your data.";
       setError(msg);
     } finally {
       setSaving(false);
     }
   };
 
-  const handleEdit = (driver) => {
-    setEditingId(driver._id);
-    setForm({
-      name: driver.name || "",
-      email: driver.email || "",
-      phoneNumber: driver.phoneNumber || "",
-      password: "",
-    });
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
   const handleToggleStatus = async (id) => {
     try {
       const res = await toggleCompanyDriverStatusApi(id);
       const updated = res.data.driver;
+
       setDrivers((prev) =>
         prev.map((d) => (d._id === updated._id ? updated : d))
       );
     } catch (err) {
       console.error(err);
-      setError("Failed to update driver status.");
+      setError("Failed to update status.");
     }
+  };
+
+  const openDrawer = async (driver) => {
+    setSelectedDriver(driver);
+    setDrawerOpen(true);
+  };
+
+  const closeDrawer = () => {
+    setSelectedDriver(null);
+    setDrawerOpen(false);
+  };
+
+  const handleEdit = (driver) => {
+    setEditingId(driver._id);
+    setForm({
+      name: driver.name,
+      email: driver.email,
+      password: "",
+      phoneNumber: driver.phoneNumber || "",
+    });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   return (
     <div className={styles.page}>
       {/* Header */}
       <div className={styles.header}>
-        <div>
-          <h2>Drivers</h2>
-          <p>Manage your company&apos;s drivers and their access.</p>
-        </div>
+        <h1>Drivers</h1>
+        <p>Manage your company’s registered drivers.</p>
       </div>
 
-      {/* Form Card */}
-      <div className={styles.formCard}>
-        <div className={styles.formHeaderRow}>
-          <h3>{editingId ? "Edit Driver" : "Create New Driver"}</h3>
-          {saving && <span className={styles.smallInfo}>Saving...</span>}
-        </div>
+      {/* Filter */}
+      <div className={styles.filtersRow}>
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+        >
+          <option value="">All</option>
+          <option value="active">Active only</option>
+          <option value="inactive">Inactive only</option>
+        </select>
+      </div>
 
-        {error && <div className={styles.error}>{error}</div>}
+      {/* Form */}
+      <div className={styles.formCard}>
+        <h3>{editingId ? "Edit Driver" : "Create New Driver"}</h3>
+        {error && <p className={styles.error}>{error}</p>}
 
         <form onSubmit={handleSubmit} className={styles.form}>
-          <div className={styles.formRow}>
-            <label>Name *</label>
-            <input
-              name="name"
-              value={form.name}
-              onChange={handleChange}
-              required
-            />
-          </div>
+          <label>Name *</label>
+          <input
+            name="name"
+            value={form.name}
+            onChange={handleFormChange}
+            required
+          />
 
-          <div className={styles.formRow}>
-            <label>Email *</label>
-            <input
-              type="email"
-              name="email"
-              value={form.email}
-              onChange={handleChange}
-              required
-            />
-          </div>
-
-          <div className={styles.formRow}>
-            <label>Phone</label>
-            <input
-              name="phoneNumber"
-              value={form.phoneNumber}
-              onChange={handleChange}
-              placeholder="+961..."
-            />
-          </div>
+          <label>Email *</label>
+          <input
+            name="email"
+            type="email"
+            value={form.email}
+            onChange={handleFormChange}
+            required
+          />
 
           {!editingId && (
-            <div className={styles.formRow}>
+            <>
               <label>Password *</label>
               <input
-                type="password"
                 name="password"
+                type="password"
                 value={form.password}
-                onChange={handleChange}
+                onChange={handleFormChange}
                 required
               />
-            </div>
+            </>
           )}
 
-          <div className={styles.formActions}>
+          <label>Phone Number</label>
+          <input
+            name="phoneNumber"
+            value={form.phoneNumber}
+            onChange={handleFormChange}
+          />
+
+          <div className={styles.actions}>
             {editingId && (
               <button
                 type="button"
@@ -199,37 +207,20 @@ const CompanyDrivers = () => {
                 Cancel Edit
               </button>
             )}
-            <button
-              type="submit"
-              className={styles.primaryBtn}
-              disabled={saving}
-            >
-              {editingId ? "Save Changes" : "Create Driver"}
+            <button type="submit" disabled={saving} className={styles.primaryBtn}>
+              {saving ? "Saving..." : editingId ? "Save Changes" : "Create Driver"}
             </button>
           </div>
         </form>
       </div>
 
-      {/* Drivers Table Card */}
+      {/* Drivers Table */}
       <div className={styles.tableCard}>
-        <div className={styles.tableHeaderRow}>
-          <h3>Drivers List</h3>
-          <div className={styles.filters}>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              <option value="">All</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
-            {loading && (
-              <span className={styles.smallInfo}>Loading drivers...</span>
-            )}
-          </div>
-        </div>
+        <h3>Drivers List</h3>
 
-        {drivers.length === 0 ? (
+        {loading ? (
+          <p>Loading...</p>
+        ) : drivers.length === 0 ? (
           <p className={styles.empty}>No drivers found.</p>
         ) : (
           <div className={styles.tableWrapper}>
@@ -244,6 +235,7 @@ const CompanyDrivers = () => {
                   <th>Actions</th>
                 </tr>
               </thead>
+
               <tbody>
                 {drivers.map((d) => (
                   <tr key={d._id}>
@@ -253,9 +245,7 @@ const CompanyDrivers = () => {
                     <td>
                       <span
                         className={
-                          d.isActive
-                            ? styles.statusBadgeActive
-                            : styles.statusBadgeInactive
+                          d.isActive ? styles.activeBadge : styles.inactiveBadge
                         }
                       >
                         {d.isActive ? "Active" : "Inactive"}
@@ -266,18 +256,24 @@ const CompanyDrivers = () => {
                         ? new Date(d.createdAt).toLocaleDateString()
                         : ""}
                     </td>
-                    <td className={styles.actionsCell}>
+                    <td>
                       <button
-                        type="button"
-                        className={styles.tableBtn}
+                        onClick={() => openDrawer(d)}
+                        className={styles.smallBtn}
+                      >
+                        View
+                      </button>
+
+                      <button
                         onClick={() => handleEdit(d)}
+                        className={styles.smallBtn}
                       >
                         Edit
                       </button>
+
                       <button
-                        type="button"
-                        className={styles.tableBtn}
                         onClick={() => handleToggleStatus(d._id)}
+                        className={styles.smallBtn}
                       >
                         {d.isActive ? "Suspend" : "Activate"}
                       </button>
@@ -289,6 +285,13 @@ const CompanyDrivers = () => {
           </div>
         )}
       </div>
+
+      {/* Drawer */}
+      <CompanyDriverDrawer
+        open={drawerOpen}
+        onClose={closeDrawer}
+        driver={selectedDriver}
+      />
     </div>
   );
 };

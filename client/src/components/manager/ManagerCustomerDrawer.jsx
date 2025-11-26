@@ -1,187 +1,151 @@
-// src/components/manager/ManagerCustomerDrawer.jsx
-import React, { useEffect, useState } from "react";
-import {
-  getCompanyCustomerStatsApi,
-  getCompanyCustomerRecentTripsApi,
-} from "../../api/companyCustomersApi";
-
+// client/src/components/manager/ManagerCustomerDrawer.jsx
+import React from "react";
 import styles from "../../styles/manager/managerCustomers.module.css";
 
-const ManagerCustomerDrawer = ({ open, onClose, customer }) => {
-  const [stats, setStats] = useState(null);
-  const [recentTrips, setRecentTrips] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+const ManagerCustomerDrawer = ({ open, onClose, details }) => {
+  if (!open) return null;
 
-  useEffect(() => {
-    if (open && customer?.customerId) {
-      loadData(customer.customerId);
-    }
-  }, [open, customer]);
-
-  const loadData = async (customerId) => {
-    try {
-      setLoading(true);
-      setError("");
-
-      const [statsRes, tripsRes] = await Promise.all([
-        getCompanyCustomerStatsApi(customerId),
-        getCompanyCustomerRecentTripsApi(customerId),
-      ]);
-
-      if (statsRes.data.ok) {
-        setStats(statsRes.data.stats);
-      }
-
-      setRecentTrips(tripsRes.data.trips || []);
-    } catch (err) {
-      console.error("Drawer load error:", err);
-      setError("Failed to load customer details.");
-    } finally {
-      setLoading(false);
-    }
+  const { customer, stats, recentTrips } = details || {};
+  const safeStats = stats || {
+    totalTrips: 0,
+    deliveredTrips: 0,
+    cancelledTrips: 0,
+    totalAmount: 0,
+    firstTripAt: null,
+    lastTripAt: null,
   };
 
-  if (!open || !customer) return null;
-
-  const joinedDate =
-    customer.createdAt && !isNaN(Date.parse(customer.createdAt))
-      ? new Date(customer.createdAt).toLocaleDateString()
-      : "—";
+  const formatDateTime = (value) => {
+    if (!value) return "—";
+    return new Date(value).toLocaleString();
+  };
 
   return (
     <div className={styles.drawerOverlay}>
       <div className={styles.drawer}>
-        {/* Close Button */}
-        <button className={styles.closeBtn} onClick={onClose}>
-          ✕
-        </button>
-
-        <h2 className={styles.drawerTitle}>Customer Details</h2>
-
-        {/* Profile Card */}
-        <div className={styles.profileCard}>
-          <div className={styles.avatarCircle}>
-            {customer.name?.charAt(0).toUpperCase() || "C"}
-          </div>
-          <div>
-            <h3 className={styles.customerName}>{customer.name}</h3>
-            <p className={styles.customerEmail}>{customer.email}</p>
-            <p className={styles.customerPhone}>
-              {customer.phoneNumber || "No phone available"}
-            </p>
-
-            <span
-              className={
-                customer.isActive
-                  ? styles.statusBadgeActive
-                  : styles.statusBadgeInactive
-              }
-            >
-              {customer.isActive ? "Active" : "Inactive"}
-            </span>
-
-            <p className={styles.joinedText}>Joined: {joinedDate}</p>
-          </div>
+        <div className={styles.drawerHeader}>
+          <h2>Customer Details</h2>
+          <button type="button" className={styles.closeBtn} onClick={onClose}>
+            ✕
+          </button>
         </div>
 
-        {loading && <p className={styles.smallInfo}>Loading stats...</p>}
-        {error && <p className={styles.error}>{error}</p>}
-
-        {/* KPI Cards */}
-        {stats && (
-          <div className={styles.kpiGrid}>
-            <div className={styles.kpiCard}>
-              <h4>Total Trips</h4>
-              <p>{stats.totalTrips}</p>
+        {!customer ? (
+          <p>Loading...</p>
+        ) : (
+          <>
+            {/* Profile */}
+            <div className={styles.drawerProfile}>
+              {customer.avatar ? (
+                <img
+                  src={customer.avatar}
+                  alt={customer.name}
+                  className={styles.drawerAvatar}
+                />
+              ) : (
+                <div className={styles.drawerAvatarFallback}>
+                  {customer.name?.[0] || "C"}
+                </div>
+              )}
+              <div>
+                <h3>{customer.name}</h3>
+                <p>{customer.email}</p>
+                <p>{customer.phone || "—"}</p>
+                <span
+                  className={
+                    customer.isActive
+                      ? styles.statusBadgeActive
+                      : styles.statusBadgeInactive
+                  }
+                >
+                  {customer.isActive ? "Active" : "Inactive"}
+                </span>
+              </div>
             </div>
 
-            <div className={styles.kpiCard}>
-              <h4>Delivered Trips</h4>
-              <p>{stats.deliveredTrips}</p>
+            {/* Stats */}
+            <div className={styles.statsGrid}>
+              <div className={styles.statCard}>
+                <span className={styles.statLabel}>Total Trips</span>
+                <span className={styles.statNumber}>
+                  {safeStats.totalTrips}
+                </span>
+              </div>
+              <div className={styles.statCard}>
+                <span className={styles.statLabel}>Delivered</span>
+                <span className={styles.statNumber}>
+                  {safeStats.deliveredTrips}
+                </span>
+              </div>
+              <div className={styles.statCard}>
+                <span className={styles.statLabel}>Cancelled</span>
+                <span className={styles.statNumber}>
+                  {safeStats.cancelledTrips}
+                </span>
+              </div>
+              <div className={styles.statCard}>
+                <span className={styles.statLabel}>Estimated Total</span>
+                <span className={styles.statNumber}>
+                  {safeStats.totalAmount?.toFixed
+                    ? `$${safeStats.totalAmount.toFixed(2)}`
+                    : `$${Number(safeStats.totalAmount || 0).toFixed(2)}`
+                  }
+                </span>
+              </div>
+              <div className={styles.statCard}>
+                <span className={styles.statLabel}>First Trip</span>
+                <span className={styles.statNumber}>
+                  {formatDateTime(safeStats.firstTripAt)}
+                </span>
+              </div>
+              <div className={styles.statCard}>
+                <span className={styles.statLabel}>Last Trip</span>
+                <span className={styles.statNumber}>
+                  {formatDateTime(safeStats.lastTripAt)}
+                </span>
+              </div>
             </div>
 
-            <div className={styles.kpiCard}>
-              <h4>Cancelled Trips</h4>
-              <p>{stats.cancelledTrips}</p>
-            </div>
-
-            <div className={styles.kpiCard}>
-              <h4>Total Spent</h4>
-              <p>${stats.totalSpent?.toFixed(2) || "0.00"}</p>
-            </div>
-          </div>
-        )}
-
-        {/* Recent Trips */}
-        <div className={styles.section}>
-          <h3>Recent Trips</h3>
-
-          {recentTrips.length === 0 ? (
-            <p className={styles.empty}>No trips yet for this customer.</p>
-          ) : (
-            <div className={styles.tableWrapper}>
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Route</th>
-                    <th>Status</th>
-                    <th>Total</th>
-                    <th>Driver</th>
-                    <th>Payment</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {recentTrips.map((t) => (
-                    <tr key={t.id}>
-                      <td>
-                        {new Date(t.createdAt).toLocaleString()}
-                      </td>
-
-                      <td>
-                        <div className={styles.routeText}>
-                          <span>{t.pickupAddress}</span>
-                          <span className={styles.routeArrow}>→</span>
-                          <span>{t.dropoffAddress}</span>
-                        </div>
-                      </td>
-
-                      <td>
-                        <span
-                          className={
-                            styles[`badge_${t.status}`] ||
-                            styles.badge_default
-                          }
-                        >
-                          {t.status}
-                        </span>
-                      </td>
-
-                      <td>${t.totalAmount?.toFixed(2) || "0.00"}</td>
-
-                      <td>{t.driverName}</td>
-
-                      <td>
-                        <span
-                          className={
-                            t.paymentStatus === "paid"
-                              ? styles.statusPaid
-                              : t.paymentStatus === "pending"
-                              ? styles.statusPending
-                              : styles.statusUnpaid
-                          }
-                        >
-                          {t.paymentStatus}
-                        </span>
-                      </td>
+            {/* Recent Trips */}
+            <h3 className={styles.subTitle}>Recent Trips</h3>
+            {(!recentTrips || recentTrips.length === 0) ? (
+              <p className={styles.empty}>No recent trips for this customer.</p>
+            ) : (
+              <div className={styles.tableWrapper}>
+                <table className={styles.table}>
+                  <thead>
+                    <tr>
+                      <th>Status</th>
+                      <th>Pickup</th>
+                      <th>Dropoff</th>
+                      <th>Driver</th>
+                      <th>Vehicle</th>
+                      <th>Created</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+                  </thead>
+                  <tbody>
+                    {recentTrips.map((t) => (
+                      <tr key={t._id}>
+                        <td>{t.status}</td>
+                        <td>{t.pickupLocation?.address || "—"}</td>
+                        <td>{t.dropoffLocation?.address || "—"}</td>
+                        <td>{t.driverId?.name || "—"}</td>
+                        <td>
+                          {t.vehicleId
+                            ? `${t.vehicleId.plateNumber || ""} ${
+                                t.vehicleId.brand || ""
+                              }`
+                            : "—"}
+                        </td>
+                        <td>{formatDateTime(t.createdAt)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </>
+        )}
       </div>
     </div>
   );

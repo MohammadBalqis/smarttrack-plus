@@ -1,8 +1,8 @@
-// server/src/routes/tripRoutes.js
 import { Router } from "express";
 import { protect } from "../middleware/authMiddleware.js";
 import { authorizeRoles } from "../middleware/roleMiddleware.js";
 import { qrLimiter } from "../middleware/rateLimitMiddleware.js";
+import { safeHandler } from "../utils/safeHandler.js";
 
 // Core controllers
 import {
@@ -33,7 +33,7 @@ import {
 const router = Router();
 
 /* ==========================================================
-   TRIP ROUTES
+   🚚 TRIP ROUTES (SECURED + WRAPPED)
 ========================================================== */
 
 // 1. Create trip
@@ -41,7 +41,7 @@ router.post(
   "/create",
   protect,
   authorizeRoles("company", "manager", "superadmin", "owner"),
-  createTrip
+  safeHandler(createTrip)
 );
 
 // 1B. Assign driver + vehicle
@@ -49,7 +49,7 @@ router.post(
   "/assign",
   protect,
   authorizeRoles("company", "manager", "superadmin", "owner"),
-  assignTrip
+  safeHandler(assignTrip)
 );
 
 // 2. Update driver location
@@ -57,7 +57,7 @@ router.post(
   "/update-location",
   protect,
   authorizeRoles("driver"),
-  updateDriverLocation
+  safeHandler(updateDriverLocation)
 );
 
 // 3. Complete trip
@@ -65,7 +65,7 @@ router.post(
   "/complete",
   protect,
   authorizeRoles("driver", "manager", "company", "superadmin", "owner"),
-  completeTrip
+  safeHandler(completeTrip)
 );
 
 // 4. Driver active trips
@@ -73,7 +73,7 @@ router.get(
   "/active",
   protect,
   authorizeRoles("driver"),
-  getDriverActiveTrips
+  safeHandler(getDriverActiveTrips)
 );
 
 // 5. Route history
@@ -81,7 +81,7 @@ router.get(
   "/:tripId/route",
   protect,
   authorizeRoles("company", "manager", "owner", "superadmin"),
-  getRouteHistory
+  safeHandler(getRouteHistory)
 );
 
 // 6. List trips
@@ -89,7 +89,7 @@ router.get(
   "/list",
   protect,
   authorizeRoles("company", "manager", "owner", "superadmin"),
-  listTrips
+  safeHandler(listTrips)
 );
 
 // 7. Generate QR
@@ -97,18 +97,22 @@ router.get(
   "/:tripId/generate-qr",
   protect,
   authorizeRoles("company", "manager", "driver", "superadmin", "owner"),
-  generateTripQr
+  safeHandler(generateTripQr)
 );
 
-// 8. Confirm delivery — secured with rate limiter
-router.post("/confirm-delivery", qrLimiter, confirmDelivery);
+// 8. Confirm delivery (rate-limited)
+router.post(
+  "/confirm-delivery",
+  qrLimiter,
+  safeHandler(confirmDelivery)
+);
 
 // 9. Customer live tracking
 router.get(
   "/customer/live/:tripId",
   protect,
   authorizeRoles("customer"),
-  getCustomerLiveTrip
+  safeHandler(getCustomerLiveTrip)
 );
 
 // Manager search
@@ -116,31 +120,31 @@ router.get(
   "/manager/search",
   protect,
   authorizeRoles("manager", "company", "owner", "superadmin"),
-  managerSearchTrips
+  safeHandler(managerSearchTrips)
 );
 
-// Cancel
+// Cancel trip
 router.patch(
   "/cancel/:tripId",
   protect,
   authorizeRoles("manager", "company", "owner", "superadmin"),
-  cancelTrip
+  safeHandler(cancelTrip)
 );
 
-// Update
+// Update trip
 router.patch(
   "/update/:tripId",
   protect,
   authorizeRoles("manager", "company", "owner", "superadmin"),
-  updateTrip
+  safeHandler(updateTrip)
 );
 
-// Live status
+// Live status updates
 router.post(
   "/live-status",
   protect,
   authorizeRoles("driver"),
-  updateLiveStatus
+  safeHandler(updateLiveStatus)
 );
 
 export default router;

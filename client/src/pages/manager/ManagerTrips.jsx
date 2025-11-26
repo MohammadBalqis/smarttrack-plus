@@ -1,169 +1,397 @@
+// client/src/pages/manager/ManagerTrips.jsx
 import React, { useEffect, useState } from "react";
-import { getCompanyTripsApi } from "../../api/companyTripsApi";
 import { getCompanyDriversApi } from "../../api/companyDriversApi";
+import { getCompanyVehiclesApi } from "../../api/companyVehiclesApi";
+import {
+  getManagerTripsApi,
+  getManagerTripStatsApi,
+} from "../../api/managerTripsApi";
 import ManagerTripDrawer from "../../components/manager/ManagerTripDrawer";
 import styles from "../../styles/manager/managerTrips.module.css";
 
 const ManagerTrips = () => {
-  const [trips, setTrips] = useState([]);
-  const [drivers, setDrivers] = useState([]);
-  const [filters, setFilters] = useState({
-    status: "",
-    from: "",
-    to: "",
+  const [stats, setStats] = useState({
+    totalTrips: 0,
+    deliveredTrips: 0,
+    activeTrips: 0,
+    cancelledTrips: 0,
+    pendingTrips: 0,
+    totalRevenue: 0,
   });
 
-  const [page, setPage] = useState(1);
-  const [pages, setPages] = useState(1);
+  const [trips, setTrips] = useState([]);
+  const [drivers, setDrivers] = useState([]);
+  const [vehicles, setVehicles] = useState([]);
 
-  const [loading, setLoading] = useState(false);
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [selectedTrip, setSelectedTrip] = useState(null);
+  const [statusFilter, setStatusFilter] = useState("");
+  const [driverFilter, setDriverFilter] = useState("");
+  const [vehicleFilter, setVehicleFilter] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+
+  const [page, setPage] = useState(1);
+  const [limit] = useState(20);
+  const [totalPages, setTotalPages] = useState(1);
+
+  const [loadingStats, setLoadingStats] = useState(false);
+  const [loadingTrips, setLoadingTrips] = useState(false);
+  const [loadingFilters, setLoadingFilters] = useState(false);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    loadDrivers();
-  }, []);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [selectedTrip, setSelectedTrip] = useState(null);
 
-  useEffect(() => {
-    loadTrips();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, filters]);
-
-  const loadDrivers = async () => {
+  /* ==========================
+     Load drivers & vehicles for filters
+  ========================== */
+  const loadFilters = async () => {
     try {
-      const res = await getCompanyDriversApi({ status: "active" });
-      setDrivers(res.data.drivers || []);
+      setLoadingFilters(true);
+      const [driversRes, vehiclesRes] = await Promise.all([
+        getCompanyDriversApi(),
+        getCompanyVehiclesApi(),
+      ]);
+
+      setDrivers(driversRes.data.drivers || []);
+      setVehicles(vehiclesRes.data.vehicles || []);
     } catch (err) {
-      console.error("Error loading drivers:", err);
+      console.error("Error loading filter data:", err);
+    } finally {
+      setLoadingFilters(false);
     }
   };
 
+  /* ==========================
+     Load stats
+  ========================== */
+  const loadStats = async () => {
+    try {
+      setLoadingStats(true);
+      setError("");
+
+      const params = {};
+      if (statusFilter) params.status = statusFilter;
+      if (startDate) params.startDate = startDate;
+      if (endDate) params.endDate = endDate;
+
+      const res = await getManagerTripStatsApi(params);
+      if (res.data?.ok && res.data.stats) {
+        setStats(res.data.stats);
+      }
+    } catch (err) {
+      console.error("Error loading trip stats:", err);
+      setError("Failed to load trip statistics.");
+    } finally {
+      setLoadingStats(false);
+    }
+  };
+
+  /* ==========================
+     Load trips list
+  ========================== */
   const loadTrips = async () => {
     try {
-      setLoading(true);
+      setLoadingTrips(true);
       setError("");
-      const res = await getCompanyTripsApi({
+
+      const params = {
         page,
-        status: filters.status || undefined,
-        from: filters.from || undefined,
-        to: filters.to || undefined,
-      });
-      setTrips(res.data.trips || []);
-      setPages(res.data.pages || 1);
+        limit,
+      };
+
+      if (statusFilter) params.status = statusFilter;
+      if (driverFilter) params.driverId = driverFilter;
+      if (vehicleFilter) params.vehicleId = vehicleFilter;
+      if (searchQuery) params.search = searchQuery;
+      if (startDate) params.startDate = startDate;
+      if (endDate) params.endDate = endDate;
+
+      const res = await getManagerTripsApi(params);
+
+      if (res.data?.ok) {
+        setTrips(res.data.trips || []);
+        setTotalPages(res.data.totalPages || 1);
+      } else {
+        setTrips([]);
+      }
     } catch (err) {
       console.error("Error loading trips:", err);
       setError("Failed to load trips.");
     } finally {
-      setLoading(false);
+      setLoadingTrips(false);
     }
   };
 
-  const handleOpenDrawer = (trip) => {
+  useEffect(() => {
+    loadFilters();
+  }, []);
+
+  // Reload stats + trips when filters or page change
+  useEffect(() => {
+    loadStats();
+    loadTrips();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusFilter, driverFilter, vehicleFilter, searchQuery, startDate, endDate, page]);
+
+  const openTripDrawer = (trip) => {
     setSelectedTrip(trip);
     setDrawerOpen(true);
   };
 
-  const handleCloseDrawer = () => {
+  const closeTripDrawer = () => {
     setSelectedTrip(null);
     setDrawerOpen(false);
   };
 
-  // Update a trip in state after assigning driver
-  const handleTripUpdated = (updatedTrip) => {
-    setTrips((prev) =>
-      prev.map((t) => (t._id === updatedTrip._id ? updatedTrip : t))
-    );
-    setSelectedTrip(updatedTrip);
+  const formatDate = (value) => {
+    if (!value) return "—";
+    return new Date(value).toLocaleString();
+  };
+
+  const shortenId = (id) => {
+    if (!id) return "";
+    if (id.length <= 8) return id;
+    return id.slice(-8);
+  };
+
+  const onResetFilters = () => {
+    setStatusFilter("");
+    setDriverFilter("");
+    setVehicleFilter("");
+    setSearchQuery("");
+    setStartDate("");
+    setEndDate("");
+    setPage(1);
   };
 
   return (
-    <div className={styles.container}>
-      <h1 className={styles.title}>Manager — Trips</h1>
-
-      {/* Filters */}
-      <div className={styles.filters}>
-        <select
-          value={filters.status}
-          onChange={(e) =>
-            setFilters((f) => ({ ...f, status: e.target.value }))
-          }
-        >
-          <option value="">All statuses</option>
-          <option value="pending">Pending</option>
-          <option value="assigned">Assigned</option>
-          <option value="in_progress">In Progress</option>
-          <option value="delivered">Delivered</option>
-          <option value="cancelled">Cancelled</option>
-        </select>
-
-        <input
-          type="date"
-          value={filters.from}
-          onChange={(e) => setFilters((f) => ({ ...f, from: e.target.value }))}
-        />
-
-        <input
-          type="date"
-          value={filters.to}
-          onChange={(e) => setFilters((f) => ({ ...f, to: e.target.value }))}
-        />
+    <div className={styles.page}>
+      {/* Header */}
+      <div className={styles.header}>
+        <div>
+          <h1>Trips</h1>
+          <p>
+            Overview of all trips for your company: stats, filters, and detailed
+            information.
+          </p>
+        </div>
+        <div className={styles.headerActions}>
+          <button
+            type="button"
+            className={styles.secondaryBtn}
+            onClick={onResetFilters}
+          >
+            Reset Filters
+          </button>
+          <button
+            type="button"
+            className={styles.refreshBtn}
+            onClick={() => {
+              loadStats();
+              loadTrips();
+            }}
+          >
+            Refresh
+          </button>
+        </div>
       </div>
 
-      {/* Table */}
+      {/* Stats Cards */}
+      <div className={styles.kpiGrid}>
+        <div className={styles.card}>
+          <h3>Total Trips</h3>
+          <p className={styles.number}>{stats.totalTrips || 0}</p>
+        </div>
+        <div className={styles.card}>
+          <h3>Delivered</h3>
+          <p className={styles.number}>{stats.deliveredTrips || 0}</p>
+        </div>
+        <div className={styles.card}>
+          <h3>Active</h3>
+          <p className={styles.number}>{stats.activeTrips || 0}</p>
+        </div>
+        <div className={styles.card}>
+          <h3>Cancelled</h3>
+          <p className={styles.number}>{stats.cancelledTrips || 0}</p>
+        </div>
+        <div className={styles.card}>
+          <h3>Pending</h3>
+          <p className={styles.number}>{stats.pendingTrips || 0}</p>
+        </div>
+        <div className={styles.card}>
+          <h3>Total Revenue</h3>
+          <p className={styles.number}>
+            {typeof stats.totalRevenue === "number"
+              ? stats.totalRevenue.toFixed(2)
+              : "0.00"}
+          </p>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className={styles.filtersCard}>
+        <div className={styles.filtersRow}>
+          {/* Status */}
+          <select
+            value={statusFilter}
+            onChange={(e) => {
+              setStatusFilter(e.target.value);
+              setPage(1);
+            }}
+          >
+            <option value="">All statuses</option>
+            <option value="pending">Pending</option>
+            <option value="assigned">Assigned</option>
+            <option value="in_progress">In Progress</option>
+            <option value="delivered">Delivered</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+
+          {/* Driver */}
+          <select
+            value={driverFilter}
+            onChange={(e) => {
+              setDriverFilter(e.target.value);
+              setPage(1);
+            }}
+          >
+            <option value="">All drivers</option>
+            {drivers.map((d) => (
+              <option key={d._id} value={d._id}>
+                {d.name}
+              </option>
+            ))}
+          </select>
+
+          {/* Vehicle */}
+          <select
+            value={vehicleFilter}
+            onChange={(e) => {
+              setVehicleFilter(e.target.value);
+              setPage(1);
+            }}
+          >
+            <option value="">All vehicles</option>
+            {vehicles.map((v) => (
+              <option key={v._id} value={v._id}>
+                {v.plateNumber} ({v.brand} {v.model})
+              </option>
+            ))}
+          </select>
+
+          {/* Search */}
+          <input
+            type="text"
+            placeholder="Search by address / phone / ID..."
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setPage(1);
+            }}
+          />
+        </div>
+
+        <div className={styles.filtersRow}>
+          {/* Dates */}
+          <div className={styles.dateGroup}>
+            <label>From</label>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => {
+                setStartDate(e.target.value);
+                setPage(1);
+              }}
+            />
+          </div>
+          <div className={styles.dateGroup}>
+            <label>To</label>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => {
+                setEndDate(e.target.value);
+                setPage(1);
+              }}
+            />
+          </div>
+
+          {loadingFilters && (
+            <span className={styles.smallInfo}>Loading filters...</span>
+          )}
+          {loadingStats && (
+            <span className={styles.smallInfo}>Updating stats...</span>
+          )}
+        </div>
+      </div>
+
+      {/* Trips Table */}
       <div className={styles.tableCard}>
         <div className={styles.tableHeaderRow}>
-          <h3>Trips</h3>
-          {loading && (
+          <h3>Trips List</h3>
+          {loadingTrips && (
             <span className={styles.smallInfo}>Loading trips...</span>
           )}
         </div>
 
-        {error && <div className={styles.error}>{error}</div>}
+        {error && <p className={styles.error}>{error}</p>}
 
-        {trips.length === 0 && !loading ? (
+        {trips.length === 0 && !loadingTrips ? (
           <p className={styles.empty}>No trips found.</p>
         ) : (
           <div className={styles.tableWrapper}>
             <table className={styles.table}>
               <thead>
                 <tr>
-                  <th>Date</th>
+                  <th>ID</th>
+                  <th>Customer</th>
                   <th>Driver</th>
-                  <th>Pickup</th>
-                  <th>Dropoff</th>
+                  <th>Vehicle</th>
                   <th>Status</th>
+                  <th>Payment</th>
                   <th>Total</th>
+                  <th>Created</th>
                   <th></th>
                 </tr>
               </thead>
               <tbody>
                 {trips.map((t) => (
                   <tr key={t._id}>
+                    <td>#{shortenId(t._id)}</td>
+                    <td>{t.customerId?.name || "—"}</td>
+                    <td>{t.driverId?.name || "—"}</td>
                     <td>
-                      {t.createdAt
-                        ? new Date(t.createdAt).toLocaleString()
-                        : ""}
+                      {t.vehicleId
+                        ? `${t.vehicleId.brand || ""} ${t.vehicleId.model || ""} (${t.vehicleId.plateNumber || ""})`
+                        : "—"}
                     </td>
-                    <td>{t.driverId?.name || "Unassigned"}</td>
-                    <td>{t.pickupLocation?.address}</td>
-                    <td>{t.dropoffLocation?.address}</td>
                     <td>
                       <span
-                        className={
-                          styles[`badge_${t.status}`] || styles.badge_default
-                        }
+                        className={`${styles.badge} ${
+                          styles[`badgeStatus_${t.status}`] || ""
+                        }`}
                       >
-                        {t.status}
+                        {t.status === "in_progress"
+                          ? "In Progress"
+                          : t.status?.charAt(0).toUpperCase() +
+                            t.status?.slice(1)}
                       </span>
                     </td>
-                    <td>${t.totalAmount?.toFixed(2) || "0.00"}</td>
+                    <td>{t.paymentStatus || "unpaid"}</td>
+                    <td>
+                      {typeof t.totalAmount === "number"
+                        ? t.totalAmount.toFixed(2)
+                        : "0.00"}
+                    </td>
+                    <td>{formatDate(t.createdAt)}</td>
                     <td>
                       <button
+                        type="button"
                         className={styles.viewBtn}
-                        onClick={() => handleOpenDrawer(t)}
+                        onClick={() => openTripDrawer(t)}
                       >
-                        View / Assign
+                        View
                       </button>
                     </td>
                   </tr>
@@ -172,34 +400,38 @@ const ManagerTrips = () => {
             </table>
           </div>
         )}
-      </div>
 
-      {/* Pagination */}
-      <div className={styles.pagination}>
-        <button
-          disabled={page <= 1}
-          onClick={() => setPage((p) => Math.max(1, p - 1))}
-        >
-          Prev
-        </button>
-        <span>
-          Page {page} / {pages}
-        </span>
-        <button
-          disabled={page >= pages}
-          onClick={() => setPage((p) => p + 1)}
-        >
-          Next
-        </button>
+        {/* Pagination */}
+        <div className={styles.paginationRow}>
+          <button
+            type="button"
+            className={styles.secondaryBtn}
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page <= 1}
+          >
+            Previous
+          </button>
+          <span className={styles.pageInfo}>
+            Page {page} of {totalPages}
+          </span>
+          <button
+            type="button"
+            className={styles.secondaryBtn}
+            onClick={() =>
+              setPage((p) => (p < totalPages ? p + 1 : p))
+            }
+            disabled={page >= totalPages}
+          >
+            Next
+          </button>
+        </div>
       </div>
 
       {/* Drawer */}
       <ManagerTripDrawer
         open={drawerOpen}
-        onClose={handleCloseDrawer}
+        onClose={closeTripDrawer}
         trip={selectedTrip}
-        drivers={drivers}
-        onTripUpdated={handleTripUpdated}
       />
     </div>
   );

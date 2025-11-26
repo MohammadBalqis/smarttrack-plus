@@ -1,68 +1,130 @@
-/* ================================
-   GLOBAL PAGE LAYOUT
-================================ */
+/* client/src/styles/manager/managerProducts.module.css */
+
 .page {
   padding: 24px;
-  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont,
-    "Segoe UI", sans-serif;
-  color: #0f172a;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 /* Header */
+
 .header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
   margin-bottom: 20px;
 }
 
 .header h1 {
-  font-size: 26px;
-  font-weight: 700;
+  margin: 0;
+  font-size: 24px;
 }
 
 .header p {
+  margin: 4px 0 0;
+  color: #64748b;
   font-size: 14px;
-  color: #6b7280;
 }
 
-/* ================================
-   FILTERS ROW
-================================ */
+.headerStats {
+  display: flex;
+  gap: 16px;
+  font-size: 14px;
+  color: #475569;
+}
+
+.headerStat strong {
+  font-weight: 600;
+}
+
+/* Filters */
+
 .filtersRow {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   margin-bottom: 16px;
 }
 
-.filtersRow input,
-.filtersRow select {
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
+.filtersRow select,
+.filtersRow input {
   padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
   font-size: 14px;
+  min-width: 140px;
 }
 
-/* ================================
-   TABLE CARD
-================================ */
+.searchForm {
+  display: flex;
+  gap: 6px;
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.searchForm input {
+  flex: 1;
+}
+
+.searchForm button {
+  padding: 8px 14px;
+  border-radius: 6px;
+  border: none;
+  background-color: #2563eb;
+  color: white;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.searchForm button:hover {
+  background-color: #1d4ed8;
+}
+
+/* Table Card */
+
 .tableCard {
-  background: #ffffff;
-  border-radius: 14px;
+  background-color: #ffffff;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
   padding: 16px;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
-  margin-bottom: 30px;
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.04);
 }
 
 .tableHeaderRow {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 12px;
+}
+
+.tableHeaderRow h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.headerInfo {
+  display: flex;
+  gap: 10px;
 }
 
 .smallInfo {
-  font-size: 13px;
-  color: #6b7280;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.error {
+  color: #b91c1c;
+  font-size: 14px;
+  margin-top: 4px;
+}
+
+.empty {
+  font-size: 14px;
+  color: #64748b;
 }
 
 /* Table */
+
 .tableWrapper {
   width: 100%;
   overflow-x: auto;
@@ -71,238 +133,266 @@
 .table {
   width: 100%;
   border-collapse: collapse;
-  margin-top: 10px;
+  font-size: 14px;
+}
+
+.table thead {
+  background-color: #f8fafc;
+}
+
+.table th,
+.table td {
+  padding: 8px 10px;
+  text-align: left;
+  border-bottom: 1px solid #e2e8f0;
 }
 
 .table th {
-  color: #374151;
-  font-size: 14px;
   font-weight: 600;
-  padding: 10px;
-  border-bottom: 1px solid #e5e7eb;
+  color: #475569;
+  font-size: 13px;
 }
 
-.table td {
-  padding: 10px;
-  font-size: 14px;
-  border-bottom: 1px solid #f3f4f6;
+.nameCell {
+  font-weight: 500;
 }
 
-/* ================================
-   IMAGE: THUMBNAIL
-================================ */
+/* Image */
+
 .thumbnail {
   width: 48px;
   height: 48px;
-  object-fit: cover;
   border-radius: 8px;
-  border: 1px solid #e5e7eb;
+  object-fit: cover;
+  border: 1px solid #e2e8f0;
 }
 
 .noImage {
   width: 48px;
   height: 48px;
-  background: #f3f4f6;
+  border-radius: 8px;
+  background-color: #e2e8f0;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 8px;
-  font-size: 11px;
-  color: #6b7280;
+  font-size: 10px;
+  color: #64748b;
 }
 
-/* ================================
-   STATUS BADGES
-================================ */
-.statusBadgeActive {
-  background: #dcfce7;
-  color: #15803d;
-  padding: 4px 10px;
+/* Stock badges */
+
+.stockBadgeZero,
+.stockBadgeLow,
+.stockBadgeOk {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
   border-radius: 999px;
   font-size: 12px;
-  font-weight: 600;
-}
-
-.statusBadgeInactive {
-  background: #fee2e2;
-  color: #b91c1c;
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-/* ================================
-   VIEW BUTTON
-================================ */
-.viewBtn {
-  background: #2563eb;
-  color: white;
-  padding: 6px 12px;
-  font-size: 13px;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: 0.2s;
-}
-
-.viewBtn:hover {
-  background: #1e40af;
-}
-
-/* ================================
-   DRAWER OVERLAY
-================================ */
-.drawerOverlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.35);
-  display: flex;
-  justify-content: flex-end;
-  z-index: 2000;
-}
-
-/* ================================
-   DRAWER PANEL
-================================ */
-.drawer {
-  width: 480px;
-  max-width: 100%;
-  height: 100%;
-  background: #ffffff;
-  padding: 24px;
-  overflow-y: auto;
-  box-shadow: -2px 0 10px rgba(15, 23, 42, 0.4);
-  position: relative;
-}
-
-.closeBtn {
-  position: absolute;
-  right: 18px;
-  top: 14px;
-  font-size: 22px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  opacity: 0.7;
-}
-
-.drawerTitle {
-  font-size: 22px;
-  font-weight: 700;
-  margin-bottom: 20px;
-}
-
-/* ================================
-   PRODUCT IMAGE (LARGE)
-================================ */
-.productImageWrapper {
-  width: 100%;
-  height: 220px;
-  background: #f3f4f6;
-  border-radius: 12px;
-  margin-bottom: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.productImage {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: 12px;
-}
-
-.noImageLarge {
-  font-size: 14px;
-  color: #9ca3af;
-}
-
-/* ================================
-   INFO SECTION
-================================ */
-.infoSection h3 {
-  font-size: 20px;
-  font-weight: 700;
-  margin-bottom: 6px;
-}
-
-.categoryText {
-  font-size: 14px;
-  color: #6b7280;
-  margin-bottom: 12px;
-}
-
-.description {
-  font-size: 14px;
-  color: #4b5563;
-  margin-bottom: 12px;
-}
-
-/* Price box */
-.priceBox {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  margin-bottom: 14px;
-  font-size: 15px;
-}
-
-.priceBox strong {
-  color: #111827;
-  font-size: 17px;
-}
-
-/* Status row */
-.statusRow {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 18px;
-}
-
-/* ================================
-   ATTRIBUTES LIST
-================================ */
-.section h4 {
-  font-size: 15px;
-  margin-bottom: 8px;
-  font-weight: 600;
-}
-
-.attributesList {
-  background: #f9fafb;
-  padding: 12px;
-  border-radius: 10px;
-}
-
-.attributeItem {
-  display: flex;
-  justify-content: space-between;
-  padding: 6px 0;
-  font-size: 14px;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.attributeItem:last-child {
-  border-bottom: none;
-}
-
-.attributeKey {
-  color: #4b5563;
   font-weight: 500;
 }
 
-.attributeValue {
-  color: #111827;
+.stockBadgeZero {
+  background-color: #fee2e2;
+  color: #b91c1c;
 }
 
-/* ================================
-   META
-================================ */
-.meta {
+.stockBadgeLow {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.stockBadgeOk {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+/* Status badges */
+
+.statusBadgeActive,
+.statusBadgeInactive {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.statusBadgeActive {
+  background-color: #e0f2fe;
+  color: #0369a1;
+}
+
+.statusBadgeInactive {
+  background-color: #f1f5f9;
+  color: #64748b;
+}
+
+/* View button */
+
+.viewButton {
+  padding: 6px 10px;
   font-size: 13px;
-  color: #6b7280;
-  margin-bottom: 6px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  background-color: #ffffff;
+  cursor: pointer;
+}
+
+.viewButton:hover {
+  background-color: #f8fafc;
+}
+
+/* Pagination */
+
+.paginationRow {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.paginationRow button {
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  background-color: #ffffff;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.paginationRow button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* Drawer */
+
+.drawerOverlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(15, 23, 42, 0.4);
+  display: flex;
+  justify-content: flex-end;
+  z-index: 50;
+}
+
+.drawer {
+  width: 360px;
+  max-width: 90%;
+  background-color: #ffffff;
+  height: 100%;
+  padding: 16px;
+  box-shadow: -4px 0 16px rgba(15, 23, 42, 0.3);
+  display: flex;
+  flex-direction: column;
+}
+
+.drawerHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.drawerHeader h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.closeButton {
+  border: none;
+  background: none;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.drawerContent {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.drawerMainInfo {
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.drawerTitle {
+  margin: 0 0 4px 0;
+  font-size: 18px;
+}
+
+.drawerCategory,
+.drawerPrice,
+.drawerStock,
+.drawerStatus {
+  font-size: 14px;
+  color: #475569;
+  margin: 4px 0;
+}
+
+.drawerCategory span,
+.drawerPrice span {
+  font-weight: 500;
+}
+
+.drawerSection {
+  margin-top: 12px;
+}
+
+.drawerSection h4 {
+  margin: 0 0 4px 0;
+  font-size: 14px;
+  color: #0f172a;
+}
+
+.drawerDescription {
+  font-size: 14px;
+  color: #475569;
+}
+
+/* Attributes */
+
+.attributesList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.attributesList li {
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+.attrKey {
+  font-weight: 500;
+}
+
+.attrValue {
+  color: #475569;
+}
+
+/* Images inside drawer */
+
+.drawerImagesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 8px;
+}
+
+.drawerImageWrapper img {
+  width: 100%;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 1px solid #e2e8f0;
+}
+
+/* Meta section */
+
+.metaLine {
+  font-size: 13px;
+  color: #64748b;
+  margin: 2px 0;
 }

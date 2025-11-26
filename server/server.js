@@ -1,4 +1,4 @@
-// server.js (FINAL SECURITY-HARDENED VERSION)
+// server.js (CLEAN, FIXED, SECURE)
 
 import express from "express";
 import dotenv from "dotenv";
@@ -13,18 +13,24 @@ import xss from "xss-clean";
 import compression from "compression";
 import cors from "cors";
 
-import { applySecurityMiddlewares } from "./src/middleware/securityMiddleware.js";
-import { apiLimiter } from "./src/middleware/rateLimitMiddleware.js";
-
-// Models
-import GlobalSettings from "./src/models/GlobalSettings.js";
-
+// 🌐 Load environment
 dotenv.config();
 const app = express();
 
 /* ==========================================================
+   🔐 IMPORT SECURITY + RATE LIMIT MIDDLEWARES
+========================================================== */
+import { sanitizeRequest } from "./src/middleware/sanitizeMiddleware.js";
+import { applySecurityMiddlewares } from "./src/middleware/securityMiddleware.js";
+import { globalLimiter } from "./src/middleware/globalRateLimit.js";
+import { loginLimiter } from "./src/middleware/loginRateLimit.js";
+import { registerLimiter } from "./src/middleware/registerRateLimit.js";
+import { apiLimiter } from "./src/middleware/rateLimitMiddleware.js";
+
+/* ==========================================================
    🧩 BASE MIDDLEWARE (Logging + Body Parsing)
 ========================================================== */
+app.use(sanitizeRequest);
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: true, limit: "1mb" }));
 app.use(morgan("dev"));
@@ -40,16 +46,23 @@ app.use(
   })
 );
 
-/* ==========================================================
-   🚀 PERFORMANCE BOOST
-========================================================== */
-app.use(compression());
+// 🌍 Global API Rate Limiter
+app.use(globalLimiter);
+
+// Route-level limiters
+app.use("/api/auth/login", loginLimiter);
+app.use("/api/auth/register", registerLimiter);
 
 /* ==========================================================
    🚦 PREVENT MONGO INJECTION & XSS
 ========================================================== */
 app.use(mongoSanitize());
 app.use(xss());
+
+/* ==========================================================
+   🚀 PERFORMANCE BOOST
+========================================================== */
+app.use(compression());
 
 /* ==========================================================
    🌍 STATIC FILES
@@ -70,7 +83,10 @@ import tripRoutes from "./src/routes/tripRoutes.js";
 import tripAnalyticsRoutes from "./src/routes/tripAnalyticsRoutes.js";
 import paymentRoutes from "./src/routes/paymentRoutes.js";
 import customerTripRoutes from "./src/routes/customerTripRoutes.js";
-import companyDriversRoutes from "./src/routes/companyDriversRoutes.js";
+
+// IMPORTANT — only keep ONE driver route file
+import companyDriverRoutes from "./src/routes/companyDriverRoutes.js";
+
 import customerCompanyRoutes from "./src/routes/customerCompanyRoutes.js";
 import productRoutes from "./src/routes/productRoutes.js";
 import managerDashboardRoutes from "./src/routes/managerDashboardRoutes.js";
@@ -86,12 +102,16 @@ import brandingRoutes from "./src/routes/brandingRoutes.js";
 import publicApiRoutes from "./src/routes/publicApiRoutes.js";
 import companyDashboardRoutes from "./src/routes/companyDashboardRoutes.js";
 import adminStatsRoutes from "./src/routes/adminStatsRoutes.js";
-import companyDriverRoutes from "./src/routes/companyDriverRoutes.js";
 import companyTripsRoutes from "./src/routes/companyTripsRoutes.js";
 import companyCustomerRoutes from "./src/routes/companyCustomerRoutes.js";
 import companyProductRoutes from "./src/routes/companyProductRoutes.js";
 import companyVehicleRoutes from "./src/routes/companyVehicleRoutes.js";
 import sessionRoutes from "./src/routes/sessionRoutes.js";
+import managerNotificationRoutes from "./src/routes/managerNotificationRoutes.js";
+import managerTripRoutes from "./src/routes/managerTripRoutes.js";
+import managerCustomerRoutes from "./src/routes/managerCustomerRoutes.js";
+
+import managerOrderRoutes from "./src/routes/managerOrdersRoutes.js";
 /* ==========================================================
    🌐 PUBLIC API (Rate Limited)
 ========================================================== */
@@ -116,7 +136,6 @@ app.use("/api/superadmin", superAdminRoutes);
 app.use("/api/settings", globalSettingsRoutes);
 app.use("/api/company/branding", brandingRoutes);
 app.use("/api/customer/trips", customerTripRoutes);
-app.use("/api/company/drivers", companyDriversRoutes);
 app.use("/api/customer", customerCompanyRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/billing-settings", billingSettingsRoutes);
@@ -128,11 +147,19 @@ app.use("/api/invoices", invoiceRoutes);
 app.use("/api/company/dashboard", companyDashboardRoutes);
 app.use("/api/company/trips", companyTripsRoutes);
 app.use("/api/company/customers", companyCustomerRoutes);
+app.use("/api/manager", managerTripRoutes);
+app.use("/api/manager", managerCustomerRoutes);
+app.use("/api/manager", managerCustomerRoutes);
+app.use("/api/manager", managerOrderRoutes);
+// ONLY THIS IS NEEDED (NEW CLEAN DRIVER ROUTES)
 app.use("/api/company/drivers", companyDriverRoutes);
+
 app.use("/api/admin", adminStatsRoutes);
 app.use("/api/company/products", companyProductRoutes);
 app.use("/api/company/vehicles", companyVehicleRoutes);
 app.use("/api/sessions", sessionRoutes);
+app.use("/api/manager/notifications", managerNotificationRoutes);
+
 /* ==========================================================
    🌡️ HEALTH CHECK
 ========================================================== */

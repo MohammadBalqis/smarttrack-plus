@@ -1,7 +1,14 @@
 import React from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext";
-import styles from "../../styles/layout/dashboardLayout.module.css";
+import { useAuth } from "../context/AuthContext";
+
+// 🎯 Import sidebar menu items
+import {
+  managerMenu,
+  companyMenu,
+} from "../components/sidebar/sidebarItems";
+
+import styles from "../styles/layouts/dashboardLayout.module.css";
 
 const DashboardLayout = ({ role }) => {
   const { user, logout } = useAuth();
@@ -12,92 +19,19 @@ const DashboardLayout = ({ role }) => {
     navigate("/login");
   };
 
-  const renderMenu = () => {
+  // 🎯 Get menu items based on role
+  const getMenuForRole = () => {
     switch (role) {
-      case "admin":
-        return (
-          <>
-            <NavLink
-              to="/admin"
-              className={({ isActive }) =>
-                isActive ? styles.activeLink : styles.link
-              }
-              end
-            >
-              Dashboard
-            </NavLink>
-            <NavLink
-              to="/admin/companies"
-              className={({ isActive }) =>
-                isActive ? styles.activeLink : styles.link
-              }
-            >
-              Companies
-            </NavLink>
-          </>
-        );
-      case "company":
-        return (
-          <>
-            <NavLink
-              to="/company"
-              className={({ isActive }) =>
-                isActive ? styles.activeLink : styles.link
-              }
-              end
-            >
-              Dashboard
-            </NavLink>
-            <NavLink
-              to="/company/products"
-              className={({ isActive }) =>
-                isActive ? styles.activeLink : styles.link
-              }
-            >
-              Products
-            </NavLink>
-          </>
-        );
       case "manager":
-        return (
-          <>
-            <NavLink
-              to="/manager"
-              className={({ isActive }) =>
-                isActive ? styles.activeLink : styles.link
-              }
-              end
-            >
-              Dashboard
-            </NavLink>
-          </>
-        );
-      case "customer":
-        return (
-          <>
-            <NavLink
-              to="/customer"
-              className={({ isActive }) =>
-                isActive ? styles.activeLink : styles.link
-              }
-              end
-            >
-              Dashboard
-            </NavLink>
-            <NavLink
-              to="/customer/products"
-              className={({ isActive }) =>
-                isActive ? styles.activeLink : styles.link
-              }
-            >
-              Products
-            </NavLink>
-          </>
-        );
+        return managerMenu;
+      case "company":
+        return companyMenu;
       default:
-        return null;
+        return [];
     }
   };
+
+  const menuItems = getMenuForRole();
 
   return (
     <div className={styles.container}>
@@ -105,10 +39,24 @@ const DashboardLayout = ({ role }) => {
       <aside className={styles.sidebar}>
         <div className={styles.logo}>SmartTrack+</div>
         <div className={styles.roleLabel}>{role.toUpperCase()}</div>
-        <nav className={styles.menu}>{renderMenu()}</nav>
+
+        <nav className={styles.menu}>
+          {menuItems.map((item) => (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              className={({ isActive }) =>
+                isActive ? styles.activeLink : styles.link
+              }
+            >
+              <span className={styles.icon}>{item.icon}</span>
+              {item.label}
+            </NavLink>
+          ))}
+        </nav>
       </aside>
 
-      {/* Content */}
+      {/* Main Content */}
       <div className={styles.main}>
         <header className={styles.topbar}>
           <div className={styles.userInfo}>

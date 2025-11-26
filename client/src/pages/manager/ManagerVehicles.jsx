@@ -1,7 +1,12 @@
-// src/pages/manager/ManagerVehicles.jsx
+// client/src/pages/manager/ManagerVehicles.jsx
 import React, { useEffect, useState } from "react";
 import { getCompanyVehiclesApi } from "../../api/companyVehiclesApi";
 import { getCompanyDriversApi } from "../../api/companyDriversApi";
+import {
+  updateVehicleStatusApi,
+  getVehicleTripsApi, // not used yet, but ready
+  assignVehicleDriverApi, // not used yet, but ready
+} from "../../api/managerVehiclesApi";
 import ManagerVehicleDrawer from "../../components/manager/ManagerVehicleDrawer";
 import styles from "../../styles/manager/managerVehicles.module.css";
 
@@ -21,7 +26,9 @@ const ManagerVehicles = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState(null);
 
-  // Load vehicles with filters
+  const [statusSavingId, setStatusSavingId] = useState(null);
+
+  // 🔄 Load vehicles with filters
   const loadVehicles = async () => {
     try {
       setLoading(true);
@@ -43,7 +50,7 @@ const ManagerVehicles = () => {
     }
   };
 
-  // Load drivers for filter dropdown
+  // 👥 Load drivers for dropdown filter
   const loadDrivers = async () => {
     try {
       setDriversLoading(true);
@@ -89,14 +96,56 @@ const ManagerVehicles = () => {
     return new Date(lastTrip.createdAt).toLocaleDateString();
   };
 
+  // 🟡 Change vehicle status (this calls backend + notifications)
+  const handleStatusChange = async (vehicleId, newStatus) => {
+    try {
+      setStatusSavingId(vehicleId);
+      setError("");
+
+      await updateVehicleStatusApi(vehicleId, newStatus);
+
+      // Update state locally
+      setVehicles((prev) =>
+        prev.map((v) =>
+          v._id === vehicleId ? { ...v, status: newStatus } : v
+        )
+      );
+    } catch (err) {
+      console.error("Error updating vehicle status:", err);
+      const msg =
+        err.response?.data?.error || "Failed to update vehicle status.";
+      setError(msg);
+    } finally {
+      setStatusSavingId(null);
+    }
+  };
+
+  const statusOptions = [
+    { value: "available", label: "Available" },
+    { value: "in_use", label: "In Use" },
+    { value: "maintenance", label: "Maintenance" },
+  ];
+
   return (
     <div className={styles.page}>
       {/* Header */}
       <div className={styles.header}>
         <div>
           <h1>Vehicles</h1>
-          <p>Overview of your company’s fleet (view-only for managers).</p>
+          <p>
+            Overview of your company’s fleet. You can filter vehicles and update
+            their status.
+          </p>
         </div>
+
+        <button
+          type="button"
+          className={styles.refreshBtn}
+          onClick={loadVehicles}
+          disabled={loading}
+        >
+          {loading ? "Refreshing..." : "Refresh"}
+        </button>
       </div>
 
       {/* Filters */}
@@ -158,6 +207,11 @@ const ManagerVehicles = () => {
             {loading && (
               <span className={styles.smallInfo}>Loading vehicles...</span>
             )}
+            {statusSavingId && (
+              <span className={styles.smallInfo}>
+                Updating vehicle status...
+              </span>
+            )}
           </div>
         </div>
 
@@ -200,19 +254,25 @@ const ManagerVehicles = () => {
                     </td>
                     <td>{v.plateNumber}</td>
                     <td>{getDriverLabel(v)}</td>
+
+                    {/* 🔄 Editable status cell */}
                     <td>
-                      <span
-                        className={
-                          v.status === "available"
-                            ? styles.badgeAvailable
-                            : v.status === "in_use"
-                            ? styles.badgeInUse
-                            : styles.badgeMaintenance
+                      <select
+                        className={styles.statusSelect}
+                        value={v.status}
+                        onChange={(e) =>
+                          handleStatusChange(v._id, e.target.value)
                         }
+                        disabled={!!statusSavingId}
                       >
-                        {v.status === "in_use" ? "In Use" : v.status}
-                      </span>
+                        {statusOptions.map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
                     </td>
+
                     <td>{getLastTripDate(v)}</td>
                     <td>
                       <button
@@ -230,7 +290,7 @@ const ManagerVehicles = () => {
         )}
       </div>
 
-      {/* Drawer */}
+      {/* Drawer (still mainly read-only; we’ll enhance later if you want) */}
       <ManagerVehicleDrawer
         open={drawerOpen}
         onClose={closeDrawer}

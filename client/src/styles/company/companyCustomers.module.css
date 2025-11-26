@@ -1,0 +1,152 @@
+/* PAGE WRAPPER */
+.page {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+}
+
+/* HEADER */
+.headerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.title {
+  font-size: 26px;
+  font-weight: 700;
+  margin-bottom: 3px;
+}
+
+.subtitle {
+  color: #666;
+  font-size: 14px;
+}
+
+/* SEARCH BOX */
+.searchBox input {
+  padding: 8px 14px;
+  width: 220px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  outline: none;
+  transition: border 0.2s ease;
+}
+
+.searchBox input:focus {
+  border-color: #3b82f6;
+}
+
+/* TABLE WRAPPER */
+.tableWrapper {
+  overflow-x: auto;
+  background: white;
+  border-radius: 10px;
+  padding: 10px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+/* TABLE */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table thead {
+  background: #f3f4f6;
+}
+
+.table th {
+  padding: 12px 8px;
+  text-align: left;
+  font-size: 14px;
+  font-weight: 600;
+  color: #444;
+}
+
+.table td {
+  padding: 12px 8px;
+  border-bottom: 1px solid #eee;
+  font-size: 14px;
+}
+
+.table tbody tr:hover {
+  background: #f9fafb;
+}
+
+/* CUSTOMER CELL */
+.customerCell {
+  display: flex;
+  align-items: center;
+}
+
+.customerInfo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* AVATAR */
+.avatar {
+  width: 36px;
+  height: 36px;
+  background: #e5e7eb;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: #555;
+  font-size: 16px;
+}
+
+/* STATUS BADGES */
+.statusActive {
+  padding: 4px 10px;
+  background: #d1fae5;
+  color: #065f46;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.statusInactive {
+  padding: 4px 10px;
+  background: #fee2e2;
+  color: #991b1b;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* VIEW BUTTON */
+.viewButton {
+  padding: 6px 14px;
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.viewButton:hover {
+  background: #1d4ed8;
+}
+
+/* EMPTY STATE */
+.empty {
+  padding: 20px;
+  text-align: center;
+  color: #666;
+  font-style: italic;
+}
+
+.error {
+  color: #b91c1c;
+  background: #fee2e2;
+  padding: 10px;
+  border-radius: 6px;
+}

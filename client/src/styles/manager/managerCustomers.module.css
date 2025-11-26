@@ -1,55 +1,83 @@
-/* ================================
-   GLOBAL PAGE LAYOUT
-================================ */
 .page {
   padding: 24px;
-  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont,
-    "Segoe UI", sans-serif;
-  color: #0f172a;
 }
 
-/* Header */
-.header {
-  margin-bottom: 20px;
+.headerRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 16px;
 }
 
-.header h1 {
-  font-size: 26px;
-  font-weight: 700;
-  color: #0f172a;
+.title {
+  font-size: 24px;
+  font-weight: 600;
 }
 
-.header p {
-  color: #6b7280;
+.subtitle {
   font-size: 14px;
+  color: #64748b;
 }
 
-/* ================================
-   FILTERS
-================================ */
+.headerStats {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  font-size: 14px;
+  color: #0f172a;
+}
+
 .filtersRow {
   display: flex;
-  gap: 10px;
-  margin-bottom: 18px;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
 }
 
-.filtersRow input,
-.filtersRow select {
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  padding: 7px 10px;
+.searchForm {
+  display: flex;
+  gap: 8px;
+  flex: 1;
+}
+
+.searchForm input {
+  flex: 1;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
   font-size: 14px;
 }
 
-/* ================================
-   TABLE CARD
-================================ */
+.searchForm button {
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: none;
+  background-color: #2563eb;
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.searchForm button:hover {
+  background-color: #1d4ed8;
+}
+
+.filtersRight select {
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  font-size: 14px;
+}
+
+/* Table */
 .tableCard {
-  background: #ffffff;
-  border-radius: 14px;
+  background-color: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
   padding: 16px;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
-  margin-bottom: 30px;
 }
 
 .tableHeaderRow {
@@ -59,302 +87,232 @@
   margin-bottom: 8px;
 }
 
-.smallInfo {
-  font-size: 13px;
-  color: #6b7280;
-}
-
 .tableWrapper {
   width: 100%;
   overflow-x: auto;
 }
 
-/* ================================
-   TABLE STRUCTURE
-================================ */
 .table {
   width: 100%;
   border-collapse: collapse;
   font-size: 14px;
 }
 
-.table th {
-  text-align: left;
-  padding: 10px;
-  color: #374151;
-  border-bottom: 1px solid #e5e7eb;
-  font-weight: 600;
+.table thead {
+  background-color: #f8fafc;
 }
 
+.table th,
 .table td {
-  padding: 10px;
-  border-bottom: 1px solid #f3f4f6;
+  padding: 10px 8px;
+  border-bottom: 1px solid #e2e8f0;
+  text-align: left;
+}
+
+.table th {
+  font-weight: 500;
+  color: #475569;
 }
 
 .empty {
+  padding: 16px 4px;
   text-align: center;
-  padding: 20px 0;
-  color: #9ca3af;
+  color: #64748b;
 }
 
-/* ================================
-   STATUS BADGES (ACTIVE / INACTIVE)
-================================ */
-.statusBadgeActive {
-  background: #dcfce7;
-  color: #15803d;
-  padding: 4px 8px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.statusBadgeInactive {
-  background: #fee2e2;
+.error {
+  margin-bottom: 8px;
   color: #b91c1c;
-  padding: 4px 8px;
-  border-radius: 999px;
+  font-size: 14px;
+}
+
+.smallInfo {
   font-size: 12px;
-  font-weight: 600;
+  color: #64748b;
 }
 
-/* ================================
-   BUTTONS
-================================ */
-.viewBtn {
-  background: #2563eb;
-  color: #ffffff;
-  border: none;
-  padding: 6px 10px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 13px;
-  transition: 0.2s;
+/* Customer cell */
+.customerCell {
+  min-width: 220px;
 }
 
-.viewBtn:hover {
-  background: #1e40af;
-}
-
-/* ================================
-   DRAWER OVERLAY
-================================ */
-.drawerOverlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.35);
+.customerInfo {
   display: flex;
-  justify-content: flex-end;
-  z-index: 2000;
-}
-
-/* ================================
-   DRAWER PANEL
-================================ */
-.drawer {
-  width: 550px;
-  max-width: 100%;
-  background: #ffffff;
-  height: 100%;
-  padding: 24px;
-  overflow-y: auto;
-  box-shadow: -2px 0 10px rgba(15, 23, 42, 0.4);
-  position: relative;
-}
-
-.closeBtn {
-  position: absolute;
-  right: 18px;
-  top: 14px;
-  background: none;
-  border: none;
-  font-size: 22px;
-  cursor: pointer;
-  opacity: 0.7;
-}
-
-.drawerTitle {
-  font-size: 22px;
-  font-weight: 700;
-  margin-bottom: 14px;
-}
-
-/* ================================
-   PROFILE CARD
-================================ */
-.profileCard {
-  display: flex;
-  gap: 12px;
-  padding: 14px;
-  background: #f9fafb;
-  border-radius: 14px;
   align-items: center;
-  margin-bottom: 18px;
+  gap: 8px;
 }
 
-.avatarCircle {
-  width: 50px;
-  height: 50px;
+.avatar {
+  width: 32px;
+  height: 32px;
   border-radius: 999px;
-  background: #2563eb;
+  object-fit: cover;
+}
+
+.avatarFallback {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background-color: #e2e8f0;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #ffffff;
-  font-size: 20px;
-  font-weight: 700;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
 }
 
-.customerName {
+.statusBadgeActive,
+.statusBadgeInactive {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  margin-top: 2px;
+}
+
+.statusBadgeActive {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.statusBadgeInactive {
+  background-color: #fee2e2;
+  color: #b91c1c;
+}
+
+/* Pagination */
+.paginationRow {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  padding-top: 12px;
+  margin-top: 12px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.paginationRow button {
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  background-color: #f8fafc;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.paginationRow button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* View button */
+.viewButton {
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: none;
+  background-color: #0f172a;
+  color: #fff;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.viewButton:hover {
+  background-color: #020617;
+}
+
+/* Drawer */
+.drawerOverlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(15, 23, 42, 0.45);
+  display: flex;
+  justify-content: flex-end;
+  z-index: 40;
+}
+
+.drawer {
+  width: 420px;
+  max-width: 100%;
+  background-color: #ffffff;
+  height: 100%;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.drawerHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.closeBtn {
+  border: none;
+  background: transparent;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.drawerProfile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.drawerAvatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 999px;
+  object-fit: cover;
+}
+
+.drawerAvatarFallback {
+  width: 48px;
+  height: 48px;
+  border-radius: 999px;
+  background-color: #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: 18px;
   font-weight: 600;
+  color: #1e293b;
 }
 
-.customerEmail {
-  font-size: 14px;
-  color: #4b5563;
-}
-
-.customerPhone {
-  font-size: 14px;
-  color: #6b7280;
-}
-
-.joinedText {
-  font-size: 12px;
-  color: #9ca3af;
-  margin-top: 4px;
-}
-
-/* ================================
-   KPI CARDS
-================================ */
-.kpiGrid {
+/* Stats grid */
+.statsGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 12px;
-  margin-bottom: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
 }
 
-.kpiCard {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
+.statCard {
+  padding: 10px;
   border-radius: 10px;
-  padding: 12px;
+  border: 1px solid #e2e8f0;
+  background-color: #f8fafc;
 }
 
-.kpiCard h4 {
-  font-size: 12px;
-  color: #6b7280;
-  margin-bottom: 4px;
+.statLabel {
+  font-size: 11px;
+  color: #64748b;
 }
 
-.kpiCard p {
-  font-size: 18px;
-  font-weight: 700;
-  color: #111827;
-}
-
-/* ================================
-   SECTIONS
-================================ */
-.section {
-  margin-top: 20px;
-}
-
-.section h3 {
+.statNumber {
   font-size: 16px;
   font-weight: 600;
-  margin-bottom: 10px;
+  color: #0f172a;
 }
 
-/* ================================
-   TRIP STATUS BADGES
-================================ */
-.badge_pending {
-  background: #fef9c3;
-  color: #b45309;
-  padding: 4px 8px;
-  border-radius: 999px;
-  font-size: 12px;
-}
-
-.badge_assigned {
-  background: #dbeafe;
-  color: #1d4ed8;
-  padding: 4px 8px;
-  border-radius: 999px;
-  font-size: 12px;
-}
-
-.badge_in_progress {
-  background: #fce7f3;
-  color: #be185d;
-  padding: 4px 8px;
-  border-radius: 999px;
-  font-size: 12px;
-}
-
-.badge_delivered {
-  background: #dcfce7;
-  color: #15803d;
-  padding: 4px 8px;
-  border-radius: 999px;
-  font-size: 12px;
-}
-
-.badge_cancelled {
-  background: #fee2e2;
-  color: #b91c1c;
-  padding: 4px 8px;
-  border-radius: 999px;
-  font-size: 12px;
-}
-
-.badge_default {
-  background: #e5e7eb;
-  color: #374151;
-  padding: 4px 8px;
-  border-radius: 999px;
-  font-size: 12px;
-}
-
-/* ================================
-   PAYMENT STATUS BADGES
-================================ */
-.statusPaid {
-  background: #dcfce7;
-  color: #15803d;
-  padding: 4px 8px;
-  border-radius: 999px;
-  font-size: 12px;
-}
-
-.statusPending {
-  background: #fef9c3;
-  color: #b45309;
-  padding: 4px 8px;
-  border-radius: 999px;
-  font-size: 12px;
-}
-
-.statusUnpaid {
-  background: #fee2e2;
-  color: #b91c1c;
-  padding: 4px 8px;
-  border-radius: 999px;
-  font-size: 12px;
-}
-
-/* ================================
-   ROUTE TEXT
-================================ */
-.routeText {
-  display: flex;
-  gap: 4px;
-  flex-wrap: wrap;
-}
-
-.routeArrow {
-  color: #9ca3af;
+.subTitle {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  margin-top: 8px;
 }

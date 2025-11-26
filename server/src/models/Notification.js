@@ -1,90 +1,53 @@
-// server/src/models/Notification.js
 import mongoose from "mongoose";
 
-const { Schema } = mongoose;
+/* ==========================================================
+   🔔 NOTIFICATION MODEL
+   Recipient can be: manager, company, driver, customer, superadmin
+========================================================== */
 
-const notificationSchema = new Schema(
+const notificationSchema = new mongoose.Schema(
   {
-    // Who will receive this notification (driver, customer, manager, company, owner)
-    userId: {
-      type: Schema.Types.ObjectId,
+    // Who receives this notification
+    recipientId: {
+      type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
+      index: true,
     },
 
-    // 🔥 REQUIRED FOR MULTI-COMPANY ISOLATION
+    // Optional: link to company (useful for filtering later)
     companyId: {
-      type: Schema.Types.ObjectId,
-      ref: "User",
-      required: true, // always required, ensures notifications stay inside same company
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User", // company owner user
+      default: null,
+      index: true,
     },
 
-    // Short title e.g. "New Trip Assigned"
-    title: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-
-    // Main message
-    message: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-
-    // High-level type (for filters / colors)
+    // Trip / order / driver / vehicle / system
     type: {
       type: String,
-      enum: ["assignment", "update", "status", "payment", "system"],
+      enum: ["trip", "order", "driver", "vehicle", "system"],
       default: "system",
+      index: true,
     },
 
-    // Audience category (for advanced filters)
-    category: {
-      type: String,
-      enum: ["driver", "customer", "manager", "company", "owner", "system"],
-      default: "system",
-    },
+    // Short title or label if needed later
+    title: { type: String, trim: true, default: "" },
 
-    // Extra visual + behavior options (Option C)
-    image: {
-      type: String, // e.g. driver profile image or car image URL
-      default: null,
-    },
+    // Main message shown in UI
+    message: { type: String, required: true },
 
-    actionUrl: {
-      type: String, // e.g. "/trips/66123abc" in frontend
-      default: null,
-    },
+    // Whether notification is read
+    isRead: { type: Boolean, default: false, index: true },
 
-    priority: {
-      type: String,
-      enum: ["low", "normal", "high"],
-      default: "normal",
-    },
+    // Optional link target (for frontend to navigate)
+    // Example: "/manager/trips/123"
+    link: { type: String, default: null },
 
-    sound: {
-      type: String, // e.g. "ding.mp3"
-      default: null,
-    },
-
-    // Read state
-    isRead: {
-      type: Boolean,
-      default: false,
-    },
-
-    // Optional: link to a trip
-    relatedTripId: {
-      type: Schema.Types.ObjectId,
-      ref: "Trip",
-      default: null,
-    },
-
-    // Extra payload (for full driver data, etc.)
-    extraData: {
-      type: Schema.Types.Mixed,
+    // Extra flexible meta info (IDs, status, etc.)
+    meta: {
+      type: Map,
+      of: mongoose.Schema.Types.Mixed,
       default: {},
     },
   },

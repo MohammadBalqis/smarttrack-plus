@@ -1,0 +1,262 @@
+.page {
+  padding: 25px;
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+}
+
+.header h1 {
+  font-size: 26px;
+  margin: 0;
+  font-weight: 600;
+}
+
+.header p {
+  color: #666;
+  margin-top: 4px;
+}
+
+/* ======================
+   STAT CARDS
+====================== */
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 16px;
+}
+
+.statCard {
+  background: #fff;
+  padding: 14px 18px;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  text-align: center;
+  border-left: 4px solid #1976d2;
+}
+
+.statCard h3 {
+  font-size: 15px;
+  margin: 0;
+  color: #444;
+  font-weight: 500;
+}
+
+.statCard p {
+  font-size: 20px;
+  margin: 6px 0 0;
+  font-weight: 700;
+}
+
+/* ======================
+   FILTERS
+====================== */
+.filtersRow {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.filtersRow select,
+.filtersRow input {
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  min-width: 160px;
+  font-size: 14px;
+}
+
+.resetBtn {
+  background: #e5e7eb;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.resetBtn:hover {
+  background: #d4d4d8;
+}
+
+/* ======================
+   TABLE
+====================== */
+.tableCard {
+  background: #fff;
+  padding: 0;
+  border-radius: 10px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.10);
+}
+
+.tableHeaderRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.smallInfo {
+  font-size: 13px;
+  color: #888;
+}
+
+.tableWrapper {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table thead {
+  background: #f5f7fa;
+}
+
+.table th {
+  padding: 12px;
+  font-weight: 600;
+  font-size: 14px;
+  text-align: left;
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.table td {
+  padding: 12px;
+  font-size: 14px;
+  border-bottom: 1px solid #e5e5e5;
+}
+
+/* BADGES */
+.statusBadge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: capitalize;
+  background: #e6f2ff;
+  color: #1976d2;
+}
+
+.methodBadge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  background: #f3f4f6;
+  color: #111827;
+}
+
+/* BUTTONS */
+.viewBtn {
+  background: #1976d2;
+  border: none;
+  padding: 8px 14px;
+  color: #fff;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.viewBtn:hover {
+  background: #145aa2;
+}
+
+/* PAGINATION */
+.pagination {
+  padding: 16px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+}
+
+.pagination button {
+  background: #1976d2;
+  color: white;
+  padding: 7px 13px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.pagination button:disabled {
+  background: #9bbad8;
+  cursor: not-allowed;
+}
+
+/* DRAWER */
+.drawerOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  display: flex;
+  justify-content: flex-end;
+  z-index: 1000;
+}
+
+.drawer {
+  width: 420px;
+  height: 100%;
+  background: #fff;
+  padding: 25px;
+  overflow-y: auto;
+  animation: slideIn 0.3s ease forwards;
+  box-shadow: -2px 0 10px rgba(0,0,0,0.2);
+  position: relative;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.closeBtn {
+  background: none;
+  font-size: 26px;
+  border: none;
+  cursor: pointer;
+  position: absolute;
+  right: 14px;
+  top: 12px;
+  color: #333;
+}
+
+/* DRAWER CONTENT */
+.section {
+  margin-top: 22px;
+}
+
+.section h3 {
+  font-size: 17px;
+  margin-bottom: 8px;
+}
+
+/* STATES */
+.empty {
+  padding: 20px;
+  text-align: center;
+  color: #888;
+}
+
+.error {
+  padding: 10px 16px;
+  color: #b91c1c;
+}
+
+.loadingOverlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  color: white;
+  font-weight: 600;
+  text-shadow: 0 0 4px rgba(0,0,0,0.7);
+}

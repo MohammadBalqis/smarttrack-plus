@@ -6,7 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 
 // Layout
-import DashboardLayout from "./components/layout/DashboardLayout";
+import DashboardLayout from "./layout/DashboardLayout";
 
 // Role-based routing
 import RoleRoute from "./components/RoleRoute";
@@ -18,21 +18,28 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import CompanyDashboard from "./pages/company/CompanyDashboard";
 import CompanyProducts from "./pages/company/CompanyProducts";
 import CompanyDrivers from "./pages/company/CompanyDrivers";
-import CompanyCustomers from "./pages/company/CompanyCustomers"; // we will create this soon
+import CompanyCustomers from "./pages/company/CompanyCustomers";
+import CompanyTrips from "./pages/company/CompanyTrips";
 
 // Manager pages
 import ManagerDashboard from "./pages/manager/ManagerDashboard";
 import ManagerTrips from "./pages/manager/ManagerTrips";
 import ManagerDrivers from "./pages/manager/ManagerDrivers";
 import ManagerCustomers from "./pages/manager/ManagerCustomers";
+import ManagerProducts from "./pages/manager/ManagerProducts";
 import ManagerVehicles from "./pages/manager/ManagerVehicles";
+import ManagerOrders from "./pages/manager/ManagerOrders";
+import ManagerPayments from "./pages/manager/ManagerPayments";
 
 function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          {/* SYSTEM OWNER / SUPERADMIN */}
+
+          {/* ==============================
+              SUPERADMIN / SYSTEM OWNER
+              ============================== */}
           <Route
             path="/admin"
             element={
@@ -44,7 +51,10 @@ function App() {
             <Route index element={<AdminDashboard />} />
           </Route>
 
-          {/* COMPANY (company + manager can share this if you want) */}
+
+          {/* ==============================
+              COMPANY DASHBOARD
+              ============================== */}
           <Route
             path="/company"
             element={
@@ -56,11 +66,17 @@ function App() {
             <Route index element={<CompanyDashboard />} />
             <Route path="products" element={<CompanyProducts />} />
             <Route path="drivers" element={<CompanyDrivers />} />
+            <Route path="customers" element={<CompanyCustomers />} />
             <Route path="trips" element={<CompanyTrips />} />
-            <Route path="customers" element={<ManagerCustomers />} />   {/* SAME PAGE */}
+            <Route path="orders" element={<ManagerOrders />} />
+            <Route path="vehicles" element={<ManagerVehicles />} />
+            <Route path="payments" element={<ManagerPayments />} />
           </Route>
 
-          {/* MANAGER DASHBOARD */}
+
+          {/* ==============================
+              MANAGER DASHBOARD
+              ============================== */}
           <Route
             path="/manager"
             element={
@@ -70,15 +86,20 @@ function App() {
             }
           >
             <Route index element={<ManagerDashboard />} />
+            <Route path="drivers" element={<ManagerDrivers />} />
+            <Route path="vehicles" element={<ManagerVehicles />} />
+            <Route path="customers" element={<ManagerCustomers />} />
+            <Route path="products" element={<ManagerProducts />} />
+            <Route path="orders" element={<ManagerOrders />} />
+            <Route path="trips" element={<ManagerTrips />} />
+            <Route path="payments" element={<ManagerPayments />} />
           </Route>
 
-          {/* DEFAULT */}
-          <Route path="*" element={<Navigate to="/company" />} />
-          <Route path="trips" element={<ManagerTrips />} />
-          <Route path="drivers" element={<ManagerDrivers />} /> {/* 👈 NEW */}
-          <Route path="customers" element={<ManagerCustomers />} />   {/* NEW */}
-          <Route path="products" element={<ManagerProducts />} />
-          <Route path="vehicles" element={<ManagerVehicles />} />
+
+          {/* ==============================
+              DEFAULT REDIRECT
+              ============================== */}
+          <Route path="*" element={<Navigate to="/manager" />} />
 
         </Routes>
       </BrowserRouter>

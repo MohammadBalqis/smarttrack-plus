@@ -1,10 +1,26 @@
-import api from "./axiosConfig";
+// client/src/api/companyProductsApi.js
+import apiClient from "./apiClient";
 
-export const getCompanyTripsApi = (params) =>
-  api.get("/company/trips", { params });
+// List products
+export const getCompanyProductsApi = (params = {}) =>
+  apiClient.get("/company/products", { params });
 
-export const getCompanyTripDetailsApi = (id) =>
-  api.get(`/company/trips/${id}`);
+// Single product
+export const getSingleCompanyProductApi = (id) =>
+  apiClient.get(`/company/products/${id}`);
 
-export const assignTripDriverApi = (tripId, driverId) =>
-  api.patch(`/company/trips/${tripId}/assign-driver`, { driverId });
+// Create
+export const createCompanyProductApi = (payload) =>
+  apiClient.post("/company/products", payload);
+
+// Update
+export const updateCompanyProductApi = (id, payload) =>
+  apiClient.put(`/company/products/${id}`, payload);
+
+// Toggle active
+export const toggleCompanyProductActiveApi = (id) =>
+  apiClient.put(`/company/products/${id}/toggle`);
+
+// Adjust stock
+export const adjustCompanyProductStockApi = (id, change, reason) =>
+  apiClient.post(`/company/products/${id}/stock`, { change, reason });

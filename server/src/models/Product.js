@@ -4,7 +4,7 @@ const productSchema = new mongoose.Schema(
   {
     companyId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Company",
+      ref: "User",
       required: true,
     },
 
@@ -30,19 +30,24 @@ const productSchema = new mongoose.Schema(
       default: "general",
     },
 
-    // Flexible structure for company-specific needs
-    // Example:
-    // attributes: { size: "L", color: "Black" }
-    // attributes: { liters: 20, fuelType: "Diesel" }
+    // Dynamic attributes (optional)
     attributes: {
       type: Map,
       of: mongoose.Schema.Types.Mixed,
       default: {},
     },
 
-    // Optional image URL
+    // Optional product images
     images: [{ type: String }],
 
+    /* ==========================================================
+       📦 INVENTORY STOCK (NEW)
+       ========================================================== */
+    stock: {
+      type: Number,
+      default: 0,  // default empty
+      min: 0,
+    },
 
     // Active/inactive status
     isActive: { type: Boolean, default: true },

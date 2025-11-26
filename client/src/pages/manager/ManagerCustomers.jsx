@@ -1,32 +1,55 @@
-// src/pages/manager/ManagerCustomers.jsx
+// client/src/pages/manager/ManagerCustomers.jsx
 import React, { useEffect, useState } from "react";
 import {
-  getCompanyCustomersApi,
-} from "../../api/companyCustomersApi";
+  getManagerCustomersApi,
+  getManagerCustomerDetailsApi,
+} from "../../api/managerCustomersApi";
 
 import ManagerCustomerDrawer from "../../components/manager/ManagerCustomerDrawer";
 import styles from "../../styles/manager/managerCustomers.module.css";
 
 const ManagerCustomers = () => {
   const [customers, setCustomers] = useState([]);
+  const [total, setTotal] = useState(0);
+
+  const [page, setPage] = useState(1);
+  const [limit] = useState(20);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  const [minTrips, setMinTrips] = useState("");
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // Drawer
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [selectedCustomerId, setSelectedCustomerId] = useState(null);
+  const [selectedCustomerDetails, setSelectedCustomerDetails] = useState(null);
+  const [loadingDetails, setLoadingDetails] = useState(false);
 
-  // Load customers for THIS company only
+  const totalPages = Math.ceil(total / limit) || 1;
+
   const loadCustomers = async () => {
     try {
       setLoading(true);
       setError("");
-      const res = await getCompanyCustomersApi();
+
+      const params = {
+        page,
+        limit,
+      };
+
+      if (search.trim()) params.search = search.trim();
+      if (minTrips) params.minTrips = minTrips;
+
+      const res = await getManagerCustomersApi(params);
+
       setCustomers(res.data.customers || []);
+      setTotal(res.data.total || 0);
     } catch (err) {
-      console.error("❌ loadCustomers error:", err);
-      setError("Failed to load customers.");
+      console.error("Error loading customers:", err);
+      const msg =
+        err.response?.data?.error || "Failed to load customers. Try again.";
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -34,118 +57,169 @@ const ManagerCustomers = () => {
 
   useEffect(() => {
     loadCustomers();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, minTrips]);
 
-  const openDrawer = (customer) => {
-    setSelectedCustomer(customer);
+  const submitSearch = (e) => {
+    e.preventDefault();
+    setPage(1);
+    loadCustomers();
+  };
+
+  const openDrawer = async (customerId) => {
+    setSelectedCustomerId(customerId);
+    setSelectedCustomerDetails(null);
+    setLoadingDetails(true);
     setDrawerOpen(true);
+
+    try {
+      const res = await getManagerCustomerDetailsApi(customerId);
+      setSelectedCustomerDetails(res.data);
+    } catch (err) {
+      console.error("Error loading customer details:", err);
+      setSelectedCustomerDetails(null);
+    } finally {
+      setLoadingDetails(false);
+    }
   };
 
   const closeDrawer = () => {
-    setSelectedCustomer(null);
     setDrawerOpen(false);
+    setSelectedCustomerId(null);
+    setSelectedCustomerDetails(null);
   };
 
-  // Search + filter
-  const filteredCustomers = customers.filter((c) => {
-    const term = search.toLowerCase();
-    const matchesSearch =
-      c.name?.toLowerCase().includes(term) ||
-      c.email?.toLowerCase().includes(term);
-
-    const matchesStatus =
-      !statusFilter ||
-      (statusFilter === "active" && c.isActive) ||
-      (statusFilter === "inactive" && !c.isActive);
-
-    return matchesSearch && matchesStatus;
-  });
+  const formatDate = (value) => {
+    if (!value) return "—";
+    return new Date(value).toLocaleDateString();
+  };
 
   return (
     <div className={styles.page}>
       {/* Header */}
-      <div className={styles.header}>
+      <div className={styles.headerRow}>
         <div>
-          <h1>Customers</h1>
-          <p>Customers who made orders with your company.</p>
+          <h1 className={styles.title}>Customers</h1>
+          <p className={styles.subtitle}>
+            Customers who placed trips with your company.
+          </p>
+        </div>
+        <div className={styles.headerStats}>
+          <span>
+            Total customers: <strong>{total}</strong>
+          </span>
+          <span>
+            Page: <strong>{page}</strong> / {totalPages}
+          </span>
         </div>
       </div>
 
       {/* Filters */}
       <div className={styles.filtersRow}>
-        <input
-          type="text"
-          placeholder="Search customer..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
+        <form className={styles.searchForm} onSubmit={submitSearch}>
+          <input
+            type="text"
+            placeholder="Search by name, email, phone..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <button type="submit">Search</button>
+        </form>
 
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-        >
-          <option value="">All statuses</option>
-          <option value="active">Active</option>
-          <option value="inactive">Inactive</option>
-        </select>
+        <div className={styles.filtersRight}>
+          <select
+            value={minTrips}
+            onChange={(e) => {
+              setMinTrips(e.target.value);
+              setPage(1);
+            }}
+          >
+            <option value="">All customers</option>
+            <option value="1">At least 1 trip</option>
+            <option value="3">At least 3 trips</option>
+            <option value="5">At least 5 trips</option>
+          </select>
+        </div>
       </div>
 
       {/* Table */}
       <div className={styles.tableCard}>
         <div className={styles.tableHeaderRow}>
-          <h3>Customer List</h3>
-          {loading && <span className={styles.smallInfo}>Loading...</span>}
+          <h3>Customers List</h3>
+          {loading && (
+            <span className={styles.smallInfo}>Loading customers...</span>
+          )}
         </div>
 
         {error && <p className={styles.error}>{error}</p>}
 
-        {filteredCustomers.length === 0 && !loading ? (
+        {!loading && customers.length === 0 ? (
           <p className={styles.empty}>No customers found.</p>
         ) : (
           <div className={styles.tableWrapper}>
             <table className={styles.table}>
               <thead>
                 <tr>
-                  <th>Name</th>
+                  <th>Customer</th>
                   <th>Email</th>
                   <th>Phone</th>
                   <th>Total Trips</th>
-                  <th>Total Spent</th>
-                  <th>Status</th>
+                  <th>Delivered</th>
+                  <th>Cancelled</th>
                   <th>Last Trip</th>
+                  <th>Estimated Total</th>
                   <th></th>
                 </tr>
               </thead>
               <tbody>
-                {filteredCustomers.map((c) => (
+                {customers.map((c) => (
                   <tr key={c.customerId}>
-                    <td>{c.name}</td>
-                    <td>{c.email}</td>
-                    <td>{c.phoneNumber || "—"}</td>
-                    <td>{c.totalTrips}</td>
-                    <td>${c.totalSpent?.toFixed(2) || "0.00"}</td>
-                    <td>
-                      <span
-                        className={
-                          c.isActive
-                            ? styles.statusBadgeActive
-                            : styles.statusBadgeInactive
-                        }
-                      >
-                        {c.isActive ? "Active" : "Inactive"}
-                      </span>
+                    <td className={styles.customerCell}>
+                      <div className={styles.customerInfo}>
+                        {c.avatar ? (
+                          <img
+                            src={c.avatar}
+                            alt={c.name}
+                            className={styles.avatar}
+                          />
+                        ) : (
+                          <div className={styles.avatarFallback}>
+                            {c.name?.[0] || "C"}
+                          </div>
+                        )}
+                        <div>
+                          <div>{c.name}</div>
+                          <span
+                            className={
+                              c.isActive
+                                ? styles.statusBadgeActive
+                                : styles.statusBadgeInactive
+                            }
+                          >
+                            {c.isActive ? "Active" : "Inactive"}
+                          </span>
+                        </div>
+                      </div>
                     </td>
+                    <td>{c.email}</td>
+                    <td>{c.phone || "—"}</td>
+                    <td>{c.totalTrips}</td>
+                    <td>{c.deliveredTrips}</td>
+                    <td>{c.cancelledTrips}</td>
+                    <td>{formatDate(c.lastTripAt)}</td>
                     <td>
-                      {c.lastTripDate
-                        ? new Date(c.lastTripDate).toLocaleDateString()
-                        : "—"}
+                      $
+                      {c.totalAmount?.toFixed
+                        ? c.totalAmount.toFixed(2)
+                        : Number(c.totalAmount || 0).toFixed(2)}
                     </td>
                     <td>
                       <button
-                        className={styles.viewBtn}
-                        onClick={() => openDrawer(c)}
+                        type="button"
+                        className={styles.viewButton}
+                        onClick={() => openDrawer(c.customerId)}
                       >
-                        View Details
+                        View
                       </button>
                     </td>
                   </tr>
@@ -154,13 +228,42 @@ const ManagerCustomers = () => {
             </table>
           </div>
         )}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className={styles.paginationRow}>
+            <button
+              type="button"
+              onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+              disabled={page === 1}
+            >
+              Previous
+            </button>
+            <span>
+              Page {page} / {totalPages}
+            </span>
+            <button
+              type="button"
+              onClick={() =>
+                setPage((prev) => (prev < totalPages ? prev + 1 : prev))
+              }
+              disabled={page >= totalPages}
+            >
+              Next
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Drawer */}
       <ManagerCustomerDrawer
         open={drawerOpen}
         onClose={closeDrawer}
-        customer={selectedCustomer}
+        details={
+          loadingDetails
+            ? null
+            : selectedCustomerDetails || { customer: null, stats: null, recentTrips: [] }
+        }
       />
     </div>
   );

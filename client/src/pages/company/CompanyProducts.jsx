@@ -1,51 +1,69 @@
-// client/src/pages/company/CompanyProducts.jsx
 import React, { useEffect, useState } from "react";
 import {
-  createProductApi,
   getCompanyProductsApi,
-  updateProductApi,
-  toggleProductActiveApi,
-  deleteProductApi,
-} from "../../api/productApi";
+  createCompanyProductApi,
+  updateCompanyProductApi,
+  toggleCompanyProductActiveApi,
+  adjustCompanyProductStockApi,
+  getSingleCompanyProductApi,
+} from "../../api/companyProductsApi";
 
-import styles from "../../styles/company/products.module.css";
+import styles from "../../styles/company/companyProducts.module.css";
 
 const emptyForm = {
   name: "",
   description: "",
   price: "",
   category: "general",
-  productImage: "",
+  images: [""],
+  stock: 0,
+  lowStockThreshold: 5,
 };
-
-const categoryOptions = [
-  { value: "general", label: "General" },
-  { value: "restaurant", label: "Restaurant / Food" },
-  { value: "water", label: "Water Delivery" },
-  { value: "fuel", label: "Fuel Delivery" },
-  { value: "electronics", label: "Electronics" },
-  { value: "clothes", label: "Clothes" },
-  { value: "books", label: "Books" },
-  { value: "machines", label: "Machines / Equipment" },
-];
 
 const CompanyProducts = () => {
   const [products, setProducts] = useState([]);
-  const [form, setForm] = useState(emptyForm);
-  const [attributes, setAttributes] = useState([{ key: "", value: "" }]);
+  const [total, setTotal] = useState(0);
+
+  // filters
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [activeFilter, setActiveFilter] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [minPrice, setMinPrice] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
+
+  const [page, setPage] = useState(1);
+  const limit = 20;
+
   const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [editingId, setEditingId] = useState(null);
   const [error, setError] = useState("");
+
+  // create/edit modal
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [form, setForm] = useState(emptyForm);
+  const [saving, setSaving] = useState(false);
+
+  // stock adjust
+  const [stockChange, setStockChange] = useState("");
+  const [stockReason, setStockReason] = useState("");
 
   const loadProducts = async () => {
     try {
       setLoading(true);
       setError("");
-      const res = await getCompanyProductsApi();
+
+      const params = { page, limit };
+      if (categoryFilter) params.category = categoryFilter;
+      if (activeFilter) params.active = activeFilter;
+      if (minPrice) params.minPrice = minPrice;
+      if (maxPrice) params.maxPrice = maxPrice;
+      if (searchTerm) params.search = searchTerm.trim();
+
+      const res = await getCompanyProductsApi(params);
       setProducts(res.data.products || []);
+      setTotal(res.data.total || 0);
     } catch (err) {
-      console.error(err);
+      console.error("Load products error:", err);
       setError("Failed to load products.");
     } finally {
       setLoading(false);
@@ -54,44 +72,86 @@ const CompanyProducts = () => {
 
   useEffect(() => {
     loadProducts();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, categoryFilter, activeFilter, minPrice, maxPrice]);
 
-  const handleFormChange = (e) => {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
-  };
+  const totalPages = Math.ceil(total / limit) || 1;
 
-  const handleAttributeChange = (index, field, value) => {
-    setAttributes((prev) => {
-      const copy = [...prev];
-      copy[index] = { ...copy[index], [field]: value };
-      return copy;
-    });
-  };
+  /* ---------------- Form helpers ---------------- */
 
-  const addAttributeRow = () => {
-    setAttributes((prev) => [...prev, { key: "", value: "" }]);
-  };
-
-  const removeAttributeRow = (index) => {
-    setAttributes((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const buildAttributesObject = () => {
-    const obj = {};
-    attributes.forEach((attr) => {
-      if (attr.key.trim() && attr.value.trim()) {
-        obj[attr.key.trim()] = attr.value.trim();
-      }
-    });
-    return obj;
-  };
-
-  const resetForm = () => {
+  const openCreateModal = () => {
+    setEditingProduct(null);
     setForm(emptyForm);
-    setAttributes([{ key: "", value: "" }]);
-    setEditingId(null);
+    setStockChange("");
+    setStockReason("");
+    setModalOpen(true);
     setError("");
+  };
+
+  const openEditModal = async (product) => {
+    try {
+      // optional: get fresh data
+      const res = await getSingleCompanyProductApi(product._id);
+      const p = res.data.product || product;
+
+      setEditingProduct(p);
+      setForm({
+        name: p.name || "",
+        description: p.description || "",
+        price: p.price ?? "",
+        category: p.category || "general",
+        images: Array.isArray(p.images) && p.images.length > 0 ? p.images : [""],
+        stock: p.stock ?? 0,
+        lowStockThreshold: p.lowStockThreshold ?? 5,
+      });
+      setStockChange("");
+      setStockReason("");
+      setModalOpen(true);
+      setError("");
+    } catch (err) {
+      console.error("Open edit modal error:", err);
+      setError("Failed to load product.");
+    }
+  };
+
+  const closeModal = () => {
+    setModalOpen(false);
+    setEditingProduct(null);
+    setForm(emptyForm);
+    setStockChange("");
+    setStockReason("");
+  };
+
+  const handleFormChange = (e, index = null) => {
+    const { name, value } = e.target;
+
+    if (name === "image" && index !== null) {
+      setForm((prev) => {
+        const imgs = [...prev.images];
+        imgs[index] = value;
+        return { ...prev, images: imgs };
+      });
+      return;
+    }
+
+    setForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const addImageField = () => {
+    setForm((prev) => ({
+      ...prev,
+      images: [...prev.images, ""],
+    }));
+  };
+
+  const removeImageField = (index) => {
+    setForm((prev) => {
+      const imgs = prev.images.filter((_, i) => i !== index);
+      return { ...prev, images: imgs.length ? imgs : [""] };
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -103,277 +163,204 @@ const CompanyProducts = () => {
       const payload = {
         ...form,
         price: Number(form.price),
-        attributes: buildAttributesObject(),
+        stock: Number(form.stock),
+        lowStockThreshold: Number(form.lowStockThreshold),
+        images: (form.images || []).filter((url) => url.trim() !== ""),
       };
 
-      // Optional: don’t send empty image
-      if (!payload.productImage) delete payload.productImage;
-
-      if (!editingId) {
-        // Create
-        const res = await createProductApi(payload);
-        setProducts((prev) => [res.data.product, ...prev]);
+      if (!editingProduct) {
+        await createCompanyProductApi(payload);
       } else {
-        // Update
-        const res = await updateProductApi(editingId, payload);
-        setProducts((prev) =>
-          prev.map((p) => (p._id === editingId ? res.data.product : p))
-        );
+        await updateCompanyProductApi(editingProduct._id, payload);
       }
 
-      resetForm();
+      closeModal();
+      setPage(1);
+      await loadProducts();
     } catch (err) {
-      console.error(err);
-      const msg =
-        err.response?.data?.error ||
-        "Failed to save product. Please check your data.";
+      console.error("Save product error:", err);
+      const msg = err.response?.data?.error || "Failed to save product.";
       setError(msg);
     } finally {
       setSaving(false);
     }
   };
 
-  const handleEdit = (product) => {
-    setEditingId(product._id);
-    setForm({
-      name: product.name || "",
-      description: product.description || "",
-      price: product.price ?? "",
-      category: product.category || "general",
-      productImage: product.productImage || "",
-    });
-
-    const attrsArr = [];
-    if (product.attributes) {
-      for (const [key, value] of Object.entries(product.attributes)) {
-        attrsArr.push({ key, value: String(value) });
-      }
-    }
-    setAttributes(attrsArr.length ? attrsArr : [{ key: "", value: "" }]);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
-  const handleToggleActive = async (id) => {
+  const handleToggleActive = async (product) => {
     try {
-      const res = await toggleProductActiveApi(id);
-      const updated = res.data.product;
-      setProducts((prev) =>
-        prev.map((p) => (p._id === updated._id ? updated : p))
-      );
+      await toggleCompanyProductActiveApi(product._id);
+      await loadProducts();
     } catch (err) {
       console.error(err);
       setError("Failed to toggle product status.");
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Delete this product permanently?")) return;
+  const handleAdjustStock = async (e) => {
+    e.preventDefault();
+    if (!editingProduct) return;
+
+    const delta = Number(stockChange);
+    if (!delta) return;
+
     try {
-      await deleteProductApi(id);
-      setProducts((prev) => prev.filter((p) => p._id !== id));
+      await adjustCompanyProductStockApi(
+        editingProduct._id,
+        delta,
+        stockReason
+      );
+      setStockChange("");
+      setStockReason("");
+      await loadProducts();
+      // re-fetch product for modal
+      const res = await getSingleCompanyProductApi(editingProduct._id);
+      setEditingProduct(res.data.product);
     } catch (err) {
-      console.error(err);
-      setError("Failed to delete product.");
+      console.error("Adjust stock error:", err);
+      setError("Failed to adjust stock.");
     }
   };
 
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    setPage(1);
+    loadProducts();
+  };
+
+  const getStockBadgeClass = (p) => {
+    if (p.stock === 0) return styles.stockBadgeZero;
+    if (p.stock <= (p.lowStockThreshold ?? 5)) return styles.stockBadgeLow;
+    return styles.stockBadgeOk;
+  };
+
   return (
-    <div className={styles.companyProductsPage}>
+    <div className={styles.page}>
       {/* Header */}
-      <div className={styles.companyProductsHeader}>
-        <h2>Products</h2>
-        <p>Manage the services / items your company offers to customers.</p>
+      <div className={styles.header}>
+        <div>
+          <h1>Products</h1>
+          <p>Manage your company&apos;s product catalog and stock.</p>
+        </div>
+        <div className={styles.headerActions}>
+          <button
+            type="button"
+            className={styles.primaryBtn}
+            onClick={openCreateModal}
+          >
+            + Add Product
+          </button>
+          <div className={styles.headerStats}>
+            <span>Total: {total}</span>
+          </div>
+        </div>
       </div>
 
-      {/* Form Card */}
-      <div className={styles.productFormCard}>
-        <div className={styles.cardHeaderRow}>
-          <h3>{editingId ? "Edit Product" : "Create New Product"}</h3>
-          {saving && <span className={styles.smallInfoText}>Saving...</span>}
-        </div>
+      {/* Filters */}
+      <div className={styles.filtersRow}>
+        <select
+          value={categoryFilter}
+          onChange={(e) => {
+            setCategoryFilter(e.target.value);
+            setPage(1);
+          }}
+        >
+          <option value="">All categories</option>
+          <option value="restaurant">Restaurant</option>
+          <option value="water">Water</option>
+          <option value="fuel">Fuel</option>
+          <option value="electronics">Electronics</option>
+          <option value="clothes">Clothes</option>
+          <option value="books">Books</option>
+          <option value="machines">Machines</option>
+          <option value="general">General</option>
+        </select>
 
-        {error && <div className={styles.errorMessage}>{error}</div>}
+        <select
+          value={activeFilter}
+          onChange={(e) => {
+            setActiveFilter(e.target.value);
+            setPage(1);
+          }}
+        >
+          <option value="">All status</option>
+          <option value="true">Active</option>
+          <option value="false">Inactive</option>
+        </select>
 
-        <form onSubmit={handleSubmit} className={styles.productForm}>
-          <div className={styles.formRow}>
-            <label>Product Name *</label>
-            <input
-              type="text"
-              name="name"
-              value={form.name}
-              onChange={handleFormChange}
-              className={styles.textInput}
-              required
-            />
-          </div>
+        <input
+          type="number"
+          min="0"
+          placeholder="Min price"
+          value={minPrice}
+          onChange={(e) => setMinPrice(e.target.value)}
+        />
+        <input
+          type="number"
+          min="0"
+          placeholder="Max price"
+          value={maxPrice}
+          onChange={(e) => setMaxPrice(e.target.value)}
+        />
 
-          <div className={styles.formRow}>
-            <label>Description</label>
-            <textarea
-              name="description"
-              value={form.description}
-              onChange={handleFormChange}
-              rows={3}
-              className={styles.textArea}
-            />
-          </div>
-
-          <div className={styles.formRow}>
-            <label>Price *</label>
-            <input
-              type="number"
-              name="price"
-              min="0"
-              step="0.01"
-              value={form.price}
-              onChange={handleFormChange}
-              className={styles.textInput}
-              required
-            />
-          </div>
-
-          <div className={styles.formRow}>
-            <label>Category</label>
-            <select
-              name="category"
-              value={form.category}
-              onChange={handleFormChange}
-              className={styles.selectInput}
-            >
-              {categoryOptions.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className={styles.formRow}>
-            <label>Product Image URL (optional)</label>
-            <input
-              type="text"
-              name="productImage"
-              value={form.productImage}
-              onChange={handleFormChange}
-              className={styles.textInput}
-              placeholder="https://example.com/image.jpg"
-            />
-          </div>
-
-          {/* Attributes */}
-          <div className={styles.formRow}>
-            <label>Custom Attributes</label>
-            <div className={styles.attributesList}>
-              {attributes.map((attr, index) => (
-                <div key={index} className={styles.attributeRow}>
-                  <input
-                    type="text"
-                    placeholder="Key (e.g. size, liters, author)"
-                    value={attr.key}
-                    onChange={(e) =>
-                      handleAttributeChange(index, "key", e.target.value)
-                    }
-                    className={styles.textInput}
-                  />
-                  <input
-                    type="text"
-                    placeholder="Value (e.g. XL, 20, John Doe)"
-                    value={attr.value}
-                    onChange={(e) =>
-                      handleAttributeChange(index, "value", e.target.value)
-                    }
-                    className={styles.textInput}
-                  />
-                  <button
-                    type="button"
-                    className={styles.attrRemoveBtn}
-                    onClick={() => removeAttributeRow(index)}
-                    disabled={attributes.length === 1}
-                  >
-                    ✕
-                  </button>
-                </div>
-              ))}
-            </div>
-            <button
-              type="button"
-              className={styles.attrAddBtn}
-              onClick={addAttributeRow}
-            >
-              + Add Attribute
-            </button>
-          </div>
-
-          <div className={styles.formActions}>
-            {editingId && (
-              <button
-                type="button"
-                className={styles.secondaryBtn}
-                onClick={resetForm}
-              >
-                Cancel Edit
-              </button>
-            )}
-            <button
-              type="submit"
-              className={styles.primaryBtn}
-              disabled={saving}
-            >
-              {editingId ? "Save Changes" : "Create Product"}
-            </button>
-          </div>
+        <form onSubmit={handleSearchSubmit} className={styles.searchForm}>
+          <input
+            type="text"
+            placeholder="Search by name..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+          <button type="submit">Search</button>
         </form>
       </div>
 
-      {/* Products Table */}
-      <div className={styles.productsTableCard}>
-        <div className={styles.cardHeaderRow}>
+      {/* Table */}
+      <div className={styles.tableCard}>
+        <div className={styles.tableHeaderRow}>
           <h3>Products List</h3>
-          {loading && (
-            <span className={styles.smallInfoText}>Loading products...</span>
-          )}
+          {loading && <span className={styles.smallInfo}>Loading...</span>}
         </div>
 
+        {error && <p className={styles.error}>{error}</p>}
+
         {!loading && products.length === 0 ? (
-          <p className={styles.emptyState}>
-            No products yet. Start by creating your first product.
-          </p>
+          <p className={styles.empty}>No products found.</p>
         ) : (
           <div className={styles.tableWrapper}>
-            <table className={styles.productsTable}>
+            <table className={styles.table}>
               <thead>
                 <tr>
+                  <th>Image</th>
                   <th>Name</th>
                   <th>Category</th>
-                  <th>Attributes</th>
                   <th>Price</th>
+                  <th>Stock</th>
                   <th>Status</th>
                   <th>Created</th>
-                  <th>Actions</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
                 {products.map((p) => (
                   <tr key={p._id}>
-                    <td className={styles.productNameCell}>{p.name}</td>
-                    <td>{p.category || "general"}</td>
                     <td>
-                      {p.attributes &&
-                      Object.keys(p.attributes).length > 0 ? (
-                        <ul className={styles.attributesListInTable}>
-                          {Object.entries(p.attributes).map(
-                            ([key, value]) => (
-                              <li key={key}>
-                                <strong>{key}:</strong> {String(value)}
-                              </li>
-                            )
-                          )}
-                        </ul>
+                      {Array.isArray(p.images) && p.images.length > 0 ? (
+                        <img
+                          src={p.images[0]}
+                          alt={p.name}
+                          className={styles.thumbnail}
+                        />
                       ) : (
-                        <span className={styles.mutedText}>—</span>
+                        <div className={styles.noImage}>No Image</div>
                       )}
                     </td>
-                    <td>${p.price?.toFixed(2)}</td>
+                    <td className={styles.nameCell}>{p.name}</td>
+                    <td>{p.category || "general"}</td>
+                    <td>${p.price?.toFixed(2) ?? "0.00"}</td>
+                    <td>
+                      <span className={getStockBadgeClass(p)}>
+                        {p.stock ?? 0}
+                      </span>
+                    </td>
                     <td>
                       <span
                         className={
@@ -388,29 +375,22 @@ const CompanyProducts = () => {
                     <td>
                       {p.createdAt
                         ? new Date(p.createdAt).toLocaleDateString()
-                        : ""}
+                        : "—"}
                     </td>
-                    <td className={styles.actionsCell}>
+                    <td>
                       <button
                         type="button"
-                        className={styles.tableBtn}
-                        onClick={() => handleEdit(p)}
+                        className={styles.smallBtn}
+                        onClick={() => openEditModal(p)}
                       >
                         Edit
                       </button>
                       <button
                         type="button"
-                        className={styles.tableBtn}
-                        onClick={() => handleToggleActive(p._id)}
+                        className={styles.smallBtn}
+                        onClick={() => handleToggleActive(p)}
                       >
                         {p.isActive ? "Deactivate" : "Activate"}
-                      </button>
-                      <button
-                        type="button"
-                        className={`${styles.tableBtn} ${styles.tableBtnDanger}`}
-                        onClick={() => handleDelete(p._id)}
-                      >
-                        Delete
                       </button>
                     </td>
                   </tr>
@@ -419,7 +399,203 @@ const CompanyProducts = () => {
             </table>
           </div>
         )}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className={styles.paginationRow}>
+            <button
+              type="button"
+              onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+              disabled={page === 1}
+            >
+              Previous
+            </button>
+            <span>
+              Page {page} / {totalPages}
+            </span>
+            <button
+              type="button"
+              onClick={() =>
+                setPage((prev) => (prev < totalPages ? prev + 1 : prev))
+              }
+              disabled={page >= totalPages}
+            >
+              Next
+            </button>
+          </div>
+        )}
       </div>
+
+      {/* Create / Edit Modal */}
+      {modalOpen && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modal}>
+            <div className={styles.modalHeader}>
+              <h2>{editingProduct ? "Edit Product" : "Add Product"}</h2>
+              <button
+                type="button"
+                className={styles.closeBtn}
+                onClick={closeModal}
+              >
+                ✕
+              </button>
+            </div>
+
+            {error && <p className={styles.error}>{error}</p>}
+
+            <form onSubmit={handleSubmit} className={styles.modalForm}>
+              <label>
+                Name
+                <input
+                  name="name"
+                  value={form.name}
+                  onChange={handleFormChange}
+                  required
+                />
+              </label>
+
+              <label>
+                Description
+                <textarea
+                  name="description"
+                  value={form.description}
+                  onChange={handleFormChange}
+                  rows={3}
+                />
+              </label>
+
+              <div className={styles.formRow}>
+                <label>
+                  Price
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    name="price"
+                    value={form.price}
+                    onChange={handleFormChange}
+                    required
+                  />
+                </label>
+
+                <label>
+                  Category
+                  <select
+                    name="category"
+                    value={form.category}
+                    onChange={handleFormChange}
+                  >
+                    <option value="restaurant">Restaurant</option>
+                    <option value="water">Water</option>
+                    <option value="fuel">Fuel</option>
+                    <option value="electronics">Electronics</option>
+                    <option value="clothes">Clothes</option>
+                    <option value="books">Books</option>
+                    <option value="machines">Machines</option>
+                    <option value="general">General</option>
+                  </select>
+                </label>
+              </div>
+
+              <div className={styles.formRow}>
+                <label>
+                  Stock
+                  <input
+                    type="number"
+                    name="stock"
+                    value={form.stock}
+                    onChange={handleFormChange}
+                  />
+                </label>
+                <label>
+                  Low stock threshold
+                  <input
+                    type="number"
+                    name="lowStockThreshold"
+                    value={form.lowStockThreshold}
+                    onChange={handleFormChange}
+                  />
+                </label>
+              </div>
+
+              <div className={styles.imagesSection}>
+                <label>Image URLs</label>
+                {form.images.map((url, index) => (
+                  <div key={index} className={styles.imageRow}>
+                    <input
+                      type="text"
+                      name="image"
+                      value={url}
+                      onChange={(e) => handleFormChange(e, index)}
+                      placeholder="https://..."
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeImageField(index)}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  className={styles.secondaryBtn}
+                  onClick={addImageField}
+                >
+                  + Add image
+                </button>
+              </div>
+
+              <div className={styles.modalActions}>
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  className={styles.secondaryBtn}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className={styles.primaryBtn}
+                  disabled={saving}
+                >
+                  {saving ? "Saving..." : "Save"}
+                </button>
+              </div>
+            </form>
+
+            {/* Stock adjust block (only when editing) */}
+            {editingProduct && (
+              <div className={styles.stockAdjustSection}>
+                <h3>Adjust Stock</h3>
+                <form onSubmit={handleAdjustStock}>
+                  <div className={styles.formRow}>
+                    <input
+                      type="number"
+                      value={stockChange}
+                      onChange={(e) => setStockChange(e.target.value)}
+                      placeholder="+5 or -2"
+                    />
+                    <input
+                      type="text"
+                      value={stockReason}
+                      onChange={(e) => setStockReason(e.target.value)}
+                      placeholder="Reason (optional)"
+                    />
+                    <button
+                      type="submit"
+                      className={styles.secondaryBtn}
+                      disabled={!stockChange}
+                    >
+                      Apply
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

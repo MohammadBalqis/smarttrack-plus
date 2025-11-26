@@ -1,0 +1,277 @@
+/* client/src/styles/company/companyProducts.module.css */
+
+.page {
+  padding: 24px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.headerStats {
+  font-size: 0.9rem;
+  color: #64748b;
+}
+
+.primaryBtn,
+.secondaryBtn,
+.smallBtn,
+.viewBtn {
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.primaryBtn {
+  background: #2563eb;
+  color: #fff;
+}
+
+.secondaryBtn {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.smallBtn,
+.viewBtn {
+  background: #f1f5f9;
+  color: #0f172a;
+  margin-right: 4px;
+}
+
+.filtersRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.filtersRow select,
+.filtersRow input {
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid #cbd5f5;
+  font-size: 0.9rem;
+}
+
+.searchForm {
+  display: flex;
+  gap: 6px;
+}
+
+.tableCard {
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 16px;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06);
+}
+
+.tableHeaderRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.smallInfo {
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+.tableWrapper {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.table th,
+.table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid #e2e8f0;
+  text-align: left;
+}
+
+.table th {
+  font-weight: 600;
+  color: #64748b;
+}
+
+.nameCell {
+  font-weight: 500;
+}
+
+.thumbnail {
+  width: 50px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
+.noImage {
+  width: 50px;
+  height: 40px;
+  border-radius: 6px;
+  background: #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  color: #64748b;
+}
+
+.empty {
+  padding: 16px 0;
+  color: #94a3b8;
+}
+
+.error {
+  color: #b91c1c;
+  margin-bottom: 8px;
+}
+
+.statusBadgeActive,
+.statusBadgeInactive {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+}
+
+.statusBadgeActive {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.statusBadgeInactive {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.stockBadgeOk,
+.stockBadgeLow,
+.stockBadgeZero {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+}
+
+.stockBadgeOk {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.stockBadgeLow {
+  background: #fef9c3;
+  color: #a16207;
+}
+
+.stockBadgeZero {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.paginationRow {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+/* Modal */
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 40;
+}
+
+.modal {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 20px;
+  width: 520px;
+  max-width: 95%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.closeBtn {
+  border: none;
+  background: transparent;
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+.modalForm label {
+  display: block;
+  font-size: 0.85rem;
+  margin-bottom: 8px;
+}
+
+.modalForm input,
+.modalForm textarea,
+.modalForm select {
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid #cbd5f5;
+  margin-top: 4px;
+  font-size: 0.9rem;
+}
+
+.formRow {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.imagesSection {
+  margin: 10px 0;
+}
+
+.imageRow {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.stockAdjustSection {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid #e2e8f0;
+}

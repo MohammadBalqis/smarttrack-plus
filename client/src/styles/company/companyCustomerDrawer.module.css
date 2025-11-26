@@ -1,0 +1,276 @@
+/* ================================
+   DRAWER OVERLAY
+================================ */
+.drawerOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(2px);
+  display: flex;
+  justify-content: flex-end;
+  z-index: 3000;
+}
+
+/* ================================
+   DRAWER PANEL
+================================ */
+.drawer {
+  background: #fff;
+  width: 420px;
+  height: 100%;
+  padding: 24px;
+  box-shadow: -4px 0 12px rgba(0, 0, 0, 0.15);
+  overflow-y: auto;
+  position: relative;
+  animation: slideIn 0.25s ease-out;
+  border-left: 4px solid #0a74da;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+/* ================================
+   CLOSE BUTTON
+================================ */
+.closeBtn {
+  position: absolute;
+  right: 16px;
+  top: 16px;
+  background: transparent;
+  border: none;
+  font-size: 22px;
+  cursor: pointer;
+  color: #555;
+  transition: 0.2s;
+}
+.closeBtn:hover {
+  color: #000;
+}
+
+/* ================================
+   HEADER TITLE
+================================ */
+.drawerTitle {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+  color: #0a74da;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #eee;
+}
+
+/* ================================
+   PROFILE CARD
+================================ */
+.profileCard {
+  margin-top: 20px;
+  padding: 18px;
+  border-radius: 12px;
+  background: #f8f9fc;
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  position: relative;
+}
+
+.avatarCircle {
+  width: 60px;
+  height: 60px;
+  background: #0a74da;
+  color: #fff;
+  font-size: 26px;
+  font-weight: 600;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.customerName {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.customerEmail {
+  font-size: 14px;
+  color: #555;
+  margin: 2px 0;
+}
+
+.customerPhone {
+  font-size: 14px;
+  color: #444;
+}
+
+.joinedText {
+  margin-top: 6px;
+  font-size: 13px;
+  color: #777;
+}
+
+/* STATUS BADGES */
+.statusBadgeActive {
+  display: inline-block;
+  background: #d1f7d6;
+  color: #0a8a1e;
+  padding: 4px 10px;
+  font-size: 12px;
+  border-radius: 20px;
+  margin-top: 5px;
+}
+
+.statusBadgeInactive {
+  display: inline-block;
+  background: #ffe1e1;
+  color: #c62828;
+  padding: 4px 10px;
+  font-size: 12px;
+  border-radius: 20px;
+  margin-top: 5px;
+}
+
+/* BUTTON: ACTIVATE / SUSPEND */
+.toggleBtn {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  background: #0a74da;
+  color: #fff;
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: none;
+  font-size: 14px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+.toggleBtn:hover {
+  background: #005bb5;
+}
+
+/* ================================
+   ERROR & INFO
+================================ */
+.error {
+  margin-top: 8px;
+  color: #d62828;
+  font-size: 14px;
+}
+
+.smallInfo {
+  font-size: 14px;
+  margin-top: 10px;
+  color: #666;
+}
+
+/* ================================
+   STAT CARDS
+================================ */
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+  margin-top: 22px;
+}
+
+.statCard {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  padding: 16px;
+  border-radius: 10px;
+  text-align: center;
+}
+
+.statCard h4 {
+  margin: 0;
+  font-size: 14px;
+  color: #777;
+}
+
+.statCard p {
+  margin: 8px 0 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #0a74da;
+}
+
+/* ================================
+   SECTION TITLE
+================================ */
+.section {
+  margin-top: 28px;
+}
+
+.section h3 {
+  margin-bottom: 10px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+/* ================================
+   ORDERS TABLE
+================================ */
+.tableWrapper {
+  max-height: 380px;
+  overflow-y: auto;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.table thead {
+  background: #f1f3f7;
+}
+
+.table th,
+.table td {
+  padding: 10px;
+  text-align: left;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.table tr:hover td {
+  background: #fafafa;
+}
+
+.empty {
+  color: #777;
+  font-size: 14px;
+  padding: 12px;
+}
+
+/* ORDER STATUS BADGES */
+.badge_pending {
+  background: #ffefc2;
+  color: #b88300;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+}
+
+.badge_delivered {
+  background: #d1f7d6;
+  color: #0a8a1e;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+}
+
+.badge_cancelled {
+  background: #ffe1e1;
+  color: #c62828;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+}

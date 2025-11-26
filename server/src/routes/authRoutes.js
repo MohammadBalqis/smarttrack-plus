@@ -1,9 +1,11 @@
-// server/src/routes/authRoutes.js (FINAL SECURITY VERSION)
+// server/src/routes/authRoutes.js
 
 import { Router } from "express";
 import { protect } from "../middleware/authMiddleware.js";
 import { authorizeRoles } from "../middleware/roleMiddleware.js";
-import { loginLimiter } from "../middleware/rateLimitMiddleware.js";
+
+// ✅ Use ONLY ONE RATE LIMITER FILE
+import { loginLimiter, registerLimiter } from "../middleware/rateLimiters.js";
 
 import {
   register,
@@ -34,11 +36,10 @@ const loginSchema = Joi.object({
 });
 
 /* ==========================================================
-   🔐 PUBLIC AUTH ROUTES
+   🔐 REGISTER — Public + Rate Limited
 ========================================================== */
-router.post("/register", async (req, res, next) => {
+router.post("/register", registerLimiter, async (req, res, next) => {
   try {
-    // Validate & sanitize
     const { error } = registerSchema.validate(req.body);
     if (error) {
       return res.status(400).json({ error: error.details[0].message });
@@ -63,11 +64,10 @@ router.post("/register", async (req, res, next) => {
 });
 
 /* ==========================================================
-   🔐 LOGIN (Rate Limited)
+   🔐 LOGIN — All Roles + Rate Limited
 ========================================================== */
 router.post("/login", loginLimiter, async (req, res, next) => {
   try {
-    // Validate login body
     const { error } = loginSchema.validate(req.body);
     if (error) return res.status(400).json({ error: error.details[0].message });
 
@@ -102,7 +102,6 @@ router.post(
   authorizeRoles("superadmin"),
   async (req, res, next) => {
     try {
-      // sanitize critical values
       req.body.email = sanitize(req.body.email || "");
       req.body.name = sanitize(req.body.name || "");
 
@@ -124,7 +123,7 @@ router.post(
 );
 
 /* ==========================================================
-   🟠 COMPANY OWNER → CREATE USER (manager/driver only)
+   🟠 COMPANY OWNER → CREATE USER
 ========================================================== */
 router.post(
   "/company/create-user",
@@ -133,7 +132,6 @@ router.post(
   async (req, res, next) => {
     try {
       const allowedRoles = ["manager", "driver"];
-
       if (!allowedRoles.includes(req.body.role)) {
         return res.status(400).json({
           error: "Company owners can only create managers or drivers.",
@@ -145,7 +143,7 @@ router.post(
 
       await companyCreateUser(req, res);
 
-      if (res.statusCode === 200 || res.statusCode === 201) {
+      if (res.statusCode === 201 || res.statusCode === 200) {
         await logActivity({
           userId: req.user._id,
           action: "COMPANY_CREATE_USER",

@@ -1,156 +1,215 @@
+// client/src/components/manager/ManagerCustomerDrawer.jsx
 import React, { useEffect, useState } from "react";
 import {
-  getCompanyDriverStatsApi,
-  getCompanyDriverRecentTripsApi,
-} from "../../api/companyDriversApi";
-import styles from "../../styles/manager/managerDrivers.module.css";
+  getManagerCustomerOrdersApi,
+  getManagerCustomerStatsApi,
+} from "../../api/managerCustomersApi";
+import styles from "../../styles/manager/managerCustomers.module.css";
 
-const ManagerDriverDrawer = ({ open, onClose, driver }) => {
+const ManagerCustomerDrawer = ({ open, onClose, customer }) => {
+  const [loadingStats, setLoadingStats] = useState(false);
+  const [loadingOrders, setLoadingOrders] = useState(false);
   const [stats, setStats] = useState(null);
-  const [recentTrips, setRecentTrips] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [orders, setOrders] = useState([]);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (open && driver?._id) {
-      loadData(driver._id);
-    }
-  }, [open, driver]);
+    if (!open || !customer?._id) return;
 
-  const loadData = async (driverId) => {
-    try {
-      setLoading(true);
+    const load = async () => {
       setError("");
-      const [statsRes, tripsRes] = await Promise.all([
-        getCompanyDriverStatsApi(driverId),
-        getCompanyDriverRecentTripsApi(driverId),
-      ]);
+      setStats(null);
+      setOrders([]);
+      setLoadingStats(true);
+      setLoadingOrders(true);
 
-      if (statsRes.data.ok) {
-        setStats(statsRes.data.stats || null);
+      try {
+        const [statsRes, ordersRes] = await Promise.all([
+          getManagerCustomerStatsApi(customer._id).catch((err) => {
+            console.error("Stats error:", err);
+            return null;
+          }),
+          getManagerCustomerOrdersApi(customer._id).catch((err) => {
+            console.error("Orders error:", err);
+            return null;
+          }),
+        ]);
+
+        if (statsRes?.data?.stats) {
+          setStats(statsRes.data.stats);
+        }
+
+        if (ordersRes?.data?.orders) {
+          setOrders(ordersRes.data.orders);
+        }
+      } catch (err) {
+        console.error(err);
+        setError("Failed to load customer details.");
+      } finally {
+        setLoadingStats(false);
+        setLoadingOrders(false);
       }
-      setRecentTrips(tripsRes.data.trips || []);
-    } catch (err) {
-      console.error("Error loading driver drawer data:", err);
-      setError("Failed to load driver details.");
-    } finally {
-      setLoading(false);
-    }
+    };
+
+    load();
+  }, [open, customer]);
+
+  if (!open || !customer) return null;
+
+  const getInitials = (name) => {
+    if (!name) return "?";
+    const parts = name.trim().split(" ");
+    if (parts.length === 1) return parts[0][0].toUpperCase();
+    return (parts[0][0] + parts[1][0]).toUpperCase();
   };
-
-  if (!open || !driver) return null;
-
-  const joinedAt =
-    driver.createdAt && !isNaN(Date.parse(driver.createdAt))
-      ? new Date(driver.createdAt).toLocaleDateString()
-      : "—";
 
   return (
     <div className={styles.drawerOverlay}>
       <div className={styles.drawer}>
-        <button className={styles.closeBtn} onClick={onClose}>
-          ✕
-        </button>
+        {/* Header */}
+        <div className={styles.drawerHeader}>
+          <h3>Customer Details</h3>
+          <button className={styles.closeBtn} onClick={onClose}>
+            ✕
+          </button>
+        </div>
 
-        <h2 className={styles.drawerTitle}>Driver Details</h2>
-
-        {/* Driver info card */}
-        <div className={styles.profileCard}>
-          <div className={styles.avatarCircle}>
-            {driver.name?.charAt(0).toUpperCase() || "D"}
+        {/* Basic info */}
+        <div className={styles.customerInfo}>
+          <div className={styles.avatarWrapper}>
+            {customer.profileImage ? (
+              <img
+                src={customer.profileImage}
+                alt={customer.name}
+                className={styles.avatar}
+              />
+            ) : (
+              <div className={styles.avatarFallback}>
+                {getInitials(customer.name)}
+              </div>
+            )}
           </div>
-          <div>
-            <h3 className={styles.driverName}>{driver.name}</h3>
-            <p className={styles.driverEmail}>{driver.email}</p>
-            <p className={styles.driverPhone}>
-              {driver.phoneNumber || "No phone set"}
-            </p>
+          <div className={styles.customerTextInfo}>
+            <h4>{customer.name || "Unnamed customer"}</h4>
+            <p>{customer.email}</p>
+            <p>{customer.phone || "No phone"}</p>
             <span
               className={
-                driver.isActive
+                customer.isActive
                   ? styles.statusBadgeActive
                   : styles.statusBadgeInactive
               }
             >
-              {driver.isActive ? "Active" : "Inactive"}
+              {customer.isActive ? "Active" : "Inactive"}
             </span>
-            <p className={styles.joinedText}>Joined: {joinedAt}</p>
           </div>
         </div>
 
-        {loading && <p className={styles.smallInfo}>Loading stats...</p>}
-        {error && <p className={styles.error}>{error}</p>}
+        {/* Stats */}
+        <div className={styles.statsSection}>
+          <h4>Customer Stats (for this company)</h4>
+          {loadingStats && <p className={styles.smallInfo}>Loading stats...</p>}
+          {!loadingStats && stats && (
+            <div className={styles.statsGrid}>
+              <div className={styles.statCard}>
+                <span className={styles.statLabel}>Total Orders</span>
+                <span className={styles.statValue}>
+                  {stats.totalOrders ?? 0}
+                </span>
+              </div>
+              <div className={styles.statCard}>
+                <span className={styles.statLabel}>Delivered</span>
+                <span className={styles.statValue}>
+                  {stats.deliveredCount ?? 0}
+                </span>
+              </div>
+              <div className={styles.statCard}>
+                <span className={styles.statLabel}>Cancelled</span>
+                <span className={styles.statValue}>
+                  {stats.cancelledCount ?? 0}
+                </span>
+              </div>
+              <div className={styles.statCard}>
+                <span className={styles.statLabel}>Total Spent</span>
+                <span className={styles.statValue}>
+                  {stats.totalSpent?.toFixed
+                    ? stats.totalSpent.toFixed(2)
+                    : Number(stats.totalSpent || 0).toFixed(2)}{" "}
+                  $
+                </span>
+              </div>
+              <div className={styles.statCardWide}>
+                <span className={styles.statLabel}>Last Order</span>
+                <span className={styles.statValue}>
+                  {stats.lastOrderDate
+                    ? new Date(stats.lastOrderDate).toLocaleString()
+                    : "—"}
+                </span>
+              </div>
+            </div>
+          )}
+          {!loadingStats && !stats && !error && (
+            <p className={styles.smallInfo}>No stats yet for this customer.</p>
+          )}
+        </div>
 
-        {/* KPI cards */}
-        {stats && (
-          <div className={styles.kpiGrid}>
-            <div className={styles.kpiCard}>
-              <h4>Total Trips</h4>
-              <p>{stats.totalTrips}</p>
-            </div>
-            <div className={styles.kpiCard}>
-              <h4>Delivered</h4>
-              <p>{stats.deliveredTrips}</p>
-            </div>
-            <div className={styles.kpiCard}>
-              <h4>Active Trips</h4>
-              <p>{stats.activeTripsCount}</p>
-            </div>
-            <div className={styles.kpiCard}>
-              <h4>Revenue</h4>
-              <p>${stats.revenueGenerated?.toFixed(2) || "0.00"}</p>
-            </div>
-          </div>
-        )}
+        {/* Orders list */}
+        <div className={styles.ordersSection}>
+          <h4>Recent Orders with this Company</h4>
+          {loadingOrders && (
+            <p className={styles.smallInfo}>Loading orders...</p>
+          )}
+          {error && <p className={styles.error}>{error}</p>}
 
-        {/* Recent trips */}
-        <div className={styles.section}>
-          <h3>Recent Trips</h3>
-          {recentTrips.length === 0 ? (
-            <p className={styles.empty}>No trips for this driver yet.</p>
-          ) : (
-            <div className={styles.tableWrapper}>
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Customer</th>
-                    <th>Route</th>
-                    <th>Status</th>
-                    <th>Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {recentTrips.map((t) => (
-                    <tr key={t.id}>
-                      <td>
-                        {t.createdAt
-                          ? new Date(t.createdAt).toLocaleString()
-                          : ""}
-                      </td>
-                      <td>{t.customerName}</td>
-                      <td>
-                        <div className={styles.routeText}>
-                          <span>{t.pickupAddress}</span>
-                          <span className={styles.routeArrow}>→</span>
-                          <span>{t.dropoffAddress}</span>
-                        </div>
-                      </td>
-                      <td>
-                        <span
-                          className={
-                            styles[`badge_${t.status}`] ||
-                            styles.badge_default
-                          }
-                        >
-                          {t.status}
-                        </span>
-                      </td>
-                      <td>${t.totalAmount?.toFixed(2) || "0.00"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          {!loadingOrders && orders.length === 0 && !error && (
+            <p className={styles.smallInfo}>No orders found.</p>
+          )}
+
+          {!loadingOrders && orders.length > 0 && (
+            <div className={styles.ordersList}>
+              {orders.slice(0, 10).map((o) => (
+                <div key={o._id} className={styles.orderItem}>
+                  <div>
+                    <div className={styles.orderHeaderRow}>
+                      <span className={styles.orderId}>
+                        #{String(o._id).slice(-6)}
+                      </span>
+                      <span
+                        className={
+                          o.status === "delivered"
+                            ? styles.badgeDelivered
+                            : o.status === "cancelled"
+                            ? styles.badgeCancelled
+                            : styles.badgePending
+                        }
+                      >
+                        {o.status}
+                      </span>
+                    </div>
+                    <p className={styles.orderMeta}>
+                      Total:{" "}
+                      <strong>
+                        {Number(o.total || 0).toFixed(2)} $
+                      </strong>
+                      {" · "}
+                      {o.createdAt
+                        ? new Date(o.createdAt).toLocaleString()
+                        : ""}
+                    </p>
+                    {o.driverId && (
+                      <p className={styles.orderMeta}>
+                        Driver: {o.driverId.name || "—"}
+                      </p>
+                    )}
+                    {o.vehicleId && (
+                      <p className={styles.orderMeta}>
+                        Vehicle: {o.vehicleId.plateNumber} (
+                        {o.vehicleId.brand} {o.vehicleId.model})
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
@@ -159,4 +218,4 @@ const ManagerDriverDrawer = ({ open, onClose, driver }) => {
   );
 };
 
-export default ManagerDriverDrawer;
+export default ManagerCustomerDrawer;

@@ -1,18 +1,20 @@
+// server/src/routes/companyDashboardRoutes.js
 import { Router } from "express";
 import { protect } from "../middleware/authMiddleware.js";
 import { authorizeRoles } from "../middleware/roleMiddleware.js";
-import { getCompanyDashboardStats } from "../controllers/companyDashboardController.js";
+import { getCompanyDashboard } from "../controllers/companyDashboardController.js";
 
 const router = Router();
 
 /* ==========================================================
-   📊 COMPANY DASHBOARD STATS (Company / Manager)
-   ========================================================== */
+   📊 COMPANY DASHBOARD SUMMARY
+   /api/company/dashboard
+========================================================== */
 router.get(
-  "/stats",
+  "/dashboard",
   protect,
-  authorizeRoles("company", "manager"),
-  getCompanyDashboardStats
+  authorizeRoles("company", "manager"), // manager can also see company dashboard if you want
+  getCompanyDashboard
 );
 
 export default router;
