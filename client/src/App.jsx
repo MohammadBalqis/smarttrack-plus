@@ -2,16 +2,11 @@
 import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
-// 🔐 Context
 import { AuthProvider } from "./context/AuthContext";
-
-// Layout
 import DashboardLayout from "./layout/DashboardLayout";
-
-// Role-based routing
 import RoleRoute from "./components/RoleRoute";
 
-// Admin pages
+// Admin
 import AdminDashboard from "./pages/admin/AdminDashboard";
 
 // Company pages
@@ -20,6 +15,9 @@ import CompanyProducts from "./pages/company/CompanyProducts";
 import CompanyDrivers from "./pages/company/CompanyDrivers";
 import CompanyCustomers from "./pages/company/CompanyCustomers";
 import CompanyTrips from "./pages/company/CompanyTrips";
+import CompanyOrders from "./pages/company/CompanyOrders";
+import CompanyVehicles from "./pages/company/CompanyVehicles";
+import CompanyPayments from "./pages/company/CompanyPayments";
 
 // Manager pages
 import ManagerDashboard from "./pages/manager/ManagerDashboard";
@@ -38,8 +36,8 @@ function App() {
         <Routes>
 
           {/* ==============================
-              SUPERADMIN / SYSTEM OWNER
-              ============================== */}
+              SUPERADMIN
+          ============================== */}
           <Route
             path="/admin"
             element={
@@ -51,10 +49,9 @@ function App() {
             <Route index element={<AdminDashboard />} />
           </Route>
 
-
           {/* ==============================
-              COMPANY DASHBOARD
-              ============================== */}
+              COMPANY
+          ============================== */}
           <Route
             path="/company"
             element={
@@ -68,15 +65,14 @@ function App() {
             <Route path="drivers" element={<CompanyDrivers />} />
             <Route path="customers" element={<CompanyCustomers />} />
             <Route path="trips" element={<CompanyTrips />} />
-            <Route path="orders" element={<ManagerOrders />} />
-            <Route path="vehicles" element={<ManagerVehicles />} />
-            <Route path="payments" element={<ManagerPayments />} />
+            <Route path="orders" element={<CompanyOrders />} />
+            <Route path="vehicles" element={<CompanyVehicles />} />
+            <Route path="payments" element={<CompanyPayments />} />
           </Route>
 
-
           {/* ==============================
-              MANAGER DASHBOARD
-              ============================== */}
+              MANAGER
+          ============================== */}
           <Route
             path="/manager"
             element={
@@ -95,12 +91,8 @@ function App() {
             <Route path="payments" element={<ManagerPayments />} />
           </Route>
 
-
-          {/* ==============================
-              DEFAULT REDIRECT
-              ============================== */}
+          {/* DEFAULT */}
           <Route path="*" element={<Navigate to="/manager" />} />
-
         </Routes>
       </BrowserRouter>
     </AuthProvider>

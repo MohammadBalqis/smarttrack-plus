@@ -1,238 +1,150 @@
+/* ================================
+   📌 Company Dashboard Layout
+=================================== */
 .page {
-  padding: 24px;
-}
-
-.headerRow {
+  padding: 25px;
   display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  gap: 16px;
-  margin-bottom: 24px;
+  flex-direction: column;
+  gap: 25px;
 }
 
 .title {
-  font-size: 24px;
-  font-weight: 600;
-  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 4px;
 }
 
 .subtitle {
-  margin: 4px 0 0;
-  color: #64748b;
-  font-size: 14px;
+  font-size: 15px;
+  color: #666;
+  margin-bottom: 20px;
 }
 
-.headerRight {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 4px;
-}
-
-.headerStat {
-  font-size: 14px;
-  color: #475569;
-}
-
-.error {
-  color: #b91c1c;
-  background: #fee2e2;
-  border: 1px solid #fecaca;
-  padding: 8px 12px;
-  border-radius: 6px;
-  margin-bottom: 16px;
-}
-
-.smallInfo {
-  font-size: 13px;
-  color: #64748b;
-}
-
-/* KPI grid */
+/* ================================
+   📊 KPI GRID
+=================================== */
 .kpiGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 16px;
-  margin-bottom: 24px;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 18px;
 }
 
-.kpiCard {
-  background: #ffffff;
-  border-radius: 10px;
-  padding: 16px;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
-  border: 1px solid #e2e8f0;
-}
-
-.kpiLabel {
-  font-size: 13px;
-  color: #64748b;
-}
-
-.kpiValue {
-  display: block;
-  font-size: 22px;
-  font-weight: 600;
-  margin-top: 4px;
-}
-
-.kpiSub {
-  display: block;
-  margin-top: 4px;
-  font-size: 12px;
-  color: #94a3b8;
-}
-
-/* Layout rows */
-.row {
-  display: grid;
-  grid-template-columns: 1.2fr 1fr;
-  gap: 16px;
-  margin-bottom: 24px;
-}
-
-.card {
-  background: #ffffff;
-  border-radius: 10px;
-  padding: 16px;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
-  border: 1px solid #e2e8f0;
-}
-
-.cardHeader {
+.card,
+.cardBig {
+  background: #fff;
+  border-radius: 12px;
+  padding: 18px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
   display: flex;
+  flex-direction: column;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
 }
 
-.cardHeader h2 {
-  font-size: 16px;
+.card h4,
+.cardBig h4 {
+  margin: 0 0 6px;
+  font-weight: 600;
+  color: #444;
+}
+
+.card p,
+.cardBig p {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: #111;
+}
+
+.cardBig {
+  grid-column: span 2;
+  text-align: center;
+}
+
+/* ================================
+   📈 CHART CARD
+=================================== */
+.chartCard {
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+}
+
+.chartCard h3 {
+  margin-bottom: 12px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+/* ================================
+   📝 RECENT LIST CARDS
+=================================== */
+.rowsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 18px;
+}
+
+.listCard {
+  background: #fff;
+  border-radius: 12px;
+  padding: 18px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+}
+
+.listCard h3 {
+  font-size: 17px;
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+
+.listCard ul {
+  list-style: none;
+  padding: 0;
   margin: 0;
 }
 
-/* Revenue list */
-.revenueList {
+.listCard li {
+  padding: 10px 0;
+  border-bottom: 1px solid #eee;
+  font-size: 14px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-}
-
-.revenueItem {
-  display: flex;
-  justify-content: space-between;
-  font-size: 14px;
-  padding: 6px 0;
-  border-bottom: 1px dashed #e2e8f0;
-}
-
-/* Tables */
-.tableWrapper {
-  width: 100%;
-  overflow-x: auto;
-}
-
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-}
-
-.table thead {
-  background: #f8fafc;
-}
-
-.table th,
-.table td {
-  padding: 8px 10px;
-  border-bottom: 1px solid #e2e8f0;
-  text-align: left;
-}
-
-.table th {
-  font-weight: 500;
-  color: #64748b;
-}
-
-.table tr:hover td {
-  background: #f9fafb;
-}
-
-/* Empty */
-.empty {
-  font-size: 13px;
-  color: #94a3b8;
-}
-
-/* Route */
-.routeText {
-  display: flex;
-  align-items: center;
   gap: 4px;
 }
 
-.routeArrow {
+.listCard li:last-child {
+  border-bottom: none;
+}
+
+.listCard span {
+  color: #777;
   font-size: 12px;
-  color: #94a3b8;
 }
 
-/* Badges */
-.badge {
-  display: inline-flex;
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-size: 11px;
-  border: 1px solid transparent;
+/* ================================
+   🌙 EMPTY STATES
+=================================== */
+.empty {
+  color: #888;
+  padding: 20px 0;
+  font-size: 14px;
+  text-align: center;
 }
 
-/* Status colors – you can adjust these */
-.badge_pending {
-  background: #fef9c3;
-  color: #854d0e;
-  border-color: #facc15;
-}
+/* ================================
+   🖥️ RESPONSIVE
+=================================== */
+@media (max-width: 768px) {
+  .kpiGrid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
 
-.badge_accepted,
-.badge_preparing,
-.badge_assigned,
-.badge_in_progress,
-.badge_delivering {
-  background: #dcfce7;
-  color: #166534;
-  border-color: #22c55e;
-}
+  .cardBig {
+    grid-column: span 1;
+  }
 
-.badge_delivered,
-.badge_completed {
-  background: #e0f2fe;
-  color: #0369a1;
-  border-color: #38bdf8;
-}
-
-.badge_cancelled {
-  background: #fee2e2;
-  color: #b91c1c;
-  border-color: #fca5a5;
-}
-
-.badge_default {
-  background: #f1f5f9;
-  color: #475569;
-  border-color: #cbd5f5;
-}
-
-/* Responsive */
-@media (max-width: 960px) {
-  .row {
+  .rowsGrid {
     grid-template-columns: 1fr;
-  }
-
-  .headerRow {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .headerRight {
-    align-items: flex-start;
   }
 }

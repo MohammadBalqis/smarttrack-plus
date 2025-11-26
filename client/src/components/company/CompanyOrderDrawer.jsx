@@ -1,87 +1,169 @@
-import React, { useEffect, useState } from "react";
-import { getSingleCompanyOrderApi } from "../../api/companyOrdersApi";
-import styles from "../../styles/company/companyOrders.module.css";
+import React, { useState } from "react";
+import {
+  updateCompanyOrderStatusApi,
+} from "../../api/companyOrdersApi";
 
-const CompanyOrderDrawer = ({ open, onClose, order, updateStatus }) => {
-  const [details, setDetails] = useState(null);
+import styles from "../../styles/company/companyOrderDrawer.module.css";
 
-  useEffect(() => {
-    if (open && order?._id) {
-      loadOrder(order._id);
+const CompanyOrderDrawer = ({ open, onClose, order, reload }) => {
+  const [updating, setUpdating] = useState(false);
+  const [error, setError] = useState("");
+
+  if (!open || !order) return null;
+
+  const handleStatusUpdate = async (newStatus) => {
+    try {
+      setUpdating(true);
+      setError("");
+
+      await updateCompanyOrderStatusApi(order._id, newStatus);
+
+      if (reload) reload();
+      onClose();
+
+    } catch (err) {
+      console.error("Status update error:", err);
+      setError(
+        err.response?.data?.error ||
+          "Failed to update order status. Try again."
+      );
+    } finally {
+      setUpdating(false);
     }
-  }, [open, order]);
-
-  const loadOrder = async (id) => {
-    const res = await getSingleCompanyOrderApi(id);
-    setDetails(res.data.order);
   };
 
-  if (!open || !details) return null;
+  // Allowed transitions (company)
+  const canAccept = order.status === "pending";
+  const canPrepare = order.status === "accepted";
+  const canCancel =
+    ["pending", "accepted", "preparing"].includes(order.status);
+
+  const timeline = Array.isArray(order.timeline) ? order.timeline : [];
 
   return (
-    <div className={styles.drawerOverlay}>
+    <div className={styles.overlay}>
       <div className={styles.drawer}>
-        <button className={styles.closeBtn} onClick={onClose}>
-          ✕
-        </button>
+        {/* Close */}
+        <button className={styles.closeBtn} onClick={onClose}>✕</button>
 
-        <h2>Order Details</h2>
+        <h2 className={styles.title}>Order Details</h2>
 
-        <p>
-          <strong>Customer:</strong> {details.customerId?.name}
-        </p>
-        <p>
-          <strong>Total:</strong> ${details.total?.toFixed(2)}
-        </p>
-        <p>
-          <strong>Status:</strong>{" "}
-          <span className={styles[`badge_${details.status}`]}>
-            {details.status}
-          </span>
-        </p>
+        {error && <p className={styles.error}>{error}</p>}
 
-        <h3>Items</h3>
-        <ul>
-          {details.items?.map((i) => (
-            <li key={i.productId}>
-              {i.name} — {i.quantity} × ${i.price}
-            </li>
-          ))}
-        </ul>
+        {/* ============================
+            ORDER BASIC INFO
+        ============================== */}
+        <div className={styles.section}>
+          <h3>Order Info</h3>
 
-        <h3>Timeline</h3>
-        <ul>
-          {details.timeline.map((t, index) => (
-            <li key={index}>
-              <strong>{t.status}</strong> —{" "}
-              {new Date(t.timestamp).toLocaleString()}
-            </li>
-          ))}
-        </ul>
+          <p><strong>Order ID:</strong> {order._id}</p>
+          <p><strong>Status:</strong> {order.status}</p>
+          <p>
+            <strong>Created:</strong>{" "}
+            {order.createdAt
+              ? new Date(order.createdAt).toLocaleString()
+              : ""}
+          </p>
+          <p>
+            <strong>Total:</strong> ${order.total?.toFixed(2) || "0.00"}
+          </p>
+        </div>
 
-        {/* Only company owner can update status */}
-        {updateStatus && (
-          <div className={styles.statusActions}>
-            <button onClick={() => updateStatus(details._id, "accepted")}>
+        {/* ============================
+            CUSTOMER INFO
+        ============================== */}
+        <div className={styles.section}>
+          <h3>Customer</h3>
+          <p><strong>Name:</strong> {order.customerId?.name || "—"}</p>
+          <p><strong>Email:</strong> {order.customerId?.email || "—"}</p>
+          <p><strong>Phone:</strong> {order.customerId?.phone || "—"}</p>
+        </div>
+
+        {/* ============================
+            DRIVER INFO
+        ============================== */}
+        <div className={styles.section}>
+          <h3>Driver</h3>
+          <p><strong>Name:</strong> {order.driverId?.name || "—"}</p>
+          <p><strong>Phone:</strong> {order.driverId?.phone || "—"}</p>
+        </div>
+
+        {/* ============================
+            VEHICLE INFO
+        ============================== */}
+        <div className={styles.section}>
+          <h3>Vehicle</h3>
+          <p><strong>Plate:</strong> {order.vehicleId?.plateNumber || "—"}</p>
+          <p><strong>Model:</strong> {order.vehicleId?.model || "—"}</p>
+          <p><strong>Brand:</strong> {order.vehicleId?.brand || "—"}</p>
+        </div>
+
+        {/* ============================
+            QR CODE (placeholder)
+        ============================== */}
+        <div className={styles.section}>
+          <h3>QR Code</h3>
+          <div className={styles.qrPlaceholder}>
+            QR CODE WILL BE ADDED LATER
+          </div>
+        </div>
+
+        {/* ============================
+            TIMELINE
+        ============================== */}
+        <div className={styles.section}>
+          <h3>Timeline</h3>
+
+          {timeline.length === 0 ? (
+            <p className={styles.muted}>No timeline yet.</p>
+          ) : (
+            <ul className={styles.timelineList}>
+              {timeline.map((step, idx) => (
+                <li key={idx} className={styles.timelineItem}>
+                  <span className={styles.timelineStatus}>{step.status}</span>
+                  <span className={styles.timelineTime}>
+                    {new Date(step.timestamp).toLocaleString()}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        {/* ============================
+            STATUS UPDATE (COMPANY)
+        ============================== */}
+        <div className={styles.section}>
+          <h3>Update Status</h3>
+
+          <div className={styles.actions}>
+            <button
+              disabled={!canAccept || updating}
+              onClick={() => handleStatusUpdate("accepted")}
+              className={styles.primaryBtn}
+            >
               Accept
             </button>
-            <button onClick={() => updateStatus(details._id, "preparing")}>
+
+            <button
+              disabled={!canPrepare || updating}
+              onClick={() => handleStatusUpdate("preparing")}
+              className={styles.primaryBtn}
+            >
               Preparing
             </button>
-            <button onClick={() => updateStatus(details._id, "assigned")}>
-              Assign Driver
-            </button>
-            <button onClick={() => updateStatus(details._id, "delivering")}>
-              Delivering
-            </button>
-            <button onClick={() => updateStatus(details._id, "delivered")}>
-              Delivered
-            </button>
-            <button onClick={() => updateStatus(details._id, "cancelled")}>
+
+            <button
+              disabled={!canCancel || updating}
+              onClick={() => handleStatusUpdate("cancelled")}
+              className={styles.dangerBtn}
+            >
               Cancel
             </button>
           </div>
-        )}
+
+          {updating && <p className={styles.smallInfo}>Updating...</p>}
+        </div>
       </div>
     </div>
   );

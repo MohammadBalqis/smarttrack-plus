@@ -1,5 +1,4 @@
 // server.js (CLEAN, FIXED, SECURE)
-
 import express from "express";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
@@ -13,12 +12,11 @@ import xss from "xss-clean";
 import compression from "compression";
 import cors from "cors";
 
-// 🌐 Load environment
 dotenv.config();
 const app = express();
 
 /* ==========================================================
-   🔐 IMPORT SECURITY + RATE LIMIT MIDDLEWARES
+   🔐 SECURITY & RATE LIMIT
 ========================================================== */
 import { sanitizeRequest } from "./src/middleware/sanitizeMiddleware.js";
 import { applySecurityMiddlewares } from "./src/middleware/securityMiddleware.js";
@@ -28,16 +26,12 @@ import { registerLimiter } from "./src/middleware/registerRateLimit.js";
 import { apiLimiter } from "./src/middleware/rateLimitMiddleware.js";
 
 /* ==========================================================
-   🧩 BASE MIDDLEWARE (Logging + Body Parsing)
+   🧩 BASE MIDDLEWARE
 ========================================================== */
 app.use(sanitizeRequest);
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: true, limit: "1mb" }));
 app.use(morgan("dev"));
-
-/* ==========================================================
-   🔐 GLOBAL SECURITY MIDDLEWARES
-========================================================== */
 applySecurityMiddlewares(app);
 
 app.use(
@@ -46,74 +40,67 @@ app.use(
   })
 );
 
-// 🌍 Global API Rate Limiter
+// Global limiter
 app.use(globalLimiter);
 
-// Route-level limiters
+// Login/Register limiters
 app.use("/api/auth/login", loginLimiter);
 app.use("/api/auth/register", registerLimiter);
 
-/* ==========================================================
-   🚦 PREVENT MONGO INJECTION & XSS
-========================================================== */
+// Prevent injection
 app.use(mongoSanitize());
 app.use(xss());
 
-/* ==========================================================
-   🚀 PERFORMANCE BOOST
-========================================================== */
+// Performance
 app.use(compression());
 
 /* ==========================================================
-   🌍 STATIC FILES
+   📁 STATIC FILES
 ========================================================== */
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
 /* ==========================================================
-   🔗 ROUTES
+   🔗 ROUTES IMPORTS
 ========================================================== */
 import authRoutes from "./src/routes/authRoutes.js";
-import companyRoutes from "./src/routes/companyRoutes.js";
-import managerRoutes from "./src/routes/managerRoutes.js";
-import driverRoutes from "./src/routes/driverRoutes.js";
-import vehicleRoutes from "./src/routes/vehicleRoutes.js";
-import orderRoutes from "./src/routes/orderRoutes.js";
-import maintenanceRoutes from "./src/routes/maintenanceRoutes.js";
-import tripRoutes from "./src/routes/tripRoutes.js";
-import tripAnalyticsRoutes from "./src/routes/tripAnalyticsRoutes.js";
-import paymentRoutes from "./src/routes/paymentRoutes.js";
-import customerTripRoutes from "./src/routes/customerTripRoutes.js";
-
-// IMPORTANT — only keep ONE driver route file
-import companyDriverRoutes from "./src/routes/companyDriverRoutes.js";
-
-import customerCompanyRoutes from "./src/routes/customerCompanyRoutes.js";
-import productRoutes from "./src/routes/productRoutes.js";
-import managerDashboardRoutes from "./src/routes/managerDashboardRoutes.js";
-import managerDriverRoutes from "./src/routes/managerDriverRoutes.js";
-import managerVehicleRoutes from "./src/routes/managerVehicleRoutes.js";
-import customerRoutes from "./src/routes/customerRoutes.js";
-import notificationRoutes from "./src/routes/notificationRoutes.js";
 import superAdminRoutes from "./src/routes/superAdminRoutes.js";
-import globalSettingsRoutes from "./src/routes/globalSettingsRoutes.js";
-import billingSettingsRoutes from "./src/routes/billingSettingsRoutes.js";
-import invoiceRoutes from "./src/routes/invoiceRoutes.js";
-import brandingRoutes from "./src/routes/brandingRoutes.js";
-import publicApiRoutes from "./src/routes/publicApiRoutes.js";
+
+import companyRoutes from "./src/routes/companyRoutes.js";
 import companyDashboardRoutes from "./src/routes/companyDashboardRoutes.js";
-import adminStatsRoutes from "./src/routes/adminStatsRoutes.js";
 import companyTripsRoutes from "./src/routes/companyTripsRoutes.js";
 import companyCustomerRoutes from "./src/routes/companyCustomerRoutes.js";
 import companyProductRoutes from "./src/routes/companyProductRoutes.js";
 import companyVehicleRoutes from "./src/routes/companyVehicleRoutes.js";
-import sessionRoutes from "./src/routes/sessionRoutes.js";
-import managerNotificationRoutes from "./src/routes/managerNotificationRoutes.js";
+import companyPaymentRoutes from "./src/routes/companyPaymentRoutes.js";
+import companyDriverRoutes from "./src/routes/companyDriverRoutes.js";
+import companyOrdersRoutes from "./src/routes/companyOrdersRoutes.js"; // NEW
+import companyBrandingRoutes from "./src/routes/companyBrandingRoutes.js";
+import managerDashboardRoutes from "./src/routes/managerDashboardRoutes.js";
+import managerDriverRoutes from "./src/routes/managerDriverRoutes.js";
+import managerVehicleRoutes from "./src/routes/managerVehicleRoutes.js";
 import managerTripRoutes from "./src/routes/managerTripRoutes.js";
 import managerCustomerRoutes from "./src/routes/managerCustomerRoutes.js";
-
 import managerOrderRoutes from "./src/routes/managerOrdersRoutes.js";
+import managerNotificationRoutes from "./src/routes/managerNotificationRoutes.js";
+
+import driverRoutes from "./src/routes/driverRoutes.js";
+import customerRoutes from "./src/routes/customerRoutes.js";
+import customerTripRoutes from "./src/routes/customerTripRoutes.js";
+
+import productRoutes from "./src/routes/productRoutes.js";
+import paymentRoutes from "./src/routes/paymentRoutes.js";
+import invoiceRoutes from "./src/routes/invoiceRoutes.js";
+
+import adminStatsRoutes from "./src/routes/adminStatsRoutes.js";
+import globalSettingsRoutes from "./src/routes/globalSettingsRoutes.js";
+import brandingRoutes from "./src/routes/brandingRoutes.js";
+import billingSettingsRoutes from "./src/routes/billingSettingsRoutes.js";
+
+import publicApiRoutes from "./src/routes/publicApiRoutes.js";
+import sessionRoutes from "./src/routes/sessionRoutes.js";
+
 /* ==========================================================
-   🌐 PUBLIC API (Rate Limited)
+   🌐 PUBLIC ROUTES
 ========================================================== */
 app.use("/api/public", apiLimiter);
 app.use("/api/public/company", publicApiRoutes);
@@ -121,44 +108,49 @@ app.use("/api/public/company", publicApiRoutes);
 /* ==========================================================
    📌 MAIN ROUTES
 ========================================================== */
+// Auth
 app.use("/api/auth", authRoutes);
-app.use("/api/company", companyRoutes);
-app.use("/api/manager", managerRoutes);
-app.use("/api/driver", driverRoutes);
-app.use("/api/vehicle", vehicleRoutes);
-app.use("/api/order", orderRoutes);
-app.use("/api/maintenance", maintenanceRoutes);
-app.use("/api/trip", tripRoutes);
-app.use("/api/trip/analytics", tripAnalyticsRoutes);
-app.use("/api/payments", paymentRoutes);
-app.use("/api/notifications", notificationRoutes);
+
+// SuperAdmin
 app.use("/api/superadmin", superAdminRoutes);
-app.use("/api/settings", globalSettingsRoutes);
-app.use("/api/company/branding", brandingRoutes);
-app.use("/api/customer/trips", customerTripRoutes);
-app.use("/api/customer", customerCompanyRoutes);
-app.use("/api/products", productRoutes);
-app.use("/api/billing-settings", billingSettingsRoutes);
-app.use("/api/manager-dashboard", managerDashboardRoutes);
-app.use("/api/manager/drivers", managerDriverRoutes);
-app.use("/api/manager/vehicles", managerVehicleRoutes);
-app.use("/api/customer/profile", customerRoutes);
-app.use("/api/invoices", invoiceRoutes);
+app.use("/api/admin", adminStatsRoutes);
+
+// Company
+app.use("/api/company", companyRoutes);
 app.use("/api/company/dashboard", companyDashboardRoutes);
 app.use("/api/company/trips", companyTripsRoutes);
 app.use("/api/company/customers", companyCustomerRoutes);
-app.use("/api/manager", managerTripRoutes);
-app.use("/api/manager", managerCustomerRoutes);
-app.use("/api/manager", managerCustomerRoutes);
-app.use("/api/manager", managerOrderRoutes);
-// ONLY THIS IS NEEDED (NEW CLEAN DRIVER ROUTES)
-app.use("/api/company/drivers", companyDriverRoutes);
-
-app.use("/api/admin", adminStatsRoutes);
 app.use("/api/company/products", companyProductRoutes);
 app.use("/api/company/vehicles", companyVehicleRoutes);
-app.use("/api/sessions", sessionRoutes);
+app.use("/api/company/orders", companyOrdersRoutes);
+app.use("/api/company/drivers", companyDriverRoutes);
+app.use("/api/company/payments", companyPaymentRoutes);
+app.use("/api/company/branding", brandingRoutes);
+
+app.use("/api/company/branding", companyBrandingRoutes);
+// Manager
+app.use("/api/manager/dashboard", managerDashboardRoutes);
+app.use("/api/manager/drivers", managerDriverRoutes);
+app.use("/api/manager/vehicles", managerVehicleRoutes);
+app.use("/api/manager/trips", managerTripRoutes);
+app.use("/api/manager/customers", managerCustomerRoutes);
+app.use("/api/manager/orders", managerOrderRoutes);
 app.use("/api/manager/notifications", managerNotificationRoutes);
+
+// Driver
+app.use("/api/driver", driverRoutes);
+
+// Customer
+app.use("/api/customer/profile", customerRoutes);
+app.use("/api/customer/trips", customerTripRoutes);
+
+// Shared
+app.use("/api/products", productRoutes);
+app.use("/api/payments", paymentRoutes);
+app.use("/api/invoices", invoiceRoutes);
+app.use("/api/settings", globalSettingsRoutes);
+app.use("/api/billing-settings", billingSettingsRoutes);
+app.use("/api/sessions", sessionRoutes);
 
 /* ==========================================================
    🌡️ HEALTH CHECK
@@ -168,12 +160,12 @@ app.get("/api/health", (req, res) => {
 });
 
 /* ==========================================================
-   💾 DATABASE CONNECTION
+   💾 DB CONNECTION
 ========================================================== */
 const connectDB = async () => {
   try {
     await mongoose.connect(process.env.MONGO_URI);
-    console.log("✅ MongoDB connected successfully");
+    console.log("✅ MongoDB connected");
   } catch (err) {
     console.error("❌ MongoDB connection failed:", err.message);
     process.exit(1);
@@ -181,7 +173,7 @@ const connectDB = async () => {
 };
 
 /* ==========================================================
-   🔌 SOCKET.IO SETUP (HARDENED)
+   🔌 SOCKET.IO
 ========================================================== */
 const server = http.createServer(app);
 

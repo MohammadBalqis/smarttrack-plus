@@ -1,0 +1,170 @@
+/* ================================
+   Drawer Overlay
+================================ */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  justify-content: flex-end;
+  z-index: 9999;
+}
+
+/* ================================
+   Drawer Panel
+================================ */
+.drawer {
+  width: 420px;
+  height: 100%;
+  background: #ffffff;
+  padding: 22px;
+  overflow-y: auto;
+  box-shadow: -4px 0 14px rgba(0, 0, 0, 0.15);
+  animation: slideIn 0.25s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+/* Close button */
+.closeBtn {
+  border: none;
+  background: #eee;
+  font-size: 18px;
+  padding: 6px 11px;
+  border-radius: 6px;
+  cursor: pointer;
+  float: right;
+}
+
+.closeBtn:hover {
+  background: #ddd;
+}
+
+/* Title */
+.title {
+  margin-top: 10px;
+  font-size: 22px;
+  font-weight: 600;
+  margin-bottom: 15px;
+}
+
+/* ================================
+   Sections
+================================ */
+.section {
+  margin-bottom: 22px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.section h3 {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+/* ================================
+   Timeline
+================================ */
+.timelineList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.timelineItem {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px dashed #ddd;
+}
+
+.timelineStatus {
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.timelineTime {
+  font-size: 13px;
+  color: #555;
+}
+
+.muted {
+  color: #888;
+  font-size: 14px;
+}
+
+/* ================================
+   Status Buttons
+================================ */
+.actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.primaryBtn {
+  background: #1976d2;
+  border: none;
+  color: white;
+  padding: 10px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.primaryBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.primaryBtn:hover:not(:disabled) {
+  background: #0f5ea8;
+}
+
+.dangerBtn {
+  background: #d32f2f;
+  border: none;
+  color: white;
+  padding: 10px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.dangerBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.dangerBtn:hover:not(:disabled) {
+  background: #b71c1c;
+}
+
+.smallInfo {
+  margin-top: 8px;
+  font-size: 13px;
+  color: #555;
+}
+
+/* QR Placeholder */
+.qrPlaceholder {
+  width: 180px;
+  height: 180px;
+  background: #f3f3f3;
+  border: 1px dashed #bbb;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 13px;
+  color: #777;
+  border-radius: 10px;
+  margin-top: 10px;
+}

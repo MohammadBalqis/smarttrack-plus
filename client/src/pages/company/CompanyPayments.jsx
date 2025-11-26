@@ -1,20 +1,21 @@
+// client/src/pages/company/CompanyPayments.jsx
 import React, { useEffect, useState } from "react";
 import {
-  getCompanyOrdersApi,
-  getCompanyOrderDetailsApi,
-  getCompanyOrdersStatsApi,
-} from "../../api/companyOrdersApi";
+  getCompanyPaymentsApi,
+  getCompanyPaymentDetailsApi,
+} from "../../api/companyPaymentsApi";
 
-import CompanyOrderDrawer from "../../components/company/CompanyOrderDrawer";
-import styles from "../../styles/company/companyOrders.module.css";
+import CompanyPaymentDrawer from "../../components/company/CompanyPaymentDrawer";
+import styles from "../../styles/company/companyPayments.module.css";
 
-const CompanyOrders = () => {
-  const [orders, setOrders] = useState([]);
+const CompanyPayments = () => {
+  const [payments, setPayments] = useState([]);
   const [total, setTotal] = useState(0);
-  const [summary, setSummary] = useState(null);
+  const [summary, setSummary] = useState({});
 
   // Filters
   const [status, setStatus] = useState("");
+  const [method, setMethod] = useState("");
   const [driverId, setDriverId] = useState("");
   const [customerId, setCustomerId] = useState("");
   const [from, setFrom] = useState("");
@@ -25,30 +26,18 @@ const CompanyOrders = () => {
   const [page, setPage] = useState(1);
   const limit = 20;
 
-  // UI
+  // UI State
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   // Drawer
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [selectedPayment, setSelectedPayment] = useState(null);
 
-  /* ================================
-        LOAD SUMMARY CARDS
-  ================================= */
-  const loadSummary = async () => {
-    try {
-      const res = await getCompanyOrdersStatsApi();
-      setSummary(res.data.stats || {});
-    } catch (err) {
-      console.error("Summary error:", err);
-    }
-  };
-
-  /* ================================
-        LOAD ORDERS
-  ================================= */
-  const loadOrders = async () => {
+  /* ==========================================================
+     LOAD PAYMENTS
+  ========================================================== */
+  const loadPayments = async () => {
     try {
       setLoading(true);
       setError("");
@@ -56,72 +45,76 @@ const CompanyOrders = () => {
       const params = { page, limit };
 
       if (status) params.status = status;
-      if (driverId) params.driverId = driverId;
-      if (customerId) params.customerId = customerId;
+      if (method) params.method = method;
+      if (driverId.trim()) params.driverId = driverId.trim();
+      if (customerId.trim()) params.customerId = customerId.trim();
       if (from) params.from = from;
       if (to) params.to = to;
       if (search.trim()) params.search = search.trim();
 
-      const res = await getCompanyOrdersApi(params);
+      const res = await getCompanyPaymentsApi(params);
 
-      setOrders(res.data.orders || []);
+      setPayments(res.data.payments || []);
       setTotal(res.data.total || 0);
+
+      if (res.data.summary) {
+        setSummary(res.data.summary);
+      }
     } catch (err) {
-      console.error(err);
-      setError("Failed to load orders.");
+      console.error("Payment load error:", err);
+      setError("Failed to load payments.");
     } finally {
       setLoading(false);
     }
   };
 
-  // Reload on filter or page change
   useEffect(() => {
-    loadOrders();
-    loadSummary();
-  }, [page, status, driverId, customerId, from, to]);
+    loadPayments();
+  }, [page, status, method, driverId, customerId, from, to]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     setPage(1);
-    loadOrders();
+    loadPayments();
   };
 
-  /* ================================
-        DRAWER HANDLING
-  ================================= */
-  const openDrawer = async (order) => {
+  const openDrawer = async (payment) => {
     try {
-      const res = await getCompanyOrderDetailsApi(order._id);
-      setSelectedOrder(res.data.order || order);
+      const res = await getCompanyPaymentDetailsApi(payment._id);
+      setSelectedPayment(res.data.payment || payment);
     } catch (err) {
-      console.error("Order detail error:", err);
-      setSelectedOrder(order);
+      console.error("Payment drawer error:", err);
+      setSelectedPayment(payment);
     }
     setDrawerOpen(true);
   };
 
   const closeDrawer = () => {
     setDrawerOpen(false);
-    setSelectedOrder(null);
+    setSelectedPayment(null);
   };
 
   const totalPages = Math.ceil(total / limit) || 1;
 
   return (
     <div className={styles.page}>
-      {/* HEADER */}
       <div className={styles.header}>
-        <h1>Orders</h1>
-        <p>Manage and track customer orders.</p>
+        <h1>Payments</h1>
+        <p>Review and manage customer payments, revenue, and earnings.</p>
       </div>
 
-      {/* ============================
-            SUMMARY CARDS
-      =============================== */}
+      {/* ==========================================================
+         SUMMARY CARDS
+      ========================================================== */}
       <div className={styles.summaryGrid}>
         <div className={styles.card}>
-          <h4>Total Orders</h4>
-          <p>{summary?.totalOrders ?? 0}</p>
+          <h4>Total Payments</h4>
+          <p>{summary?.totalPayments ?? 0}</p>
+        </div>
+
+        <div className={styles.card}>
+          <h4>Paid</h4>
+          <p>{summary?.paidCount ?? 0}</p>
         </div>
 
         <div className={styles.card}>
@@ -130,13 +123,8 @@ const CompanyOrders = () => {
         </div>
 
         <div className={styles.card}>
-          <h4>Delivered</h4>
-          <p>{summary?.deliveredCount ?? 0}</p>
-        </div>
-
-        <div className={styles.card}>
-          <h4>Cancelled</h4>
-          <p>{summary?.cancelledCount ?? 0}</p>
+          <h4>Failed</h4>
+          <p>{summary?.failedCount ?? 0}</p>
         </div>
 
         <div className={styles.card}>
@@ -145,8 +133,11 @@ const CompanyOrders = () => {
         </div>
       </div>
 
-      {/* FILTERS */}
+      {/* ==========================================================
+         FILTERS
+      ========================================================== */}
       <div className={styles.filtersRow}>
+        {/* Status */}
         <select
           value={status}
           onChange={(e) => {
@@ -154,38 +145,54 @@ const CompanyOrders = () => {
             setPage(1);
           }}
         >
-          <option value="">All statuses</option>
+          <option value="">All Status</option>
+          <option value="paid">Paid</option>
           <option value="pending">Pending</option>
-          <option value="accepted">Accepted</option>
-          <option value="preparing">Preparing</option>
-          <option value="assigned">Assigned</option>
-          <option value="delivering">Delivering</option>
-          <option value="delivered">Delivered</option>
-          <option value="completed">Completed</option>
-          <option value="cancelled">Cancelled</option>
+          <option value="failed">Failed</option>
+          <option value="refunded">Refunded</option>
         </select>
 
+        {/* Method */}
+        <select
+          value={method}
+          onChange={(e) => {
+            setMethod(e.target.value);
+            setPage(1);
+          }}
+        >
+          <option value="">All Methods</option>
+          <option value="cod">Cash on Delivery</option>
+          <option value="cash">Cash</option>
+          <option value="card">Card</option>
+          <option value="wallet">Wallet</option>
+          <option value="wish_money">Wish Money</option>
+        </select>
+
+        {/* Driver filter */}
         <input
           type="text"
-          placeholder="Filter by driverId"
+          placeholder="Driver ID..."
           value={driverId}
           onChange={(e) => setDriverId(e.target.value)}
         />
 
+        {/* Customer filter */}
         <input
           type="text"
-          placeholder="Filter by customerId"
+          placeholder="Customer ID..."
           value={customerId}
           onChange={(e) => setCustomerId(e.target.value)}
         />
 
+        {/* Date filters */}
         <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
         <input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
 
+        {/* Search by payment ID */}
         <form onSubmit={handleSearchSubmit} className={styles.searchForm}>
           <input
             type="text"
-            placeholder="Search order ID..."
+            placeholder="Search payment ID..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -193,49 +200,53 @@ const CompanyOrders = () => {
         </form>
       </div>
 
-      {/* TABLE */}
+      {/* ==========================================================
+         TABLE
+      ========================================================== */}
       <div className={styles.tableCard}>
         <div className={styles.tableHeaderRow}>
-          <h3>Orders List</h3>
+          <h3>Payments List</h3>
           {loading && <span className={styles.smallInfo}>Loading...</span>}
         </div>
 
         {error && <p className={styles.error}>{error}</p>}
 
-        {!loading && orders.length === 0 ? (
-          <p className={styles.empty}>No orders found.</p>
+        {!loading && payments.length === 0 ? (
+          <p className={styles.empty}>No payments found.</p>
         ) : (
           <div className={styles.tableWrapper}>
             <table className={styles.table}>
               <thead>
                 <tr>
-                  <th>Order ID</th>
+                  <th>Payment ID</th>
                   <th>Status</th>
+                  <th>Amount</th>
+                  <th>Method</th>
                   <th>Customer</th>
                   <th>Driver</th>
-                  <th>Total</th>
                   <th>Created</th>
                   <th></th>
                 </tr>
               </thead>
 
               <tbody>
-                {orders.map((o) => (
-                  <tr key={o._id}>
-                    <td>{o._id}</td>
-                    <td>{o.status}</td>
-                    <td>{o.customerId?.name || "—"}</td>
-                    <td>{o.driverId?.name || "—"}</td>
-                    <td>${o.total?.toFixed(2) || "0.00"}</td>
+                {payments.map((p) => (
+                  <tr key={p._id}>
+                    <td>{p._id}</td>
+                    <td>{p.status}</td>
+                    <td>${p.totalAmount?.toFixed(2) || "0.00"}</td>
+                    <td>{p.method}</td>
+                    <td>{p.customerId?.name || "—"}</td>
+                    <td>{p.driverId?.name || "—"}</td>
                     <td>
-                      {o.createdAt
-                        ? new Date(o.createdAt).toLocaleString()
+                      {p.createdAt
+                        ? new Date(p.createdAt).toLocaleString()
                         : ""}
                     </td>
                     <td>
                       <button
                         className={styles.viewBtn}
-                        onClick={() => openDrawer(o)}
+                        onClick={() => openDrawer(p)}
                       >
                         View
                       </button>
@@ -243,15 +254,15 @@ const CompanyOrders = () => {
                   </tr>
                 ))}
               </tbody>
+
             </table>
           </div>
         )}
 
-        {/* PAGINATION */}
+        {/* Pagination */}
         {totalPages > 1 && (
           <div className={styles.paginationRow}>
             <button
-              type="button"
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page === 1}
             >
@@ -263,7 +274,6 @@ const CompanyOrders = () => {
             </span>
 
             <button
-              type="button"
               onClick={() => setPage((p) => (p < totalPages ? p + 1 : p))}
               disabled={page >= totalPages}
             >
@@ -273,15 +283,14 @@ const CompanyOrders = () => {
         )}
       </div>
 
-      {/* DRAWER */}
-      <CompanyOrderDrawer
+      {/* Drawer */}
+      <CompanyPaymentDrawer
         open={drawerOpen}
         onClose={closeDrawer}
-        order={selectedOrder}
-        reload={loadOrders}
+        payment={selectedPayment}
       />
     </div>
   );
 };
 
-export default CompanyOrders;
+export default CompanyPayments;

@@ -1,268 +1,187 @@
-// client/src/pages/company/CompanyDashboard.jsx
-import React, { useEffect, useState } from "react";
-import { getCompanyDashboardApi } from "../../api/companyDashboardApi";
+import React, { useEffect, useState, useContext } from "react";
+import {
+  getCompanyDashboardStatsApi,
+  getCompanyDashboardRecentTripsApi,
+  getCompanyDashboardRecentOrdersApi,
+  getCompanyDashboardRecentPaymentsApi,
+} from "../../api/companyDashboardApi";
+
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
+
+import { BrandingContext } from "../../context/BrandingContext"; // ⬅ NEW
 import styles from "../../styles/company/companyDashboard.module.css";
 
 const CompanyDashboard = () => {
-  const [kpis, setKpis] = useState(null);
-  const [revenue, setRevenue] = useState([]);
-  const [topDrivers, setTopDrivers] = useState([]);
+  const [stats, setStats] = useState(null);
   const [recentTrips, setRecentTrips] = useState([]);
   const [recentOrders, setRecentOrders] = useState([]);
+  const [recentPayments, setRecentPayments] = useState([]);
 
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-
-  const loadDashboard = async () => {
-    try {
-      setLoading(true);
-      setError("");
-
-      const res = await getCompanyDashboardApi();
-      const data = res.data;
-
-      if (!data.ok) {
-        throw new Error("Response not ok");
-      }
-
-      setKpis(data.kpis || null);
-      setRevenue(data.revenueLast6Months || []);
-      setTopDrivers(data.topDrivers || []);
-      setRecentTrips(data.recentTrips || []);
-      setRecentOrders(data.recentOrders || []);
-    } catch (err) {
-      console.error("Company dashboard load error:", err);
-      setError("Failed to load company dashboard.");
-    } finally {
-      setLoading(false);
-    }
-  };
+  // ⬅ GET BRANDING COLORS
+  const { branding } = useContext(BrandingContext);
 
   useEffect(() => {
     loadDashboard();
   }, []);
 
+  const loadDashboard = async () => {
+    try {
+      const [statsRes, tripsRes, ordersRes, payRes] = await Promise.all([
+        getCompanyDashboardStatsApi(),
+        getCompanyDashboardRecentTripsApi(),
+        getCompanyDashboardRecentOrdersApi(),
+        getCompanyDashboardRecentPaymentsApi(),
+      ]);
+
+      setStats(statsRes.data.stats);
+      setRecentTrips(tripsRes.data.trips);
+      setRecentOrders(ordersRes.data.orders);
+      setRecentPayments(payRes.data.payments);
+    } catch (err) {
+      console.error("Dashboard load error:", err);
+    }
+  };
+
+  /* ================================
+      BRANDING COLORS
+  ================================= */
+  const primary = branding?.primaryColor || "#1F2937";
+  const accent = branding?.accentColor || "#2563EB";
+
   return (
     <div className={styles.page}>
-      {/* Header */}
-      <div className={styles.headerRow}>
-        <div>
-          <h1 className={styles.title}>Company Dashboard</h1>
-          <p className={styles.subtitle}>
-            Overview of your company performance, trips, orders, and drivers.
-          </p>
-        </div>
-        {kpis && (
-          <div className={styles.headerRight}>
-            <span className={styles.headerStat}>
-              Total revenue:{" "}
-              <strong>${kpis.totalRevenue?.toFixed(2) || "0.00"}</strong>
-            </span>
-            <span className={styles.headerStat}>
-              Active trips: <strong>{kpis.activeTrips}</strong>
-            </span>
-          </div>
-        )}
-      </div>
+      <h1 className={styles.title} style={{ color: primary }}>
+        Company Dashboard
+      </h1>
+      <p className={styles.subtitle} style={{ color: accent }}>
+        Overview of company activity & performance
+      </p>
 
-      {error && <div className={styles.error}>{error}</div>}
-      {loading && <p className={styles.smallInfo}>Loading dashboard...</p>}
-
-      {/* KPI cards */}
-      {kpis && (
-        <div className={styles.kpiGrid}>
-          <div className={styles.kpiCard}>
-            <span className={styles.kpiLabel}>Drivers</span>
-            <span className={styles.kpiValue}>{kpis.totalDrivers}</span>
-            <span className={styles.kpiSub}>
-              Active: {kpis.activeDrivers}
-            </span>
-          </div>
-          <div className={styles.kpiCard}>
-            <span className={styles.kpiLabel}>Vehicles</span>
-            <span className={styles.kpiValue}>{kpis.totalVehicles}</span>
-            <span className={styles.kpiSub}>
-              Available: {kpis.availableVehicles}
-            </span>
-          </div>
-          <div className={styles.kpiCard}>
-            <span className={styles.kpiLabel}>Customers</span>
-            <span className={styles.kpiValue}>{kpis.totalCustomers}</span>
-            <span className={styles.kpiSub}>from orders</span>
-          </div>
-          <div className={styles.kpiCard}>
-            <span className={styles.kpiLabel}>Trips</span>
-            <span className={styles.kpiValue}>{kpis.totalTrips}</span>
-            <span className={styles.kpiSub}>
-              Active: {kpis.activeTrips}
-            </span>
-          </div>
-          <div className={styles.kpiCard}>
-            <span className={styles.kpiLabel}>Orders</span>
-            <span className={styles.kpiValue}>{kpis.totalOrders}</span>
-            <span className={styles.kpiSub}>
-              Pending: {kpis.pendingOrders}
-            </span>
-          </div>
-          <div className={styles.kpiCard}>
-            <span className={styles.kpiLabel}>Revenue (all time)</span>
-            <span className={styles.kpiValue}>
-              ${kpis.totalRevenue?.toFixed(2) || "0.00"}
-            </span>
-          </div>
-        </div>
-      )}
-
-      {/* Revenue + Top Drivers */}
-      <div className={styles.row}>
-        {/* Revenue trend */}
+      {/* ============================
+        KPI CARDS
+      ============================ */}
+      <div className={styles.kpiGrid}>
         <div className={styles.card}>
-          <div className={styles.cardHeader}>
-            <h2>Revenue (last 6 months)</h2>
-          </div>
-          {revenue.length === 0 ? (
-            <p className={styles.empty}>No revenue data yet.</p>
-          ) : (
-            <div className={styles.revenueList}>
-              {revenue.map((r) => (
-                <div key={r.label} className={styles.revenueItem}>
-                  <span>{r.label}</span>
-                  <span>${r.totalCompanyEarning?.toFixed(2) || "0.00"}</span>
-                </div>
-              ))}
-            </div>
-          )}
+          <h4 style={{ color: primary }}>Total Trips</h4>
+          <p>{stats?.totalTrips ?? 0}</p>
         </div>
 
-        {/* Top Drivers */}
         <div className={styles.card}>
-          <div className={styles.cardHeader}>
-            <h2>Top Drivers</h2>
-          </div>
-          {topDrivers.length === 0 ? (
-            <p className={styles.empty}>No driver performance data yet.</p>
-          ) : (
-            <div className={styles.tableWrapper}>
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th>Driver</th>
-                    <th>Delivered Trips</th>
-                    <th>Total Distance (km)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {topDrivers.map((d) => (
-                    <tr key={d.id}>
-                      <td>{d.name}</td>
-                      <td>{d.deliveredTrips}</td>
-                      <td>{d.totalDistance || 0}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <h4 style={{ color: primary }}>Delivered Trips</h4>
+          <p>{stats?.deliveredTrips ?? 0}</p>
+        </div>
+
+        <div className={styles.card}>
+          <h4 style={{ color: primary }}>Total Orders</h4>
+          <p>{stats?.totalOrders ?? 0}</p>
+        </div>
+
+        <div className={styles.card}>
+          <h4 style={{ color: primary }}>Total Payments</h4>
+          <p>{stats?.totalPayments ?? 0}</p>
+        </div>
+
+        <div className={styles.card}>
+          <h4 style={{ color: primary }}>Total Drivers</h4>
+          <p>{stats?.totalDrivers ?? 0}</p>
+        </div>
+
+        <div className={styles.card}>
+          <h4 style={{ color: primary }}>Total Customers</h4>
+          <p>{stats?.totalCustomers ?? 0}</p>
+        </div>
+
+        <div className={styles.cardBig}>
+          <h4 style={{ color: primary }}>Total Revenue</h4>
+          <p style={{ color: accent }}>${(stats?.totalRevenue ?? 0).toFixed(2)}</p>
         </div>
       </div>
 
-      {/* Recent Trips + Recent Orders */}
-      <div className={styles.row}>
-        {/* Recent trips */}
-        <div className={styles.card}>
-          <div className={styles.cardHeader}>
-            <h2>Recent Trips</h2>
-          </div>
+      {/* ============================
+        REVENUE CHART
+      ============================ */}
+      <div className={styles.chartCard}>
+        <h3 style={{ color: primary }}>Revenue Trend</h3>
+
+        <ResponsiveContainer width="100%" height={260}>
+          <LineChart data={recentPayments}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis
+              dataKey="createdAt"
+              tickFormatter={(v) => new Date(v).toLocaleDateString()}
+            />
+            <YAxis />
+            <Tooltip />
+            <Line
+              type="monotone"
+              dataKey="totalAmount"
+              stroke={accent} // BRANDING COLOR
+              strokeWidth={2}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* ============================
+        RECENT SECTIONS
+      ============================ */}
+      <div className={styles.rowsGrid}>
+        {/* Recent Trips */}
+        <div className={styles.listCard}>
+          <h3 style={{ color: primary }}>Recent Trips</h3>
           {recentTrips.length === 0 ? (
             <p className={styles.empty}>No trips yet.</p>
           ) : (
-            <div className={styles.tableWrapper}>
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Route</th>
-                    <th>Driver</th>
-                    <th>Customer</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {recentTrips.map((t) => (
-                    <tr key={t.id}>
-                      <td>
-                        {t.createdAt
-                          ? new Date(t.createdAt).toLocaleString()
-                          : "—"}
-                      </td>
-                      <td>
-                        <div className={styles.routeText}>
-                          <span>{t.pickupAddress}</span>
-                          <span className={styles.routeArrow}>→</span>
-                          <span>{t.dropoffAddress}</span>
-                        </div>
-                      </td>
-                      <td>{t.driverName}</td>
-                      <td>{t.customerName}</td>
-                      <td>
-                        <span
-                          className={`${styles.badge} ${
-                            styles[`badge_${t.status}`] || styles.badge_default
-                          }`}
-                        >
-                          {t.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <ul>
+              {recentTrips.map((t) => (
+                <li key={t._id}>
+                  {t.driverId?.name || "—"} → {t.customerId?.name || "—"}
+                  <span>{new Date(t.createdAt).toLocaleString()}</span>
+                </li>
+              ))}
+            </ul>
           )}
         </div>
 
-        {/* Recent orders */}
-        <div className={styles.card}>
-          <div className={styles.cardHeader}>
-            <h2>Recent Orders</h2>
-          </div>
+        {/* Recent Orders */}
+        <div className={styles.listCard}>
+          <h3 style={{ color: primary }}>Recent Orders</h3>
           {recentOrders.length === 0 ? (
             <p className={styles.empty}>No orders yet.</p>
           ) : (
-            <div className={styles.tableWrapper}>
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Customer</th>
-                    <th>Status</th>
-                    <th>Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {recentOrders.map((o) => (
-                    <tr key={o.id}>
-                      <td>
-                        {o.createdAt
-                          ? new Date(o.createdAt).toLocaleString()
-                          : "—"}
-                      </td>
-                      <td>{o.customerName}</td>
-                      <td>
-                        <span
-                          className={`${styles.badge} ${
-                            styles[`badge_${o.status}`] || styles.badge_default
-                          }`}
-                        >
-                          {o.status}
-                        </span>
-                      </td>
-                      <td>${o.total?.toFixed(2) || "0.00"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <ul>
+              {recentOrders.map((o) => (
+                <li key={o._id}>
+                  #{o._id.slice(-6)} — {o.status}
+                  <span>{new Date(o.createdAt).toLocaleString()}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        {/* Recent Payments */}
+        <div className={styles.listCard}>
+          <h3 style={{ color: primary }}>Recent Payments</h3>
+          {recentPayments.length === 0 ? (
+            <p className={styles.empty}>No payments yet.</p>
+          ) : (
+            <ul>
+              {recentPayments.map((p) => (
+                <li key={p._id}>
+                  ${p.totalAmount.toFixed(2)}
+                  <span>{new Date(p.createdAt).toLocaleString()}</span>
+                </li>
+              ))}
+            </ul>
           )}
         </div>
       </div>

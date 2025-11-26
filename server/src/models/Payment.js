@@ -4,12 +4,19 @@ import mongoose from "mongoose";
 const paymentSchema = new mongoose.Schema(
   {
     /* ==========================================================
-       🔹 Basic Payment Metadata
+       🔗 SOURCE: Trip OR Order
        ========================================================== */
     tripId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Trip",
-      required: true,
+      default: null,
+      index: true,
+    },
+
+    orderId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Order",
+      default: null,
       index: true,
     },
 
@@ -37,28 +44,24 @@ const paymentSchema = new mongoose.Schema(
     /* ==========================================================
        💰 Amount Breakdown (Customer FINAL payment)
        ========================================================== */
-
-    totalAmount: { type: Number, required: true },         // Final customer payment
-    deliveryFee: { type: Number, default: 0 },             // From trip
-    productTotal: { type: Number, default: 0 },            // Future e-commerce
+    totalAmount: { type: Number, required: true },   // Final customer payment
+    deliveryFee: { type: Number, default: 0 },
+    productTotal: { type: Number, default: 0 },
     discountAmount: { type: Number, default: 0 },
     promoCodeUsed: { type: String, default: null },
 
     taxAmount: { type: Number, default: 0 },
+    gatewayFee: { type: Number, default: 0 },
 
-    gatewayFee: { type: Number, default: 0 },              // Wish Money gateway fee
-
-    currency: { type: String, default: "USD" },            // NEW (clean)
+    currency: { type: String, default: "USD" },
 
     /* ==========================================================
-       🧮 Earnings Breakdown (snapshot)
+       🧮 Earnings Breakdown (snapshot for history)
        ========================================================== */
-
     driverEarning: { type: Number, default: 0 },
     companyEarning: { type: Number, default: 0 },
-    platformEarning: { type: Number, default: 0 },          // System owner earning
+    platformEarning: { type: Number, default: 0 },
 
-    /* 🔥 NEW — Clean, organized breakdown for analytics */
     paymentBreakdown: {
       type: Object,
       default: {}, // { deliveryFee, productTotal, discount, tax, gatewayFee }
@@ -67,16 +70,15 @@ const paymentSchema = new mongoose.Schema(
     /* ==========================================================
        💳 Payment Details
        ========================================================== */
-
     method: {
       type: String,
       enum: [
-        "cod",          // Cash on delivery
-        "cash",         // Cash (explicit)
-        "card",         // Debit / credit
-        "wallet",       // Internal wallet
-        "wish_money",   // Wish Money online gateway
-        "manual",       // Adjustments / admin
+        "cod",
+        "cash",
+        "card",
+        "wallet",
+        "wish_money",
+        "manual",
       ],
       default: "cod",
     },
@@ -88,24 +90,22 @@ const paymentSchema = new mongoose.Schema(
       index: true,
     },
 
-    transactionId: { type: String, default: null },         // Wish money transaction ref
-    gatewayResponse: { type: Object, default: {} },         // Raw API response
-    isPlatformFeeApplied: { type: Boolean, default: false }, // NEW flag
+    transactionId: { type: String, default: null },
+    gatewayResponse: { type: Object, default: {} },
+    isPlatformFeeApplied: { type: Boolean, default: false },
 
     /* ==========================================================
-       📄 Invoice Attachments (snapshot)
+       📄 Invoice Snapshot
        ========================================================== */
-
     invoiceNumber: { type: String, default: null },
     invoicePdfUrl: { type: String, default: null },
     generationDate: { type: Date, default: null },
 
-    /* ==========================================================
-       🕒 Audit
-       ========================================================== */
-
     paidAt: { type: Date, default: null },
 
+    /* ==========================================================
+       👤 Audit
+       ========================================================== */
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -115,9 +115,9 @@ const paymentSchema = new mongoose.Schema(
     isActive: { type: Boolean, default: true },
 
     /* ==========================================================
-       🔧 Meta (Extensible)
+       🔧 Extensible Meta
        ========================================================== */
-    meta: { type: Object, default: {} },                    // NEW — for expansion
+    meta: { type: Object, default: {} },
   },
   { timestamps: true }
 );

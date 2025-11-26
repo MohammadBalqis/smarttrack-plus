@@ -1,0 +1,178 @@
+.page {
+  padding: 20px;
+}
+
+.header {
+  margin-bottom: 20px;
+}
+
+.header h1 {
+  font-size: 26px;
+  font-weight: bold;
+}
+
+.header p {
+  color: #555;
+}
+
+/* ============================
+   SUMMARY CARDS
+============================ */
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 15px;
+  margin-bottom: 25px;
+}
+
+.card {
+  background: white;
+  padding: 18px;
+  border-radius: 10px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.06);
+  text-align: center;
+}
+
+.card h4 {
+  margin-bottom: 6px;
+  font-size: 14px;
+  color: #555;
+}
+
+.card p {
+  font-size: 20px;
+  font-weight: bold;
+  color: #222;
+}
+
+/* ============================
+   FILTERS
+============================ */
+.filtersRow {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.filtersRow select,
+.filtersRow input[type="date"],
+.filtersRow input[type="text"] {
+  padding: 9px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+
+.searchForm {
+  display: flex;
+  gap: 6px;
+}
+
+.searchForm input {
+  padding: 9px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+
+.searchForm button {
+  padding: 9px 14px;
+  background: #2476ff;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+/* ============================
+   TABLE
+============================ */
+.tableCard {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+}
+
+.tableHeaderRow {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.smallInfo {
+  color: #666;
+}
+
+.tableWrapper {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+
+.table th {
+  background: #fafafa;
+  font-weight: bold;
+  font-size: 13px;
+}
+
+.table tbody tr:hover {
+  background: #f9f9f9;
+}
+
+.viewBtn {
+  padding: 6px 12px;
+  background: #2476ff;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+/* ============================
+   EMPTY + ERROR
+============================ */
+.empty {
+  padding: 20px;
+  text-align: center;
+  color: #777;
+}
+
+.error {
+  color: red;
+  margin-bottom: 10px;
+}
+
+/* ============================
+   PAGINATION
+============================ */
+.paginationRow {
+  margin-top: 15px;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.paginationRow button {
+  padding: 7px 13px;
+  background: #2476ff;
+  color: white;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+}
+
+.paginationRow span {
+  padding: 7px 15px;
+  background: #eee;
+  border-radius: 6px;
+}

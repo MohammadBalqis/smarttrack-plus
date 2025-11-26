@@ -37,11 +37,20 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem("st_user");
   };
 
-  return (
-    <AuthContext.Provider value={{ user, token, loading, login, logout }}>
-      {children}
-    </AuthContext.Provider>
-  );
+ return (
+  <AuthContext.Provider
+    value={{
+      user,
+      login,
+      logout,
+      branding,
+      primaryColor: branding?.primaryColor || "#0A74DA",
+      secondaryColor: branding?.secondaryColor || "#005BBB",
+    }}
+  >
+    {children}
+  </AuthContext.Provider>
+);
 };
 
 export const useAuth = () => useContext(AuthContext);

@@ -1,12 +1,13 @@
 // client/src/pages/company/CompanyCustomers.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import {
   getCompanyCustomersApi,
-  getCompanyCustomerStatsApi,
-  getCompanyCustomerRecentTripsApi,
 } from "../../api/companyCustomersApi";
 
 import CompanyCustomerDrawer from "../../components/company/CompanyCustomerDrawer";
+
+// 🔵 Branding
+import { BrandingContext } from "../../context/BrandingContext";
 
 import styles from "../../styles/company/companyCustomers.module.css";
 
@@ -14,6 +15,11 @@ const CompanyCustomers = () => {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // Branding system
+  const { branding } = useContext(BrandingContext);
+  const primary = branding?.primaryColor || "#1F2937";
+  const accent = branding?.accentColor || "#2563EB";
 
   // Filters
   const [search, setSearch] = useState("");
@@ -51,7 +57,7 @@ const CompanyCustomers = () => {
     );
   });
 
-  const openDrawer = async (customer) => {
+  const openDrawer = (customer) => {
     setSelectedCustomer(customer);
     setDrawerOpen(true);
   };
@@ -66,8 +72,10 @@ const CompanyCustomers = () => {
       {/* Header */}
       <div className={styles.headerRow}>
         <div>
-          <h1 className={styles.title}>Customers</h1>
-          <p className={styles.subtitle}>
+          <h1 className={styles.title} style={{ color: primary }}>
+            Customers
+          </h1>
+          <p className={styles.subtitle} style={{ color: accent }}>
             View and analyze customers who ordered from your company.
           </p>
         </div>
@@ -78,6 +86,7 @@ const CompanyCustomers = () => {
             placeholder="Search customers..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            style={{ borderColor: accent }}
           />
         </div>
       </div>
@@ -96,7 +105,7 @@ const CompanyCustomers = () => {
         <div className={styles.tableWrapper}>
           <table className={styles.table}>
             <thead>
-              <tr>
+              <tr style={{ background: primary, color: "#fff" }}>
                 <th>Customer</th>
                 <th>Email</th>
                 <th>Phone</th>
@@ -111,7 +120,11 @@ const CompanyCustomers = () => {
                 <tr key={c._id}>
                   <td className={styles.customerCell}>
                     <div className={styles.customerInfo}>
-                      <div className={styles.avatar}>
+                      {/* Avatar colored by branding */}
+                      <div
+                        className={styles.avatar}
+                        style={{ background: accent }}
+                      >
                         {c.name?.charAt(0)?.toUpperCase() || "C"}
                       </div>
                       <span>{c.name}</span>
@@ -124,10 +137,11 @@ const CompanyCustomers = () => {
                   <td>
                     <span
                       className={
-                        c.isActive
-                          ? styles.statusActive
-                          : styles.statusInactive
+                        c.isActive ? styles.statusActive : styles.statusInactive
                       }
+                      style={{
+                        background: c.isActive ? accent : "#bbb",
+                      }}
                     >
                       {c.isActive ? "Active" : "Inactive"}
                     </span>
@@ -142,6 +156,7 @@ const CompanyCustomers = () => {
                   <td>
                     <button
                       className={styles.viewButton}
+                      style={{ color: primary }}
                       onClick={() => openDrawer(c)}
                     >
                       View

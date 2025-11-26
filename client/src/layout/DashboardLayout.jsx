@@ -2,16 +2,18 @@ import React from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
-// 🎯 Import sidebar menu items
+// Sidebar items
 import {
   managerMenu,
   companyMenu,
+  driverMenu,
+  customerMenu,
 } from "../components/sidebar/sidebarItems";
 
 import styles from "../styles/layouts/dashboardLayout.module.css";
 
 const DashboardLayout = ({ role }) => {
-  const { user, logout } = useAuth();
+  const { user, branding, logout } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -19,27 +21,78 @@ const DashboardLayout = ({ role }) => {
     navigate("/login");
   };
 
-  // 🎯 Get menu items based on role
-  const getMenuForRole = () => {
+  /** -----------------------------------------
+   *  Get Branding for company / manager / driver
+   *  ----------------------------------------- */
+  const isBrandingUser = ["company", "manager", "driver"].includes(role);
+
+  // Colors
+  const primaryColor =
+    (isBrandingUser && branding?.primaryColor) || "#0A74DA";
+
+  const secondaryColor =
+    (isBrandingUser && branding?.secondaryColor) || "#005BBB";
+
+  // Logo
+  const logoUrl =
+    isBrandingUser && branding?.logoUrl
+      ? branding.logoUrl
+      : null;
+
+  const companyShort =
+    isBrandingUser && branding?.shortDescription
+      ? branding.shortDescription
+      : null;
+
+  /** -----------------------------------------
+   *  Choose Sidebar Menu
+   *  ----------------------------------------- */
+  const getMenu = () => {
     switch (role) {
-      case "manager":
-        return managerMenu;
       case "company":
         return companyMenu;
+      case "manager":
+        return managerMenu;
+      case "driver":
+        return driverMenu;
+      case "customer":
+        return customerMenu; // NO COMPANY BRANDING
       default:
         return [];
     }
   };
 
-  const menuItems = getMenuForRole();
+  const menuItems = getMenu();
 
   return (
     <div className={styles.container}>
-      {/* Sidebar */}
-      <aside className={styles.sidebar}>
-        <div className={styles.logo}>SmartTrack+</div>
-        <div className={styles.roleLabel}>{role.toUpperCase()}</div>
+      {/* ------------------------------------------
+          SIDEBAR (with branding)
+      ------------------------------------------- */}
+      <aside
+        className={styles.sidebar}
+        style={{ background: primaryColor }}
+      >
+        <div className={styles.logoBox}>
+          {logoUrl ? (
+            <img
+              src={logoUrl}
+              alt="Company Logo"
+              className={styles.brandLogo}
+            />
+          ) : (
+            <div className={styles.defaultLogo}>SmartTrack+</div>
+          )}
 
+          {companyShort && (
+            <p className={styles.companyShort}>{companyShort}</p>
+          )}
+
+          {/* Role label stays text-only */}
+          <div className={styles.roleLabel}>{role.toUpperCase()}</div>
+        </div>
+
+        {/* MENU */}
         <nav className={styles.menu}>
           {menuItems.map((item) => (
             <NavLink
@@ -47,6 +100,11 @@ const DashboardLayout = ({ role }) => {
               to={item.path}
               className={({ isActive }) =>
                 isActive ? styles.activeLink : styles.link
+              }
+              style={({ isActive }) =>
+                isActive
+                  ? { background: secondaryColor }
+                  : undefined
               }
             >
               <span className={styles.icon}>{item.icon}</span>
@@ -56,13 +114,33 @@ const DashboardLayout = ({ role }) => {
         </nav>
       </aside>
 
-      {/* Main Content */}
+      {/* ------------------------------------------
+          MAIN SECTION
+      ------------------------------------------- */}
       <div className={styles.main}>
-        <header className={styles.topbar}>
+        <header
+          className={styles.topbar}
+          style={{
+            borderBottom: `3px solid ${primaryColor}`,
+          }}
+        >
           <div className={styles.userInfo}>
-            <span>{user?.name || "User"}</span>
+            {role === "customer" ? (
+              <>
+                <img
+                  src={user?.profileImage}
+                  className={styles.profileImgSmall}
+                  alt=""
+                />
+                <span>{user?.name}</span>
+              </>
+            ) : (
+              <span>{user?.name || "User"}</span>
+            )}
+
             <span className={styles.roleChip}>{user?.role}</span>
           </div>
+
           <button onClick={handleLogout} className={styles.logoutBtn}>
             Logout
           </button>

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import {
   getCompanyProductsApi,
   createCompanyProductApi,
@@ -8,6 +8,7 @@ import {
   getSingleCompanyProductApi,
 } from "../../api/companyProductsApi";
 
+import { BrandingContext } from "../../context/BrandingContext"; // ★ NEW
 import styles from "../../styles/company/companyProducts.module.css";
 
 const emptyForm = {
@@ -23,6 +24,11 @@ const emptyForm = {
 const CompanyProducts = () => {
   const [products, setProducts] = useState([]);
   const [total, setTotal] = useState(0);
+
+  // Branding
+  const { branding } = useContext(BrandingContext); // ★ Branding injection
+  const primary = branding?.primaryColor || "#1F2937";
+  const accent = branding?.accentColor || "#2563EB";
 
   // filters
   const [categoryFilter, setCategoryFilter] = useState("");
@@ -72,7 +78,7 @@ const CompanyProducts = () => {
 
   useEffect(() => {
     loadProducts();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line
   }, [page, categoryFilter, activeFilter, minPrice, maxPrice]);
 
   const totalPages = Math.ceil(total / limit) || 1;
@@ -90,7 +96,6 @@ const CompanyProducts = () => {
 
   const openEditModal = async (product) => {
     try {
-      // optional: get fresh data
       const res = await getSingleCompanyProductApi(product._id);
       const p = res.data.product || product;
 
@@ -212,7 +217,6 @@ const CompanyProducts = () => {
       setStockChange("");
       setStockReason("");
       await loadProducts();
-      // re-fetch product for modal
       const res = await getSingleCompanyProductApi(editingProduct._id);
       setEditingProduct(res.data.product);
     } catch (err) {
@@ -238,18 +242,21 @@ const CompanyProducts = () => {
       {/* Header */}
       <div className={styles.header}>
         <div>
-          <h1>Products</h1>
-          <p>Manage your company&apos;s product catalog and stock.</p>
+          <h1 style={{ color: primary }}>Products</h1>
+          <p style={{ color: accent }}>
+            Manage your company’s product catalog and stock.
+          </p>
         </div>
         <div className={styles.headerActions}>
           <button
             type="button"
             className={styles.primaryBtn}
             onClick={openCreateModal}
+            style={{ background: accent }}
           >
             + Add Product
           </button>
-          <div className={styles.headerStats}>
+          <div className={styles.headerStats} style={{ color: primary }}>
             <span>Total: {total}</span>
           </div>
         </div>
@@ -309,14 +316,16 @@ const CompanyProducts = () => {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
-          <button type="submit">Search</button>
+          <button type="submit" style={{ background: accent }}>
+            Search
+          </button>
         </form>
       </div>
 
       {/* Table */}
       <div className={styles.tableCard}>
         <div className={styles.tableHeaderRow}>
-          <h3>Products List</h3>
+          <h3 style={{ color: primary }}>Products List</h3>
           {loading && <span className={styles.smallInfo}>Loading...</span>}
         </div>
 
@@ -368,6 +377,9 @@ const CompanyProducts = () => {
                             ? styles.statusBadgeActive
                             : styles.statusBadgeInactive
                         }
+                        style={{
+                          background: p.isActive ? accent : "#ccc",
+                        }}
                       >
                         {p.isActive ? "Active" : "Inactive"}
                       </span>
@@ -382,6 +394,7 @@ const CompanyProducts = () => {
                         type="button"
                         className={styles.smallBtn}
                         onClick={() => openEditModal(p)}
+                        style={{ color: primary }}
                       >
                         Edit
                       </button>
@@ -389,6 +402,7 @@ const CompanyProducts = () => {
                         type="button"
                         className={styles.smallBtn}
                         onClick={() => handleToggleActive(p)}
+                        style={{ color: primary }}
                       >
                         {p.isActive ? "Deactivate" : "Activate"}
                       </button>
@@ -426,11 +440,11 @@ const CompanyProducts = () => {
         )}
       </div>
 
-      {/* Create / Edit Modal */}
+      {/* Modal */}
       {modalOpen && (
         <div className={styles.modalOverlay}>
           <div className={styles.modal}>
-            <div className={styles.modalHeader}>
+            <div className={styles.modalHeader} style={{ background: primary }}>
               <h2>{editingProduct ? "Edit Product" : "Add Product"}</h2>
               <button
                 type="button"
@@ -558,16 +572,17 @@ const CompanyProducts = () => {
                   type="submit"
                   className={styles.primaryBtn}
                   disabled={saving}
+                  style={{ background: accent }}
                 >
                   {saving ? "Saving..." : "Save"}
                 </button>
               </div>
             </form>
 
-            {/* Stock adjust block (only when editing) */}
+            {/* Stock adjust */}
             {editingProduct && (
               <div className={styles.stockAdjustSection}>
-                <h3>Adjust Stock</h3>
+                <h3 style={{ color: primary }}>Adjust Stock</h3>
                 <form onSubmit={handleAdjustStock}>
                   <div className={styles.formRow}>
                     <input

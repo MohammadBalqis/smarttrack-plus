@@ -1,30 +1,18 @@
-// client/src/api/companyDriversApi.js
-import api from "./apiClient";
+// client/src/api/companyOrdersApi.js
+import api from "./axiosConfig";
 
-/* ==========================================================
-   🚚 COMPANY DRIVERS API (Owner + Manager View/Edit/Create)
-   ========================================================== */
+// 1️⃣ List orders with filters
+export const getCompanyOrdersApi = (params = {}) =>
+  api.get("/company/orders", { params });
 
-// GET all drivers (optionally filter: ?status=active / inactive)
-export const getCompanyDriversApi = (params = {}) =>
-  api.get("/company/drivers", { params });
+// 2️⃣ Get single order details
+export const getCompanyOrderDetailsApi = (orderId) =>
+  api.get(`/company/orders/${orderId}`);
 
-// CREATE driver
-export const createCompanyDriverApi = (payload) =>
-  api.post("/company/drivers", payload);
+// 3️⃣ Update order status (manual — company)
+export const updateCompanyOrderStatusApi = (orderId, newStatus) =>
+  api.patch(`/company/orders/${orderId}/status`, { newStatus });
 
-// UPDATE driver info
-export const updateCompanyDriverApi = (id, payload) =>
-  api.put(`/company/drivers/${id}`, payload);
-
-// TOGGLE active / inactive
-export const toggleCompanyDriverStatusApi = (id) =>
-  api.patch(`/company/drivers/${id}/toggle-active`);
-
-// GET stats for single driver
-export const getCompanyDriverStatsApi = (id) =>
-  api.get(`/company/drivers/${id}/stats`);
-
-// GET recent delivered trips for driver
-export const getCompanyDriverRecentTripsApi = (id) =>
-  api.get(`/company/drivers/${id}/recent-trips`);
+// 4️⃣ Get order stats for dashboard
+export const getCompanyOrderStatsApi = () =>
+  api.get(`/company/orders/stats`);
