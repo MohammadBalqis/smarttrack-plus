@@ -1,11 +1,15 @@
 // client/src/components/manager/ManagerCustomerDrawer.jsx
 import React from "react";
+import { useBranding } from "../../context/BrandingContext";
 import styles from "../../styles/manager/managerCustomers.module.css";
 
-const ManagerCustomerDrawer = ({ open, onClose, details }) => {
+const ManagerCustomerDrawer = ({ open, onClose, details, loading }) => {
+  const { branding } = useBranding();
+
   if (!open) return null;
 
   const { customer, stats, recentTrips } = details || {};
+
   const safeStats = stats || {
     totalTrips: 0,
     deliveredTrips: 0,
@@ -15,26 +19,43 @@ const ManagerCustomerDrawer = ({ open, onClose, details }) => {
     lastTripAt: null,
   };
 
-  const formatDateTime = (value) => {
-    if (!value) return "—";
-    return new Date(value).toLocaleString();
+  const formatDate = (v) => {
+    if (!v) return "—";
+    const date = new Date(v);
+    return isNaN(date) ? "—" : date.toLocaleString();
+  };
+
+  const formatMoney = (v) => {
+    if (typeof v === "number") return `$${v.toFixed(2)}`;
+    const n = Number(v || 0);
+    return `$${n.toFixed(2)}`;
   };
 
   return (
     <div className={styles.drawerOverlay}>
       <div className={styles.drawer}>
+
+        {/* Header */}
         <div className={styles.drawerHeader}>
-          <h2>Customer Details</h2>
+          <h2 style={{ color: branding.primaryColor }}>Customer Details</h2>
           <button type="button" className={styles.closeBtn} onClick={onClose}>
             ✕
           </button>
         </div>
 
-        {!customer ? (
-          <p>Loading...</p>
-        ) : (
+        {/* Loading State */}
+        {loading && <p className={styles.smallInfo}>Loading customer...</p>}
+
+        {/* SAFETY CHECK */}
+        {!loading && !customer && (
+          <p className={styles.error}>Customer not found.</p>
+        )}
+
+        {!loading && customer && (
           <>
-            {/* Profile */}
+            {/* =============================
+                PROFILE SECTION
+            ============================== */}
             <div className={styles.drawerProfile}>
               {customer.avatar ? (
                 <img
@@ -43,14 +64,19 @@ const ManagerCustomerDrawer = ({ open, onClose, details }) => {
                   className={styles.drawerAvatar}
                 />
               ) : (
-                <div className={styles.drawerAvatarFallback}>
-                  {customer.name?.[0] || "C"}
+                <div
+                  className={styles.drawerAvatarFallback}
+                  style={{ background: branding.primaryColor }}
+                >
+                  {customer.name?.charAt(0) || "C"}
                 </div>
               )}
+
               <div>
                 <h3>{customer.name}</h3>
                 <p>{customer.email}</p>
                 <p>{customer.phone || "—"}</p>
+
                 <span
                   className={
                     customer.isActive
@@ -60,56 +86,68 @@ const ManagerCustomerDrawer = ({ open, onClose, details }) => {
                 >
                   {customer.isActive ? "Active" : "Inactive"}
                 </span>
+
+                <p className={styles.joinedText}>
+                  Joined: {formatDate(customer.createdAt)}
+                </p>
               </div>
             </div>
 
-            {/* Stats */}
+            {/* =============================
+                STATS SECTION
+            ============================== */}
             <div className={styles.statsGrid}>
+
               <div className={styles.statCard}>
                 <span className={styles.statLabel}>Total Trips</span>
                 <span className={styles.statNumber}>
                   {safeStats.totalTrips}
                 </span>
               </div>
+
               <div className={styles.statCard}>
                 <span className={styles.statLabel}>Delivered</span>
                 <span className={styles.statNumber}>
                   {safeStats.deliveredTrips}
                 </span>
               </div>
+
               <div className={styles.statCard}>
                 <span className={styles.statLabel}>Cancelled</span>
                 <span className={styles.statNumber}>
                   {safeStats.cancelledTrips}
                 </span>
               </div>
+
               <div className={styles.statCard}>
-                <span className={styles.statLabel}>Estimated Total</span>
+                <span className={styles.statLabel}>Total Spent</span>
                 <span className={styles.statNumber}>
-                  {safeStats.totalAmount?.toFixed
-                    ? `$${safeStats.totalAmount.toFixed(2)}`
-                    : `$${Number(safeStats.totalAmount || 0).toFixed(2)}`
-                  }
+                  {formatMoney(safeStats.totalAmount)}
                 </span>
               </div>
+
               <div className={styles.statCard}>
                 <span className={styles.statLabel}>First Trip</span>
                 <span className={styles.statNumber}>
-                  {formatDateTime(safeStats.firstTripAt)}
+                  {formatDate(safeStats.firstTripAt)}
                 </span>
               </div>
+
               <div className={styles.statCard}>
                 <span className={styles.statLabel}>Last Trip</span>
                 <span className={styles.statNumber}>
-                  {formatDateTime(safeStats.lastTripAt)}
+                  {formatDate(safeStats.lastTripAt)}
                 </span>
               </div>
             </div>
 
-            {/* Recent Trips */}
+            {/* =============================
+                RECENT TRIPS
+            ============================== */}
             <h3 className={styles.subTitle}>Recent Trips</h3>
-            {(!recentTrips || recentTrips.length === 0) ? (
-              <p className={styles.empty}>No recent trips for this customer.</p>
+
+            {!recentTrips || recentTrips.length === 0 ? (
+              <p className={styles.empty}>No recent trips.</p>
             ) : (
               <div className={styles.tableWrapper}>
                 <table className={styles.table}>
@@ -123,13 +161,28 @@ const ManagerCustomerDrawer = ({ open, onClose, details }) => {
                       <th>Created</th>
                     </tr>
                   </thead>
+
                   <tbody>
                     {recentTrips.map((t) => (
                       <tr key={t._id}>
-                        <td>{t.status}</td>
+                        <td>
+                          <span
+                            className={`${styles.badge} ${
+                              styles[`badgeStatus_${t.status}`] || ""
+                            }`}
+                          >
+                            {t.status === "in_progress"
+                              ? "In Progress"
+                              : t.status.charAt(0).toUpperCase() +
+                                t.status.slice(1)}
+                          </span>
+                        </td>
+
                         <td>{t.pickupLocation?.address || "—"}</td>
                         <td>{t.dropoffLocation?.address || "—"}</td>
+
                         <td>{t.driverId?.name || "—"}</td>
+
                         <td>
                           {t.vehicleId
                             ? `${t.vehicleId.plateNumber || ""} ${
@@ -137,7 +190,8 @@ const ManagerCustomerDrawer = ({ open, onClose, details }) => {
                               }`
                             : "—"}
                         </td>
-                        <td>{formatDateTime(t.createdAt)}</td>
+
+                        <td>{formatDate(t.createdAt)}</td>
                       </tr>
                     ))}
                   </tbody>

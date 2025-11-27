@@ -1,11 +1,16 @@
 // client/src/pages/manager/ManagerDashboard.jsx
 import React, { useEffect, useState } from "react";
+
 import {
   getManagerDashboardStatsApi,
   getManagerRecentTripsApi,
   getManagerRecentOrdersApi,
   getManagerNotificationsApi,
 } from "../../api/managerDashboardApi";
+
+import { getBrandingApi } from "../../api/brandingApi";
+import { useBranding } from "../../context/BrandingContext";
+
 import styles from "../../styles/manager/managerDashboard.module.css";
 
 const ManagerDashboard = () => {
@@ -17,6 +22,28 @@ const ManagerDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [loadingTable, setLoadingTable] = useState(false);
   const [error, setError] = useState("");
+
+  // 🎨 BRANDING COLORS
+  const { branding, updateBranding } = useBranding();
+  const brandColor = branding?.primaryColor || "#2563EB";
+  const brandColorLight = branding?.accentColor || "#E5F1FF";
+
+  /* =====================================
+        INITIAL LOAD (BRANDING + DATA)
+  ====================================== */
+  useEffect(() => {
+    loadBranding();
+    loadAll();
+  }, []);
+
+  const loadBranding = async () => {
+    try {
+      const res = await getBrandingApi();
+      updateBranding(res.data.branding);
+    } catch (err) {
+      console.error("Branding load failed:", err);
+    }
+  };
 
   const loadAll = async () => {
     try {
@@ -35,19 +62,19 @@ const ManagerDashboard = () => {
       setRecentOrders(ordersRes.data?.orders || []);
       setNotifications(notiRes.data?.notifications || []);
     } catch (err) {
-      console.error("Error loading manager dashboard:", err);
-      const msg =
-        err?.response?.data?.error || "Failed to load manager dashboard data.";
-      setError(msg);
+      console.error("Manager Dashboard Load Error:", err);
+      setError(
+        err?.response?.data?.error ||
+          "Failed to load manager dashboard data."
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    loadAll();
-  }, []);
-
+  /* =====================================
+       REFRESH TRIPS + ORDERS ONLY
+  ====================================== */
   const refreshTables = async () => {
     try {
       setLoadingTable(true);
@@ -69,119 +96,112 @@ const ManagerDashboard = () => {
 
   return (
     <div className={styles.page}>
-      {/* Header */}
+      {/* HEADER */}
       <div className={styles.headerRow}>
         <div>
-          <h1 className={styles.title}>Manager Dashboard</h1>
+          <h1 className={styles.title} style={{ color: brandColor }}>
+            Manager Dashboard
+          </h1>
           <p className={styles.subtitle}>
-            Live overview of your company&apos;s operations: drivers, vehicles,
-            trips, and orders.
+            Live overview of your company’s operations.
           </p>
         </div>
+
         <div className={styles.headerActions}>
           <button
             type="button"
             className={styles.refreshBtn}
+            style={{ backgroundColor: brandColor }}
             onClick={loadAll}
             disabled={loading}
           >
             {loading ? "Refreshing..." : "Refresh All"}
           </button>
+
           <button
             type="button"
             className={styles.refreshLightBtn}
+            style={{ borderColor: brandColor, color: brandColor }}
             onClick={refreshTables}
             disabled={loadingTable}
           >
-            {loadingTable ? "Refreshing lists..." : "Refresh Lists"}
+            {loadingTable ? "Refreshing..." : "Refresh Lists"}
           </button>
         </div>
       </div>
 
       {error && <div className={styles.error}>{error}</div>}
 
-      {/* KPI cards */}
+      {/* KPI CARDS */}
       <div className={styles.kpiGrid}>
-        <div className={styles.kpiCard}>
-          <span className={styles.kpiLabel}>Total Drivers</span>
-          <span className={styles.kpiNumber}>
-            {safe(stats, "totalDrivers")}
-          </span>
-          <span className={styles.kpiHint}>
-            Active: {safe(stats, "activeDrivers")}
-          </span>
-        </div>
-
-        <div className={styles.kpiCard}>
-          <span className={styles.kpiLabel}>Total Vehicles</span>
-          <span className={styles.kpiNumber}>
-            {safe(stats, "totalVehicles")}
-          </span>
-          <span className={styles.kpiHint}>
-            Available: {safe(stats, "availableVehicles")}
-          </span>
-        </div>
-
-        <div className={styles.kpiCard}>
-          <span className={styles.kpiLabel}>Total Trips</span>
-          <span className={styles.kpiNumber}>{safe(stats, "totalTrips")}</span>
-          <span className={styles.kpiHint}>
-            Active: {safe(stats, "activeTrips")}
-          </span>
-        </div>
-
-        <div className={styles.kpiCard}>
-          <span className={styles.kpiLabel}>Total Orders</span>
-          <span className={styles.kpiNumber}>{safe(stats, "totalOrders")}</span>
-          <span className={styles.kpiHint}>
-            Pending: {safe(stats, "pendingOrders")}
-          </span>
-        </div>
+        {[
+          {
+            label: "Total Drivers",
+            value: safe(stats, "totalDrivers"),
+            hint: `Active: ${safe(stats, "activeDrivers")}`,
+          },
+          {
+            label: "Total Vehicles",
+            value: safe(stats, "totalVehicles"),
+            hint: `Available: ${safe(stats, "availableVehicles")}`,
+          },
+          {
+            label: "Total Trips",
+            value: safe(stats, "totalTrips"),
+            hint: `Active: ${safe(stats, "activeTrips")}`,
+          },
+          {
+            label: "Total Orders",
+            value: safe(stats, "totalOrders"),
+            hint: `Pending: ${safe(stats, "pendingOrders")}`,
+          },
+        ].map((card, i) => (
+          <div
+            key={i}
+            className={styles.kpiCard}
+            style={{ borderTop: `4px solid ${brandColor}` }}
+          >
+            <span className={styles.kpiLabel}>{card.label}</span>
+            <span className={styles.kpiNumber} style={{ color: brandColor }}>
+              {card.value}
+            </span>
+            <span className={styles.kpiHint}>{card.hint}</span>
+          </div>
+        ))}
       </div>
 
-      {/* Secondary KPI row */}
+      {/* SECONDARY KPI */}
       <div className={styles.kpiGridSecondary}>
-        <div className={styles.kpiCardSmall}>
-          <span className={styles.kpiLabel}>Revenue Today</span>
-          <span className={styles.kpiNumber}>
-            $
-            {stats && typeof stats.revenueToday === "number"
-              ? stats.revenueToday.toFixed(2)
-              : "0.00"}
-          </span>
-        </div>
-        <div className={styles.kpiCardSmall}>
-          <span className={styles.kpiLabel}>Revenue (This Month)</span>
-          <span className={styles.kpiNumber}>
-            $
-            {stats && typeof stats.revenueMonth === "number"
-              ? stats.revenueMonth.toFixed(2)
-              : "0.00"}
-          </span>
-        </div>
-        <div className={styles.kpiCardSmall}>
-          <span className={styles.kpiLabel}>Drivers Online</span>
-          <span className={styles.kpiNumber}>
-            {safe(stats, "driversOnline")}
-          </span>
-        </div>
-        <div className={styles.kpiCardSmall}>
-          <span className={styles.kpiLabel}>Vehicles In Use</span>
-          <span className={styles.kpiNumber}>
-            {safe(stats, "vehiclesInUse")}
-          </span>
-        </div>
+        {[
+          { label: "Revenue Today", value: stats?.revenueToday },
+          { label: "Revenue (Month)", value: stats?.revenueMonth },
+          { label: "Drivers Online", value: stats?.driversOnline },
+          { label: "Vehicles In Use", value: stats?.vehiclesInUse },
+        ].map((item, i) => (
+          <div
+            key={i}
+            className={styles.kpiCardSmall}
+            style={{ borderLeft: `4px solid ${brandColor}` }}
+          >
+            <span className={styles.kpiLabel}>{item.label}</span>
+            <span className={styles.kpiNumber} style={{ color: brandColor }}>
+              {typeof item.value === "number"
+                ? item.value.toFixed(2)
+                : item.value}
+            </span>
+          </div>
+        ))}
       </div>
 
-      {/* Main 2-column content */}
+      {/* MAIN GRID */}
       <div className={styles.mainGrid}>
-        {/* Left: Recent Trips */}
+        {/* TRIPS */}
         <div className={styles.card}>
-          <div className={styles.cardHeader}>
+          <div
+            className={styles.cardHeader}
+            style={{ borderBottom: `2px solid ${brandColor}` }}
+          >
             <h2>Recent Trips</h2>
-            {loadingTable && (
-              <span className={styles.smallInfo}>Refreshing...</span>
-            )}
           </div>
 
           {recentTrips.length === 0 && !loading ? (
@@ -190,7 +210,7 @@ const ManagerDashboard = () => {
             <div className={styles.tableWrapper}>
               <table className={styles.table}>
                 <thead>
-                  <tr>
+                  <tr style={{ background: brandColorLight }}>
                     <th>Trip</th>
                     <th>Driver</th>
                     <th>Customer</th>
@@ -207,24 +227,23 @@ const ManagerDashboard = () => {
                       <td>{t.customer?.name || "—"}</td>
                       <td>
                         <span
-                          className={`${styles.statusBadge} ${
-                            styles[`tripStatus_${t.status}`] || ""
-                          }`}
+                          className={styles.statusBadge}
+                          style={{
+                            background:
+                              t.status === "completed"
+                                ? brandColorLight
+                                : undefined,
+                            color:
+                              t.status === "completed"
+                                ? brandColor
+                                : undefined,
+                          }}
                         >
                           {t.status}
                         </span>
                       </td>
-                      <td>
-                        $
-                        {typeof t.deliveryFee === "number"
-                          ? t.deliveryFee.toFixed(2)
-                          : "0.00"}
-                      </td>
-                      <td>
-                        {t.createdAt
-                          ? new Date(t.createdAt).toLocaleString()
-                          : "—"}
-                      </td>
+                      <td>${t.deliveryFee?.toFixed(2)}</td>
+                      <td>{new Date(t.createdAt).toLocaleString()}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -233,68 +252,68 @@ const ManagerDashboard = () => {
           )}
         </div>
 
-        {/* Right: Recent Orders */}
+        {/* ORDERS */}
         <div className={styles.card}>
-          <div className={styles.cardHeader}>
+          <div
+            className={styles.cardHeader}
+            style={{ borderBottom: `2px solid ${brandColor}` }}
+          >
             <h2>Recent Orders</h2>
-            {loadingTable && (
-              <span className={styles.smallInfo}>Refreshing...</span>
-            )}
           </div>
 
-          {recentOrders.length === 0 && !loading ? (
-            <p className={styles.empty}>No orders found yet.</p>
-          ) : (
-            <div className={styles.tableWrapper}>
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th>Order</th>
-                    <th>Customer</th>
-                    <th>Total</th>
-                    <th>Status</th>
-                    <th>Created</th>
+          <div className={styles.tableWrapper}>
+            <table className={styles.table}>
+              <thead>
+                <tr style={{ background: brandColorLight }}>
+                  <th>Order</th>
+                  <th>Customer</th>
+                  <th>Total</th>
+                  <th>Status</th>
+                  <th>Created</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recentOrders.map((o) => (
+                  <tr key={o._id}>
+                    <td className={styles.idCell}>{o._id}</td>
+                    <td>{o.customer?.name || "—"}</td>
+                    <td>${o.total?.toFixed(2)}</td>
+                    <td>
+                      <span
+                        className={styles.statusBadge}
+                        style={{
+                          background:
+                            o.status === "completed" ||
+                            o.status === "delivered"
+                              ? brandColorLight
+                              : undefined,
+                          color:
+                            o.status === "completed" ||
+                            o.status === "delivered"
+                              ? brandColor
+                              : undefined,
+                        }}
+                      >
+                        {o.status}
+                      </span>
+                    </td>
+                    <td>{new Date(o.createdAt).toLocaleString()}</td>
                   </tr>
-                </thead>
-                <tbody>
-                  {recentOrders.map((o) => (
-                    <tr key={o._id}>
-                      <td className={styles.idCell}>{o._id}</td>
-                      <td>{o.customer?.name || "—"}</td>
-                      <td>
-                        $
-                        {typeof o.total === "number"
-                          ? o.total.toFixed(2)
-                          : "0.00"}
-                      </td>
-                      <td>
-                        <span
-                          className={`${styles.statusBadge} ${
-                            styles[`orderStatus_${o.status}`] || ""
-                          }`}
-                        >
-                          {o.status}
-                        </span>
-                      </td>
-                      <td>
-                        {o.createdAt
-                          ? new Date(o.createdAt).toLocaleString()
-                          : "—"}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
-      {/* Notifications + Activity */}
+      {/* NOTIFICATIONS + SUMMARY */}
       <div className={styles.bottomGrid}>
-        {/* Notifications */}
+        {/* NOTIFICATIONS */}
         <div className={styles.card}>
-          <div className={styles.cardHeader}>
+          <div
+            className={styles.cardHeader}
+            style={{ borderBottom: `2px solid ${brandColor}` }}
+          >
             <h2>Latest Notifications</h2>
           </div>
 
@@ -305,9 +324,10 @@ const ManagerDashboard = () => {
               {notifications.slice(0, 6).map((n) => (
                 <li
                   key={n._id}
-                  className={`${styles.notificationItem} ${
-                    n.isRead ? styles.notificationRead : ""
-                  }`}
+                  className={styles.notificationItem}
+                  style={{
+                    borderLeft: `4px solid ${brandColor}`,
+                  }}
                 >
                   <div className={styles.notificationMain}>
                     <h4>{n.title}</h4>
@@ -316,9 +336,7 @@ const ManagerDashboard = () => {
                   <div className={styles.notificationMeta}>
                     <span className={styles.notificationType}>{n.type}</span>
                     <span className={styles.notificationTime}>
-                      {n.createdAt
-                        ? new Date(n.createdAt).toLocaleString()
-                        : ""}
+                      {new Date(n.createdAt).toLocaleString()}
                     </span>
                   </div>
                 </li>
@@ -327,51 +345,43 @@ const ManagerDashboard = () => {
           )}
         </div>
 
-        {/* Quick Summary */}
+        {/* SUMMARY */}
         <div className={styles.card}>
-          <div className={styles.cardHeader}>
+          <div
+            className={styles.cardHeader}
+            style={{ borderBottom: `2px solid ${brandColor}` }}
+          >
             <h2>Quick Summary</h2>
           </div>
+
           <div className={styles.summaryGrid}>
-            <div className={styles.summaryItem}>
-              <span className={styles.summaryLabel}>Pending Orders</span>
-              <span className={styles.summaryNumber}>
-                {safe(stats, "pendingOrders")}
-              </span>
-              <span className={styles.summaryHint}>
-                Prioritize these in Orders page.
-              </span>
-            </div>
-
-            <div className={styles.summaryItem}>
-              <span className={styles.summaryLabel}>Active Trips</span>
-              <span className={styles.summaryNumber}>
-                {safe(stats, "activeTrips")}
-              </span>
-              <span className={styles.summaryHint}>
-                Monitor drivers on the Trips page.
-              </span>
-            </div>
-
-            <div className={styles.summaryItem}>
-              <span className={styles.summaryLabel}>Drivers Offline</span>
-              <span className={styles.summaryNumber}>
-                {safe(stats, "totalDrivers") - safe(stats, "driversOnline")}
-              </span>
-              <span className={styles.summaryHint}>
-                Check their status on Drivers page.
-              </span>
-            </div>
-
-            <div className={styles.summaryItem}>
-              <span className={styles.summaryLabel}>Vehicles in Maintenance</span>
-              <span className={styles.summaryNumber}>
-                {safe(stats, "vehiclesInMaintenance")}
-              </span>
-              <span className={styles.summaryHint}>
-                Keep fleet healthy in Vehicles page.
-              </span>
-            </div>
+            {[
+              { label: "Pending Orders", value: safe(stats, "pendingOrders") },
+              { label: "Active Trips", value: safe(stats, "activeTrips") },
+              {
+                label: "Drivers Offline",
+                value:
+                  safe(stats, "totalDrivers") - safe(stats, "driversOnline"),
+              },
+              {
+                label: "Vehicles in Maintenance",
+                value: safe(stats, "vehiclesInMaintenance"),
+              },
+            ].map((item, i) => (
+              <div
+                key={i}
+                className={styles.summaryItem}
+                style={{ borderLeft: `4px solid ${brandColor}` }}
+              >
+                <span className={styles.summaryLabel}>{item.label}</span>
+                <span
+                  className={styles.summaryNumber}
+                  style={{ color: brandColor }}
+                >
+                  {item.value}
+                </span>
+              </div>
+            ))}
           </div>
         </div>
       </div>

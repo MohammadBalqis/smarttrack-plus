@@ -1,3 +1,4 @@
+// client/src/pages/manager/ManagerNotifications.jsx
 import React, { useEffect, useState } from "react";
 import {
   getManagerNotificationsApi,
@@ -5,13 +6,19 @@ import {
   markAllNotificationsAsReadApi,
 } from "../../api/managerNotificationsApi";
 
+import { useBranding } from "../../context/BrandingContext";
 import styles from "../../styles/manager/managerNotifications.module.css";
 
 const ManagerNotifications = () => {
+  const { branding } = useBranding();
+
   const [notifications, setNotifications] = useState([]);
   const [filter, setFilter] = useState("all"); // all | unread
   const [loading, setLoading] = useState(false);
 
+  /* ============================
+      LOAD NOTIFICATIONS
+  ============================ */
   const loadNotifications = async () => {
     try {
       setLoading(true);
@@ -28,30 +35,43 @@ const ManagerNotifications = () => {
     loadNotifications();
   }, []);
 
+  /* ============================
+      MARK AS READ
+  ============================ */
   const markAsRead = async (id) => {
     try {
       await markNotificationAsReadApi(id);
       setNotifications((prev) =>
-        prev.map((n) => (n._id === id ? { ...n, isRead: true } : n))
+        prev.map((n) =>
+          n._id === id ? { ...n, isRead: true } : n
+        )
       );
     } catch (err) {
-      console.error(err);
+      console.error("Error marking notification:", err);
     }
   };
 
   const markAllAsRead = async () => {
     try {
       await markAllNotificationsAsReadApi();
-      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+      setNotifications((prev) =>
+        prev.map((n) => ({ ...n, isRead: true }))
+      );
     } catch (err) {
-      console.error(err);
+      console.error("Error marking all notifications:", err);
     }
   };
 
+  /* ============================
+      FILTERED LIST
+  ============================ */
   const filtered = notifications.filter((n) =>
     filter === "unread" ? !n.isRead : true
   );
 
+  /* ============================
+      TYPE COLORS
+  ============================ */
   const typeColor = (type) => {
     switch (type) {
       case "trip":
@@ -67,12 +87,25 @@ const ManagerNotifications = () => {
     }
   };
 
+  // safer date formatting
+  const safeDate = (value) => {
+    if (!value) return "—";
+    const d = new Date(value);
+    return isNaN(d.getTime()) ? "—" : d.toLocaleString();
+  };
+
+  /* ============================
+      RENDER
+  ============================ */
+
   return (
     <div className={styles.page}>
       <h1>Notifications</h1>
-      <p className={styles.subtitle}>Stay updated with your company activity.</p>
+      <p className={styles.subtitle}>
+        Stay updated with your company activity.
+      </p>
 
-      {/* Header buttons */}
+      {/* Header actions */}
       <div className={styles.headerRow}>
         <select
           className={styles.filterSelect}
@@ -83,11 +116,16 @@ const ManagerNotifications = () => {
           <option value="unread">Unread</option>
         </select>
 
-        <button className={styles.readAllBtn} onClick={markAllAsRead}>
+        <button
+          className={styles.readAllBtn}
+          onClick={markAllAsRead}
+          style={{ backgroundColor: branding.primaryColor }}
+        >
           Mark All as Read
         </button>
       </div>
 
+      {/* LOADING */}
       {loading ? (
         <p className={styles.loading}>Loading...</p>
       ) : filtered.length === 0 ? (
@@ -106,9 +144,7 @@ const ManagerNotifications = () => {
 
                 <div>
                   <p className={styles.message}>{n.message}</p>
-                  <p className={styles.time}>
-                    {new Date(n.createdAt).toLocaleString()}
-                  </p>
+                  <p className={styles.time}>{safeDate(n.createdAt)}</p>
                 </div>
               </div>
 
@@ -116,6 +152,7 @@ const ManagerNotifications = () => {
                 <button
                   className={styles.readBtn}
                   onClick={() => markAsRead(n._id)}
+                  style={{ backgroundColor: branding.primaryColor }}
                 >
                   Mark Read
                 </button>

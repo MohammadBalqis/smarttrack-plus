@@ -4,13 +4,17 @@ import { getCompanyVehiclesApi } from "../../api/companyVehiclesApi";
 import { getCompanyDriversApi } from "../../api/companyDriversApi";
 import {
   updateVehicleStatusApi,
-  getVehicleTripsApi, // not used yet, but ready
-  assignVehicleDriverApi, // not used yet, but ready
+  getVehicleTripsApi,
+  assignVehicleDriverApi,
 } from "../../api/managerVehiclesApi";
+
+import { useBranding } from "../../context/BrandingContext";
 import ManagerVehicleDrawer from "../../components/manager/ManagerVehicleDrawer";
 import styles from "../../styles/manager/managerVehicles.module.css";
 
 const ManagerVehicles = () => {
+  const { branding } = useBranding();
+
   const [vehicles, setVehicles] = useState([]);
   const [drivers, setDrivers] = useState([]);
 
@@ -28,7 +32,9 @@ const ManagerVehicles = () => {
 
   const [statusSavingId, setStatusSavingId] = useState(null);
 
-  // 🔄 Load vehicles with filters
+  /* ==========================================================
+     LOAD VEHICLES
+  ========================================================== */
   const loadVehicles = async () => {
     try {
       setLoading(true);
@@ -44,13 +50,17 @@ const ManagerVehicles = () => {
       setVehicles(res.data.vehicles || []);
     } catch (err) {
       console.error("Error loading vehicles:", err);
-      setError("Failed to load vehicles.");
+      const msg =
+        err.response?.data?.error || "Failed to load vehicles. Try again.";
+      setError(msg);
     } finally {
       setLoading(false);
     }
   };
 
-  // 👥 Load drivers for dropdown filter
+  /* ==========================================================
+     LOAD DRIVERS
+  ========================================================== */
   const loadDrivers = async () => {
     try {
       setDriversLoading(true);
@@ -65,15 +75,17 @@ const ManagerVehicles = () => {
 
   useEffect(() => {
     loadVehicles();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [typeFilter, statusFilter, driverFilter, plateSearch]);
 
   useEffect(() => {
     loadDrivers();
   }, []);
 
-  const openDrawer = (vehicle) => {
-    setSelectedVehicle(vehicle);
+  /* ==========================================================
+     UI HELPERS
+  ========================================================== */
+  const openDrawer = (v) => {
+    setSelectedVehicle(v);
     setDrawerOpen(true);
   };
 
@@ -84,19 +96,25 @@ const ManagerVehicles = () => {
 
   const getDriverLabel = (vehicle) => {
     if (!vehicle.driverId) return "Unassigned";
+
     if (typeof vehicle.driverId === "object") {
       return vehicle.driverId.name || "Unnamed driver";
     }
+
     return "Driver";
   };
 
   const getLastTripDate = (vehicle) => {
     const lastTrip = vehicle.lastTripId;
     if (!lastTrip || !lastTrip.createdAt) return "—";
-    return new Date(lastTrip.createdAt).toLocaleDateString();
+
+    const d = new Date(lastTrip.createdAt);
+    return isNaN(d) ? "—" : d.toLocaleDateString();
   };
 
-  // 🟡 Change vehicle status (this calls backend + notifications)
+  /* ==========================================================
+     UPDATE VEHICLE STATUS
+  ========================================================== */
   const handleStatusChange = async (vehicleId, newStatus) => {
     try {
       setStatusSavingId(vehicleId);
@@ -104,7 +122,7 @@ const ManagerVehicles = () => {
 
       await updateVehicleStatusApi(vehicleId, newStatus);
 
-      // Update state locally
+      // Update UI state
       setVehicles((prev) =>
         prev.map((v) =>
           v._id === vehicleId ? { ...v, status: newStatus } : v
@@ -126,14 +144,18 @@ const ManagerVehicles = () => {
     { value: "maintenance", label: "Maintenance" },
   ];
 
+  /* ==========================================================
+     RENDER
+  ========================================================== */
+
   return (
     <div className={styles.page}>
-      {/* Header */}
+      {/* ================= HEADER ================= */}
       <div className={styles.header}>
         <div>
-          <h1>Vehicles</h1>
-          <p>
-            Overview of your company’s fleet. You can filter vehicles and update
+          <h1 className={styles.title}>Vehicles</h1>
+          <p className={styles.subtitle}>
+            Overview of your company’s fleet. Filter, view details, and update
             their status.
           </p>
         </div>
@@ -143,14 +165,14 @@ const ManagerVehicles = () => {
           className={styles.refreshBtn}
           onClick={loadVehicles}
           disabled={loading}
+          style={{ background: branding.primaryColor }}
         >
           {loading ? "Refreshing..." : "Refresh"}
         </button>
       </div>
 
-      {/* Filters */}
+      {/* ================= FILTERS ================= */}
       <div className={styles.filtersRow}>
-        {/* Type filter */}
         <select
           value={typeFilter}
           onChange={(e) => setTypeFilter(e.target.value)}
@@ -163,7 +185,6 @@ const ManagerVehicles = () => {
           <option value="pickup">Pickup</option>
         </select>
 
-        {/* Status filter */}
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
@@ -174,7 +195,6 @@ const ManagerVehicles = () => {
           <option value="maintenance">Maintenance</option>
         </select>
 
-        {/* Driver filter */}
         <select
           value={driverFilter}
           onChange={(e) => setDriverFilter(e.target.value)}
@@ -187,7 +207,6 @@ const ManagerVehicles = () => {
           ))}
         </select>
 
-        {/* Plate search */}
         <input
           type="text"
           placeholder="Search by plate..."
@@ -196,10 +215,11 @@ const ManagerVehicles = () => {
         />
       </div>
 
-      {/* Vehicles table */}
+      {/* ================= VEHICLES TABLE ================= */}
       <div className={styles.tableCard}>
         <div className={styles.tableHeaderRow}>
           <h3>Vehicles List</h3>
+
           <div className={styles.headerInfo}>
             {driversLoading && (
               <span className={styles.smallInfo}>Loading drivers...</span>
@@ -208,16 +228,14 @@ const ManagerVehicles = () => {
               <span className={styles.smallInfo}>Loading vehicles...</span>
             )}
             {statusSavingId && (
-              <span className={styles.smallInfo}>
-                Updating vehicle status...
-              </span>
+              <span className={styles.smallInfo}>Updating vehicle status...</span>
             )}
           </div>
         </div>
 
         {error && <p className={styles.error}>{error}</p>}
 
-        {vehicles.length === 0 && !loading ? (
+        {!loading && vehicles.length === 0 ? (
           <p className={styles.empty}>No vehicles found.</p>
         ) : (
           <div className={styles.tableWrapper}>
@@ -234,6 +252,7 @@ const ManagerVehicles = () => {
                   <th></th>
                 </tr>
               </thead>
+
               <tbody>
                 {vehicles.map((v) => (
                   <tr key={v._id}>
@@ -245,17 +264,25 @@ const ManagerVehicles = () => {
                           className={styles.thumbnail}
                         />
                       ) : (
-                        <div className={styles.noImage}>No Image</div>
+                        <div
+                          className={styles.noImage}
+                          style={{ borderColor: branding.primaryColor }}
+                        >
+                          No Image
+                        </div>
                       )}
                     </td>
+
                     <td className={styles.typeCell}>{v.type}</td>
+
                     <td>
                       {v.brand} {v.model}
                     </td>
+
                     <td>{v.plateNumber}</td>
+
                     <td>{getDriverLabel(v)}</td>
 
-                    {/* 🔄 Editable status cell */}
                     <td>
                       <select
                         className={styles.statusSelect}
@@ -274,10 +301,12 @@ const ManagerVehicles = () => {
                     </td>
 
                     <td>{getLastTripDate(v)}</td>
+
                     <td>
                       <button
                         className={styles.viewBtn}
                         onClick={() => openDrawer(v)}
+                        style={{ background: branding.primaryColor }}
                       >
                         View Details
                       </button>
@@ -290,7 +319,7 @@ const ManagerVehicles = () => {
         )}
       </div>
 
-      {/* Drawer (still mainly read-only; we’ll enhance later if you want) */}
+      {/* ================= DRAWER ================= */}
       <ManagerVehicleDrawer
         open={drawerOpen}
         onClose={closeDrawer}

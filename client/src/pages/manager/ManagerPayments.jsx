@@ -5,10 +5,14 @@ import {
   getCompanyPaymentsSummaryApi,
   getPaymentDetailsApi,
 } from "../../api/companyPaymentsApi";
+
 import ManagerPaymentDrawer from "../../components/manager/ManagerPaymentDrawer";
+import { useBranding } from "../../context/BrandingContext";
 import styles from "../../styles/manager/managerPayments.module.css";
 
 const ManagerPayments = () => {
+  const { branding } = useBranding();
+
   const [payments, setPayments] = useState([]);
   const [summary, setSummary] = useState(null);
 
@@ -23,18 +27,23 @@ const ManagerPayments = () => {
 
   const [loading, setLoading] = useState(false);
   const [loadingSummary, setLoadingSummary] = useState(false);
+  const [loadingDetails, setLoadingDetails] = useState(false);
+
   const [error, setError] = useState("");
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState(null);
-  const [loadingDetails, setLoadingDetails] = useState(false);
 
   const pageLimit = 15;
 
+  /* ==========================================================
+     LOAD SUMMARY
+  ========================================================== */
   const loadSummary = async () => {
     try {
       setLoadingSummary(true);
       const params = {};
+
       if (dateFrom) params.dateFrom = dateFrom;
       if (dateTo) params.dateTo = dateTo;
 
@@ -47,15 +56,16 @@ const ManagerPayments = () => {
     }
   };
 
+  /* ==========================================================
+     LOAD PAYMENTS LIST
+  ========================================================== */
   const loadPayments = async () => {
     try {
       setLoading(true);
       setError("");
 
-      const params = {
-        page,
-        limit: pageLimit,
-      };
+      const params = { page, limit: pageLimit };
+
       if (statusFilter) params.status = statusFilter;
       if (methodFilter) params.method = methodFilter;
       if (search) params.search = search;
@@ -83,21 +93,28 @@ const ManagerPayments = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, statusFilter, methodFilter, search, dateFrom, dateTo]);
 
+  /* ==========================================================
+     HELPERS
+  ========================================================== */
   const formatDate = (value) => {
-    if (!value) return "";
-    return new Date(value).toLocaleDateString();
+    if (!value) return "—";
+    const d = new Date(value);
+    return isNaN(d.getTime()) ? "—" : d.toLocaleDateString();
   };
 
   const formatCurrency = (value) => {
-    if (value === null || value === undefined) return "0";
-    return value.toFixed(2);
+    if (value === null || value === undefined) return "0.00";
+    const num = Number(value);
+    return isNaN(num) ? "0.00" : num.toFixed(2);
   };
 
+  /* ==========================================================
+     DRAWER HANDLING
+  ========================================================== */
   const handleOpenDrawer = async (paymentId) => {
     try {
       setLoadingDetails(true);
       setDrawerOpen(true);
-      setSelectedPayment(null);
 
       const res = await getPaymentDetailsApi(paymentId);
       setSelectedPayment(res.data.payment || null);
@@ -113,6 +130,9 @@ const ManagerPayments = () => {
     setSelectedPayment(null);
   };
 
+  /* ==========================================================
+     RESET FILTERS
+  ========================================================== */
   const handleResetFilters = () => {
     setStatusFilter("");
     setMethodFilter("");
@@ -122,21 +142,22 @@ const ManagerPayments = () => {
     setPage(1);
   };
 
+  /* ==========================================================
+     RENDER
+  ========================================================== */
   return (
     <div className={styles.page}>
-      {/* Header */}
+      {/* HEADER */}
       <div className={styles.header}>
         <h1>Payments</h1>
         <p>Overview of all payments for your company.</p>
       </div>
 
-      {/* Stats */}
+      {/* SUMMARY CARDS */}
       <div className={styles.statsGrid}>
         <div className={styles.statCard}>
           <h3>Total Payments</h3>
-          <p>
-            {loadingSummary ? "…" : summary?.totalPayments ?? 0}
-          </p>
+          <p>{loadingSummary ? "…" : summary?.totalPayments ?? 0}</p>
         </div>
         <div className={styles.statCard}>
           <h3>Total Amount</h3>
@@ -146,6 +167,7 @@ const ManagerPayments = () => {
               : formatCurrency(summary?.totalAmount || 0)}
           </p>
         </div>
+
         <div className={styles.statCard}>
           <h3>Company Earning</h3>
           <p>
@@ -154,6 +176,7 @@ const ManagerPayments = () => {
               : formatCurrency(summary?.totalCompanyEarning || 0)}
           </p>
         </div>
+
         <div className={styles.statCard}>
           <h3>Driver Earning</h3>
           <p>
@@ -162,6 +185,7 @@ const ManagerPayments = () => {
               : formatCurrency(summary?.totalDriverEarning || 0)}
           </p>
         </div>
+
         <div className={styles.statCard}>
           <h3>Platform Earning</h3>
           <p>
@@ -170,15 +194,14 @@ const ManagerPayments = () => {
               : formatCurrency(summary?.totalPlatformEarning || 0)}
           </p>
         </div>
+
         <div className={styles.statCard}>
           <h3>Refunded Payments</h3>
-          <p>
-            {loadingSummary ? "…" : summary?.refundedCount ?? 0}
-          </p>
+          <p>{loadingSummary ? "…" : summary?.refundedCount ?? 0}</p>
         </div>
       </div>
 
-      {/* Filters */}
+      {/* FILTERS */}
       <div className={styles.filtersRow}>
         <select
           value={statusFilter}
@@ -228,6 +251,7 @@ const ManagerPayments = () => {
             setPage(1);
           }}
         />
+
         <input
           type="date"
           value={dateTo}
@@ -241,12 +265,13 @@ const ManagerPayments = () => {
           type="button"
           onClick={handleResetFilters}
           className={styles.resetBtn}
+          style={{ backgroundColor: branding.primaryColor }}
         >
           Reset
         </button>
       </div>
 
-      {/* Table */}
+      {/* TABLE */}
       <div className={styles.tableCard}>
         <div className={styles.tableHeaderRow}>
           <h3>Payments List</h3>
@@ -272,6 +297,7 @@ const ManagerPayments = () => {
                   <th></th>
                 </tr>
               </thead>
+
               <tbody>
                 {payments.map((p) => (
                   <tr key={p._id}>
@@ -279,17 +305,17 @@ const ManagerPayments = () => {
                     <td>{p.tripId?._id || p.tripId || "—"}</td>
                     <td>{p.customerId?.name || "—"}</td>
                     <td>{p.driverId?.name || "—"}</td>
+
                     <td>
-                      <span className={styles.methodBadge}>
-                        {p.method}
-                      </span>
+                      <span className={styles.methodBadge}>{p.method}</span>
                     </td>
+
                     <td>
-                      <span className={styles.statusBadge}>
-                        {p.status}
-                      </span>
+                      <span className={styles.statusBadge}>{p.status}</span>
                     </td>
+
                     <td>{formatCurrency(p.totalAmount || 0)}</td>
+
                     <td>
                       <button
                         className={styles.viewBtn}
@@ -306,7 +332,7 @@ const ManagerPayments = () => {
           </div>
         )}
 
-        {/* Pagination */}
+        {/* PAGINATION */}
         <div className={styles.pagination}>
           <button
             type="button"
@@ -315,9 +341,11 @@ const ManagerPayments = () => {
           >
             Previous
           </button>
+
           <span>
             Page {page} of {totalPages}
           </span>
+
           <button
             type="button"
             disabled={page >= totalPages}
@@ -330,12 +358,14 @@ const ManagerPayments = () => {
         </div>
       </div>
 
-      {/* Drawer */}
+      {/* DRAWER */}
       <ManagerPaymentDrawer
         open={drawerOpen}
         onClose={handleCloseDrawer}
         payment={selectedPayment}
       />
+
+      {/* LOADING OVERLAY */}
       {loadingDetails && drawerOpen && (
         <div className={styles.loadingOverlay}>Loading details…</div>
       )}

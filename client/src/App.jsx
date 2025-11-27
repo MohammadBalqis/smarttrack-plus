@@ -3,8 +3,13 @@ import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 import { AuthProvider } from "./context/AuthContext";
-import DashboardLayout from "./layout/DashboardLayout";
 import RoleRoute from "./components/RoleRoute";
+
+// Layouts
+import AdminLayout from "./layout/AdminLayout";
+import CompanyLayout from "./layout/CompanyLayout";
+import ManagerLayout from "./layout/ManagerLayout";
+import CustomerLayout from "./layout/CustomerLayout";
 
 // Admin
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -18,6 +23,7 @@ import CompanyTrips from "./pages/company/CompanyTrips";
 import CompanyOrders from "./pages/company/CompanyOrders";
 import CompanyVehicles from "./pages/company/CompanyVehicles";
 import CompanyPayments from "./pages/company/CompanyPayments";
+import CompanyProfile from "./pages/company/CompanyProfile";   // ⬅ NEW
 
 // Manager pages
 import ManagerDashboard from "./pages/manager/ManagerDashboard";
@@ -29,34 +35,40 @@ import ManagerVehicles from "./pages/manager/ManagerVehicles";
 import ManagerOrders from "./pages/manager/ManagerOrders";
 import ManagerPayments from "./pages/manager/ManagerPayments";
 
+// Customer pages
+import CustomerDashboard from "./pages/customer/CustomerDashboard";
+import CustomerTrips from "./pages/customer/CustomerTrips";
+import CustomerPayments from "./pages/customer/CustomerPayments";
+import CustomerProfile from "./pages/customer/CustomerProfile";
+
 function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
         <Routes>
 
-          {/* ==============================
+          {/* ===========================================
               SUPERADMIN
-          ============================== */}
+          =========================================== */}
           <Route
             path="/admin"
             element={
               <RoleRoute roles={["superadmin"]}>
-                <DashboardLayout role="admin" />
+                <AdminLayout />
               </RoleRoute>
             }
           >
             <Route index element={<AdminDashboard />} />
           </Route>
 
-          {/* ==============================
+          {/* ===========================================
               COMPANY
-          ============================== */}
+          =========================================== */}
           <Route
             path="/company"
             element={
               <RoleRoute roles={["company"]}>
-                <DashboardLayout role="company" />
+                <CompanyLayout />
               </RoleRoute>
             }
           >
@@ -68,16 +80,17 @@ function App() {
             <Route path="orders" element={<CompanyOrders />} />
             <Route path="vehicles" element={<CompanyVehicles />} />
             <Route path="payments" element={<CompanyPayments />} />
+            <Route path="profile" element={<CompanyProfile />} /> {/* ⬅ NEW */}
           </Route>
 
-          {/* ==============================
+          {/* ===========================================
               MANAGER
-          ============================== */}
+          =========================================== */}
           <Route
             path="/manager"
             element={
               <RoleRoute roles={["manager"]}>
-                <DashboardLayout role="manager" />
+                <ManagerLayout />
               </RoleRoute>
             }
           >
@@ -91,8 +104,25 @@ function App() {
             <Route path="payments" element={<ManagerPayments />} />
           </Route>
 
-          {/* DEFAULT */}
-          <Route path="*" element={<Navigate to="/manager" />} />
+          {/* ===========================================
+              CUSTOMER
+          =========================================== */}
+          <Route
+            path="/customer"
+            element={
+              <RoleRoute roles={["customer"]}>
+                <CustomerLayout />
+              </RoleRoute>
+            }
+          >
+            <Route index element={<CustomerDashboard />} />
+            <Route path="trips" element={<CustomerTrips />} />
+            <Route path="payments" element={<CustomerPayments />} />
+            <Route path="profile" element={<CustomerProfile />} />
+          </Route>
+
+          {/* FALLBACK */}
+          <Route path="*" element={<Navigate to="/login" />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

@@ -6,38 +6,41 @@ import {
 } from "../../api/managerCustomersApi";
 
 import ManagerCustomerDrawer from "../../components/manager/ManagerCustomerDrawer";
+import { useBranding } from "../../context/BrandingContext";
 import styles from "../../styles/manager/managerCustomers.module.css";
 
 const ManagerCustomers = () => {
+  const { branding } = useBranding();
+
   const [customers, setCustomers] = useState([]);
   const [total, setTotal] = useState(0);
 
   const [page, setPage] = useState(1);
-  const [limit] = useState(20);
+  const limit = 20;
+
   const [search, setSearch] = useState("");
   const [minTrips, setMinTrips] = useState("");
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Drawer
+  // Drawer States
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedCustomerId, setSelectedCustomerId] = useState(null);
-  const [selectedCustomerDetails, setSelectedCustomerDetails] = useState(null);
+  const [selectedDetails, setSelectedDetails] = useState(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
 
   const totalPages = Math.ceil(total / limit) || 1;
 
+  /* ============================================================
+     LOAD CUSTOMERS
+  ============================================================ */
   const loadCustomers = async () => {
     try {
       setLoading(true);
       setError("");
 
-      const params = {
-        page,
-        limit,
-      };
-
+      const params = { page, limit };
       if (search.trim()) params.search = search.trim();
       if (minTrips) params.minTrips = minTrips;
 
@@ -47,9 +50,10 @@ const ManagerCustomers = () => {
       setTotal(res.data.total || 0);
     } catch (err) {
       console.error("Error loading customers:", err);
-      const msg =
-        err.response?.data?.error || "Failed to load customers. Try again.";
-      setError(msg);
+      setError(
+        err.response?.data?.error ||
+          "Failed to load customers. Please try again."
+      );
     } finally {
       setLoading(false);
     }
@@ -57,7 +61,6 @@ const ManagerCustomers = () => {
 
   useEffect(() => {
     loadCustomers();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, minTrips]);
 
   const submitSearch = (e) => {
@@ -66,18 +69,21 @@ const ManagerCustomers = () => {
     loadCustomers();
   };
 
+  /* ============================================================
+     OPEN DRAWER (LOAD DETAILS)
+  ============================================================ */
   const openDrawer = async (customerId) => {
-    setSelectedCustomerId(customerId);
-    setSelectedCustomerDetails(null);
-    setLoadingDetails(true);
     setDrawerOpen(true);
+    setSelectedCustomerId(customerId);
+    setSelectedDetails(null);
+    setLoadingDetails(true);
 
     try {
       const res = await getManagerCustomerDetailsApi(customerId);
-      setSelectedCustomerDetails(res.data);
+      setSelectedDetails(res.data);
     } catch (err) {
-      console.error("Error loading customer details:", err);
-      setSelectedCustomerDetails(null);
+      console.error(err);
+      setSelectedDetails(null);
     } finally {
       setLoadingDetails(false);
     }
@@ -86,24 +92,34 @@ const ManagerCustomers = () => {
   const closeDrawer = () => {
     setDrawerOpen(false);
     setSelectedCustomerId(null);
-    setSelectedCustomerDetails(null);
+    setSelectedDetails(null);
   };
 
-  const formatDate = (value) => {
-    if (!value) return "—";
-    return new Date(value).toLocaleDateString();
+  const formatDate = (v) => {
+    if (!v) return "—";
+    const d = new Date(v);
+    return isNaN(d) ? "—" : d.toLocaleDateString();
+  };
+
+  const formatMoney = (v) => {
+    if (typeof v === "number") return `$${v.toFixed(2)}`;
+    const num = Number(v || 0);
+    return `$${num.toFixed(2)}`;
   };
 
   return (
     <div className={styles.page}>
-      {/* Header */}
+      {/* HEADER */}
       <div className={styles.headerRow}>
         <div>
-          <h1 className={styles.title}>Customers</h1>
+          <h1 className={styles.title} style={{ color: branding.primaryColor }}>
+            Customers
+          </h1>
           <p className={styles.subtitle}>
-            Customers who placed trips with your company.
+            Customers who placed trips or orders with your company.
           </p>
         </div>
+
         <div className={styles.headerStats}>
           <span>
             Total customers: <strong>{total}</strong>
@@ -114,16 +130,18 @@ const ManagerCustomers = () => {
         </div>
       </div>
 
-      {/* Filters */}
+      {/* FILTERS */}
       <div className={styles.filtersRow}>
         <form className={styles.searchForm} onSubmit={submitSearch}>
           <input
             type="text"
-            placeholder="Search by name, email, phone..."
+            placeholder="Search name / phone / email..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
-          <button type="submit">Search</button>
+          <button type="submit" style={{ background: branding.primaryColor }}>
+            Search
+          </button>
         </form>
 
         <div className={styles.filtersRight}>
@@ -142,13 +160,11 @@ const ManagerCustomers = () => {
         </div>
       </div>
 
-      {/* Table */}
+      {/* TABLE */}
       <div className={styles.tableCard}>
         <div className={styles.tableHeaderRow}>
           <h3>Customers List</h3>
-          {loading && (
-            <span className={styles.smallInfo}>Loading customers...</span>
-          )}
+          {loading && <span className={styles.smallInfo}>Loading...</span>}
         </div>
 
         {error && <p className={styles.error}>{error}</p>}
@@ -167,10 +183,11 @@ const ManagerCustomers = () => {
                   <th>Delivered</th>
                   <th>Cancelled</th>
                   <th>Last Trip</th>
-                  <th>Estimated Total</th>
+                  <th>Total Spent</th>
                   <th></th>
                 </tr>
               </thead>
+
               <tbody>
                 {customers.map((c) => (
                   <tr key={c.customerId}>
@@ -179,12 +196,12 @@ const ManagerCustomers = () => {
                         {c.avatar ? (
                           <img
                             src={c.avatar}
-                            alt={c.name}
                             className={styles.avatar}
+                            alt="avatar"
                           />
                         ) : (
                           <div className={styles.avatarFallback}>
-                            {c.name?.[0] || "C"}
+                            {c.name?.charAt(0) || "C"}
                           </div>
                         )}
                         <div>
@@ -201,23 +218,23 @@ const ManagerCustomers = () => {
                         </div>
                       </div>
                     </td>
+
                     <td>{c.email}</td>
                     <td>{c.phone || "—"}</td>
+
                     <td>{c.totalTrips}</td>
                     <td>{c.deliveredTrips}</td>
                     <td>{c.cancelledTrips}</td>
+
                     <td>{formatDate(c.lastTripAt)}</td>
-                    <td>
-                      $
-                      {c.totalAmount?.toFixed
-                        ? c.totalAmount.toFixed(2)
-                        : Number(c.totalAmount || 0).toFixed(2)}
-                    </td>
+                    <td>{formatMoney(c.totalAmount)}</td>
+
                     <td>
                       <button
                         type="button"
                         className={styles.viewButton}
                         onClick={() => openDrawer(c.customerId)}
+                        style={{ background: branding.primaryColor }}
                       >
                         View
                       </button>
@@ -229,12 +246,12 @@ const ManagerCustomers = () => {
           </div>
         )}
 
-        {/* Pagination */}
+        {/* PAGINATION */}
         {totalPages > 1 && (
           <div className={styles.paginationRow}>
             <button
               type="button"
-              onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page === 1}
             >
               Previous
@@ -245,7 +262,7 @@ const ManagerCustomers = () => {
             <button
               type="button"
               onClick={() =>
-                setPage((prev) => (prev < totalPages ? prev + 1 : prev))
+                setPage((p) => (p < totalPages ? p + 1 : p))
               }
               disabled={page >= totalPages}
             >
@@ -255,14 +272,19 @@ const ManagerCustomers = () => {
         )}
       </div>
 
-      {/* Drawer */}
+      {/* DRAWER */}
       <ManagerCustomerDrawer
         open={drawerOpen}
         onClose={closeDrawer}
+        loading={loadingDetails}
         details={
           loadingDetails
             ? null
-            : selectedCustomerDetails || { customer: null, stats: null, recentTrips: [] }
+            : selectedDetails || {
+                customer: null,
+                stats: null,
+                trips: [],
+              }
         }
       />
     </div>

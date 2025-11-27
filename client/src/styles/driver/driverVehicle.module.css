@@ -1,0 +1,24 @@
+.page {
+  padding: 24px;
+}
+
+.title {
+  font-size: 26px;
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+
+.card {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.08);
+  width: 100%;
+  max-width: 460px;
+  line-height: 1.6;
+}
+
+.card p {
+  font-size: 15px;
+  color: #334155;
+}

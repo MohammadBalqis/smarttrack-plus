@@ -1,10 +1,14 @@
-import React, { useEffect, useState, useContext } from "react";
+// client/src/pages/company/CompanyDashboard.jsx
+import React, { useEffect, useState } from "react";
 import {
   getCompanyDashboardStatsApi,
   getCompanyDashboardRecentTripsApi,
   getCompanyDashboardRecentOrdersApi,
   getCompanyDashboardRecentPaymentsApi,
 } from "../../api/companyDashboardApi";
+
+import { getBrandingApi } from "../../api/brandingApi";
+import { useBranding } from "../../context/BrandingContext";
 
 import {
   LineChart,
@@ -16,7 +20,6 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-import { BrandingContext } from "../../context/BrandingContext"; // ⬅ NEW
 import styles from "../../styles/company/companyDashboard.module.css";
 
 const CompanyDashboard = () => {
@@ -25,12 +28,21 @@ const CompanyDashboard = () => {
   const [recentOrders, setRecentOrders] = useState([]);
   const [recentPayments, setRecentPayments] = useState([]);
 
-  // ⬅ GET BRANDING COLORS
-  const { branding } = useContext(BrandingContext);
+  const { branding, updateBranding } = useBranding();
 
   useEffect(() => {
+    loadBranding();
     loadDashboard();
   }, []);
+
+  const loadBranding = async () => {
+    try {
+      const res = await getBrandingApi();
+      updateBranding(res.data.branding);
+    } catch (err) {
+      console.error("Branding load error:", err);
+    }
+  };
 
   const loadDashboard = async () => {
     try {
@@ -50,9 +62,6 @@ const CompanyDashboard = () => {
     }
   };
 
-  /* ================================
-      BRANDING COLORS
-  ================================= */
   const primary = branding?.primaryColor || "#1F2937";
   const accent = branding?.accentColor || "#2563EB";
 
@@ -65,9 +74,7 @@ const CompanyDashboard = () => {
         Overview of company activity & performance
       </p>
 
-      {/* ============================
-        KPI CARDS
-      ============================ */}
+      {/* KPI CARDS */}
       <div className={styles.kpiGrid}>
         <div className={styles.card}>
           <h4 style={{ color: primary }}>Total Trips</h4>
@@ -105,9 +112,7 @@ const CompanyDashboard = () => {
         </div>
       </div>
 
-      {/* ============================
-        REVENUE CHART
-      ============================ */}
+      {/* REVENUE CHART */}
       <div className={styles.chartCard}>
         <h3 style={{ color: primary }}>Revenue Trend</h3>
 
@@ -123,16 +128,14 @@ const CompanyDashboard = () => {
             <Line
               type="monotone"
               dataKey="totalAmount"
-              stroke={accent} // BRANDING COLOR
+              stroke={accent}
               strokeWidth={2}
             />
           </LineChart>
         </ResponsiveContainer>
       </div>
 
-      {/* ============================
-        RECENT SECTIONS
-      ============================ */}
+      {/* RECENT SECTIONS */}
       <div className={styles.rowsGrid}>
         {/* Recent Trips */}
         <div className={styles.listCard}>

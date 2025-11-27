@@ -1,11 +1,11 @@
 import React from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { customerMenu } from "../components/sidebar/sidebarItems";
+import { driverMenu } from "../components/sidebar/sidebarItems";
 
 import styles from "../styles/layouts/dashboardLayout.module.css";
 
-const CustomerLayout = () => {
+const DriverLayout = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
@@ -19,28 +19,29 @@ const CustomerLayout = () => {
       {/* ================================
           SIDEBAR (NO BRANDING)
       ================================= */}
-      <aside className={styles.sidebar} style={{ background: "#1F2937" }}>
+      <aside className={styles.sidebar} style={{ background: "#1E293B" }}>
         <div className={styles.logoBox}>
-          {/* PROFILE IMAGE */}
+
+          {/* DRIVER PROFILE PICTURE */}
           {user?.profileImage ? (
             <img
               src={user.profileImage}
-              alt="Customer"
+              alt="Driver"
               className={styles.profileImgLarge}
             />
           ) : (
-            <div className={styles.defaultLogo}>Customer</div>
+            <div className={styles.defaultLogo}>Driver</div>
           )}
 
-          {/* CUSTOMER NAME */}
-          <p className={styles.companyShort}>{user?.name || "Customer"}</p>
+          {/* DRIVER NAME */}
+          <p className={styles.companyShort}>{user?.name || "Driver"}</p>
 
-          <div className={styles.roleLabel}>CUSTOMER</div>
+          <div className={styles.roleLabel}>DRIVER</div>
         </div>
 
         {/* MENU */}
         <nav className={styles.menu}>
-          {customerMenu.map((item) => (
+          {driverMenu.map((item) => (
             <NavLink
               key={item.path}
               to={item.path}
@@ -48,7 +49,7 @@ const CustomerLayout = () => {
                 isActive ? styles.activeLink : styles.link
               }
               style={({ isActive }) =>
-                isActive ? { background: "#374151" } : undefined
+                isActive ? { background: "#334155" } : undefined
               }
             >
               <span className={styles.icon}>{item.icon}</span>
@@ -62,7 +63,10 @@ const CustomerLayout = () => {
           MAIN CONTENT AREA
       ================================= */}
       <div className={styles.main}>
-        <header className={styles.topbar} style={{ borderBottom: "3px solid #1F2937" }}>
+        <header
+          className={styles.topbar}
+          style={{ borderBottom: "3px solid #1E293B" }}
+        >
           <div className={styles.userInfo}>
             {user?.profileImage && (
               <img
@@ -72,7 +76,7 @@ const CustomerLayout = () => {
               />
             )}
 
-            <span>{user?.name || "Customer"}</span>
+            <span>{user?.name || "Driver"}</span>
 
             <span className={styles.roleChip}>{user?.role}</span>
           </div>
@@ -90,4 +94,4 @@ const CustomerLayout = () => {
   );
 };
 
-export default CustomerLayout;
+export default DriverLayout;

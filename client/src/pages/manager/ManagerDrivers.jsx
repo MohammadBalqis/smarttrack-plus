@@ -3,11 +3,12 @@ import React, { useEffect, useState } from "react";
 import {
   getManagerDriversApi,
   toggleManagerDriverStatusApi,
-  updateManagerDriverApi, // uses company/manager driver update route
+  updateManagerDriverApi,
   getManagerDriverStatsApi,
   getManagerDriverRecentTripsApi,
 } from "../../api/managerDriversApi";
 
+import { useBranding } from "../../context/BrandingContext";
 import styles from "../../styles/manager/managerDrivers.module.css";
 
 const emptyForm = {
@@ -17,33 +18,39 @@ const emptyForm = {
 };
 
 const ManagerDrivers = () => {
+  const { branding } = useBranding();
+
   const [drivers, setDrivers] = useState([]);
   const [statusFilter, setStatusFilter] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // Edit modal
   const [editingDriver, setEditingDriver] = useState(null);
   const [editForm, setEditForm] = useState(emptyForm);
   const [savingEdit, setSavingEdit] = useState(false);
 
+  // Stats modal
   const [statsDriver, setStatsDriver] = useState(null);
   const [stats, setStats] = useState(null);
   const [recentTrips, setRecentTrips] = useState([]);
   const [loadingStats, setLoadingStats] = useState(false);
 
+  /* ==========================
+      LOAD DRIVERS
+  ========================== */
   const loadDrivers = async () => {
     try {
       setLoading(true);
       setError("");
 
-      const params = {};
-      if (statusFilter) params.status = statusFilter;
+      const params = statusFilter ? { status: statusFilter } : {};
 
       const res = await getManagerDriversApi(params);
       setDrivers(res.data.drivers || []);
     } catch (err) {
       console.error(err);
-      setError("Failed to load drivers");
+      setError("Failed to load drivers.");
     } finally {
       setLoading(false);
     }
@@ -53,6 +60,9 @@ const ManagerDrivers = () => {
     loadDrivers();
   }, [statusFilter]);
 
+  /* ==========================
+      EDIT DRIVER
+  ========================== */
   const openEditModal = (driver) => {
     setEditingDriver(driver);
     setEditForm({
@@ -99,6 +109,9 @@ const ManagerDrivers = () => {
     }
   };
 
+  /* ==========================
+      TOGGLE STATUS
+  ========================== */
   const handleToggleStatus = async (driver) => {
     try {
       const newStatus = !driver.isActive;
@@ -110,10 +123,13 @@ const ManagerDrivers = () => {
       );
     } catch (err) {
       console.error(err);
-      setError("Failed to change driver status.");
+      setError("Failed to update driver status.");
     }
   };
 
+  /* ==========================
+      STATS MODAL
+  ========================== */
   const openStatsModal = async (driver) => {
     setStatsDriver(driver);
     setStats(null);
@@ -143,20 +159,28 @@ const ManagerDrivers = () => {
     setError("");
   };
 
+  const formatDate = (v) => {
+    if (!v) return "—";
+    const d = new Date(v);
+    return isNaN(d) ? "—" : d.toLocaleString();
+  };
+
   return (
     <div className={styles.page}>
+      {/* ==========================
+          HEADER
+      ========================== */}
       <div className={styles.headerRow}>
         <div>
           <h1 className={styles.title}>Drivers</h1>
-          <p className={styles.subtitle}>
-            View and manage your company&apos;s drivers.
-          </p>
+          <p className={styles.subtitle}>Manage your company’s drivers.</p>
         </div>
 
         <div className={styles.filters}>
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
+            style={{ borderColor: branding.primaryColor }}
           >
             <option value="">All</option>
             <option value="active">Active only</option>
@@ -167,6 +191,9 @@ const ManagerDrivers = () => {
 
       {error && <div className={styles.error}>{error}</div>}
 
+      {/* ==========================
+          DRIVERS TABLE
+      ========================== */}
       {loading ? (
         <p>Loading drivers...</p>
       ) : drivers.length === 0 ? (
@@ -185,6 +212,7 @@ const ManagerDrivers = () => {
                 <th>Actions</th>
               </tr>
             </thead>
+
             <tbody>
               {drivers.map((d) => (
                 <tr key={d._id}>
@@ -197,15 +225,20 @@ const ManagerDrivers = () => {
                           className={styles.avatar}
                         />
                       ) : (
-                        <div className={styles.avatarFallback}>
+                        <div
+                          className={styles.avatarFallback}
+                          style={{ background: branding.primaryColor }}
+                        >
                           {d.name?.[0] || "D"}
                         </div>
                       )}
                       <span>{d.name}</span>
                     </div>
                   </td>
+
                   <td>{d.email}</td>
                   <td>{d.phone || "—"}</td>
+
                   <td>
                     <span
                       className={
@@ -217,6 +250,7 @@ const ManagerDrivers = () => {
                       {d.isActive ? "Active" : "Inactive"}
                     </span>
                   </td>
+
                   <td>
                     {d.assignedVehicle
                       ? `${d.assignedVehicle.plateNumber || ""} ${
@@ -224,6 +258,7 @@ const ManagerDrivers = () => {
                         }`
                       : "—"}
                   </td>
+
                   <td>
                     <span
                       className={
@@ -235,6 +270,7 @@ const ManagerDrivers = () => {
                       {d.onlineStatus || "offline"}
                     </span>
                   </td>
+
                   <td className={styles.actionsCell}>
                     <button
                       type="button"
@@ -243,6 +279,7 @@ const ManagerDrivers = () => {
                     >
                       Stats
                     </button>
+
                     <button
                       type="button"
                       className={styles.smallBtn}
@@ -250,6 +287,7 @@ const ManagerDrivers = () => {
                     >
                       Edit
                     </button>
+
                     <button
                       type="button"
                       className={styles.smallBtn}
@@ -265,14 +303,15 @@ const ManagerDrivers = () => {
         </div>
       )}
 
-      {/* Edit Modal */}
+      {/* ==========================
+          EDIT MODAL
+      ========================== */}
       {editingDriver && (
         <div className={styles.modalOverlay}>
           <div className={styles.modal}>
             <div className={styles.modalHeader}>
-              <h2>Edit Driver</h2>
+              <h2 style={{ color: branding.primaryColor }}>Edit Driver</h2>
               <button
-                type="button"
                 className={styles.closeBtn}
                 onClick={closeEditModal}
               >
@@ -315,15 +354,17 @@ const ManagerDrivers = () => {
               <div className={styles.modalActions}>
                 <button
                   type="button"
-                  onClick={closeEditModal}
                   className={styles.secondaryBtn}
+                  onClick={closeEditModal}
                 >
                   Cancel
                 </button>
+
                 <button
                   type="submit"
                   className={styles.primaryBtn}
                   disabled={savingEdit}
+                  style={{ background: branding.primaryColor }}
                 >
                   {savingEdit ? "Saving..." : "Save Changes"}
                 </button>
@@ -333,17 +374,17 @@ const ManagerDrivers = () => {
         </div>
       )}
 
-      {/* Stats Modal */}
+      {/* ==========================
+          STATS MODAL
+      ========================== */}
       {statsDriver && (
         <div className={styles.modalOverlay}>
           <div className={styles.modal}>
             <div className={styles.modalHeader}>
-              <h2>Driver Stats — {statsDriver.name}</h2>
-              <button
-                type="button"
-                className={styles.closeBtn}
-                onClick={closeStatsModal}
-              >
+              <h2 style={{ color: branding.primaryColor }}>
+                Driver Stats — {statsDriver.name}
+              </h2>
+              <button className={styles.closeBtn} onClick={closeStatsModal}>
                 ✕
               </button>
             </div>
@@ -355,19 +396,19 @@ const ManagerDrivers = () => {
                 {stats && (
                   <div className={styles.statsGrid}>
                     <div className={styles.statCard}>
-                      <span className={styles.statLabel}>
-                        Delivered Trips
-                      </span>
+                      <span className={styles.statLabel}>Delivered Trips</span>
                       <span className={styles.statNumber}>
                         {stats.delivered}
                       </span>
                     </div>
+
                     <div className={styles.statCard}>
                       <span className={styles.statLabel}>Active Trips</span>
                       <span className={styles.statNumber}>
                         {stats.activeTrips}
                       </span>
                     </div>
+
                     <div className={styles.statCard}>
                       <span className={styles.statLabel}>
                         Total Distance (km)
@@ -394,6 +435,7 @@ const ManagerDrivers = () => {
                           <th>Created</th>
                         </tr>
                       </thead>
+
                       <tbody>
                         {recentTrips.map((t) => (
                           <tr key={t._id}>
@@ -406,11 +448,7 @@ const ManagerDrivers = () => {
                                   }`
                                 : "—"}
                             </td>
-                            <td>
-                              {t.createdAt
-                                ? new Date(t.createdAt).toLocaleString()
-                                : ""}
-                            </td>
+                            <td>{formatDate(t.createdAt)}</td>
                           </tr>
                         ))}
                       </tbody>

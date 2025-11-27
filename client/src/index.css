@@ -66,3 +66,13 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+:root {
+  --brand-primary: #2563eb;
+  --brand-accent: #10b981;
+  --brand-secondary: #1f2937;
+  --brand-bg: #f3f4f6;
+
+  --brand-sidebar-bg: #111827;
+  --brand-sidebar-text: #e5e7eb;
+  --brand-header-text: #ffffff;
+}

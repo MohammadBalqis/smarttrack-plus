@@ -4,10 +4,14 @@ import {
   getManagerOrdersApi,
   getManagerOrdersSummaryApi,
 } from "../../api/managerOrdersApi";
+
+import { useBranding } from "../../context/BrandingContext";
 import ManagerOrderDrawer from "../../components/manager/ManagerOrderDrawer";
 import styles from "../../styles/manager/managerOrders.module.css";
 
 const ManagerOrders = () => {
+  const { branding } = useBranding();
+
   // List + pagination
   const [orders, setOrders] = useState([]);
   const [total, setTotal] = useState(0);
@@ -23,27 +27,27 @@ const ManagerOrders = () => {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
-  // UI state
+  // UI
   const [loading, setLoading] = useState(false);
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Summary
+  // Summary cards
   const [summary, setSummary] = useState(null);
 
   // Drawer
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
 
+  /* ==========================================================
+     LOAD ORDERS
+  ========================================================== */
   const loadOrders = async () => {
     try {
       setLoading(true);
       setError("");
 
-      const params = {
-        page,
-        limit,
-      };
+      const params = { page, limit };
 
       if (statusFilter) params.status = statusFilter;
       if (search.trim()) params.search = search.trim();
@@ -54,23 +58,26 @@ const ManagerOrders = () => {
 
       const res = await getManagerOrdersApi(params);
 
-      const data = res.data || {};
-      setOrders(data.orders || []);
-      setTotal(data.total || 0);
-      setTotalPages(data.totalPages || 1);
+      setOrders(res.data.orders || []);
+      setTotal(res.data.total || 0);
+      setTotalPages(res.data.totalPages || 1);
     } catch (err) {
       console.error("Error loading orders:", err);
-      setError(
-        err.response?.data?.error || "Failed to load orders. Please try again."
-      );
+      const msg =
+        err.response?.data?.error || "Failed to load orders. Please try again.";
+      setError(msg);
     } finally {
       setLoading(false);
     }
   };
 
+  /* ==========================================================
+     LOAD SUMMARY
+  ========================================================== */
   const loadSummary = async () => {
     try {
       setSummaryLoading(true);
+
       const params = {};
       if (startDate) params.startDate = startDate;
       if (endDate) params.endDate = endDate;
@@ -88,14 +95,15 @@ const ManagerOrders = () => {
 
   useEffect(() => {
     loadOrders();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, statusFilter, minTotal, maxTotal, startDate, endDate]);
 
-  // Reload summary when date filters change
   useEffect(() => {
     loadSummary();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [startDate, endDate]);
+
+  /* ==========================================================
+     HELPERS
+  ========================================================== */
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -103,8 +111,8 @@ const ManagerOrders = () => {
     loadOrders();
   };
 
-  const openDrawer = (order) => {
-    setSelectedOrder(order);
+  const openDrawer = (o) => {
+    setSelectedOrder(o);
     setDrawerOpen(true);
   };
 
@@ -119,21 +127,25 @@ const ManagerOrders = () => {
     return styles[key] || styles.badge_default;
   };
 
-  const formatMoney = (value) => {
-    if (typeof value !== "number") return "0.00";
-    return value.toFixed(2);
+  const formatMoney = (v) =>
+    typeof v === "number" ? v.toFixed(2) : "0.00";
+
+  const formatDateTime = (v) => {
+    if (!v) return "—";
+    const d = new Date(v);
+    return isNaN(d.getTime()) ? "—" : d.toLocaleString();
   };
 
-  const formatDateTime = (value) => {
-    if (!value) return "—";
-    const d = new Date(value);
-    if (Number.isNaN(d.getTime())) return "—";
-    return d.toLocaleString();
-  };
+  const shortId = (id) =>
+    id ? `#${String(id).slice(-6)}` : "#000000";
+
+  /* ==========================================================
+     RENDER
+  ========================================================== */
 
   return (
     <div className={styles.page}>
-      {/* Header */}
+      {/* ================= HEADER ================= */}
       <div className={styles.headerRow}>
         <div>
           <h1 className={styles.title}>Orders</h1>
@@ -152,7 +164,7 @@ const ManagerOrders = () => {
         </div>
       </div>
 
-      {/* Summary cards */}
+      {/* ================= SUMMARY CARDS ================= */}
       <div className={styles.summaryGrid}>
         <div className={styles.summaryCard}>
           <span className={styles.summaryLabel}>Delivered</span>
@@ -160,32 +172,32 @@ const ManagerOrders = () => {
             {summaryLoading ? "…" : summary?.deliveredCount ?? 0}
           </span>
         </div>
+
         <div className={styles.summaryCard}>
           <span className={styles.summaryLabel}>Pending</span>
           <span className={styles.summaryNumber}>
             {summaryLoading ? "…" : summary?.pendingCount ?? 0}
           </span>
         </div>
+
         <div className={styles.summaryCard}>
           <span className={styles.summaryLabel}>Cancelled</span>
           <span className={styles.summaryNumber}>
             {summaryLoading ? "…" : summary?.cancelledCount ?? 0}
           </span>
         </div>
+
         <div className={styles.summaryCard}>
           <span className={styles.summaryLabel}>Total Revenue</span>
           <span className={styles.summaryNumber}>
             $
-            {summaryLoading
-              ? "…"
-              : formatMoney(summary?.totalRevenue || 0)}
+            {summaryLoading ? "…" : formatMoney(summary?.totalRevenue || 0)}
           </span>
         </div>
       </div>
 
-      {/* Filters */}
+      {/* ================= FILTERS ================= */}
       <div className={styles.filtersRow}>
-        {/* Status */}
         <select
           value={statusFilter}
           onChange={(e) => {
@@ -204,7 +216,7 @@ const ManagerOrders = () => {
           <option value="cancelled">Cancelled</option>
         </select>
 
-        {/* Date range */}
+        {/* Date filters */}
         <input
           type="date"
           value={startDate}
@@ -222,35 +234,35 @@ const ManagerOrders = () => {
           }}
         />
 
-        {/* Total range */}
+        {/* Total filters */}
         <input
           type="number"
-          min="0"
           placeholder="Min total"
           value={minTotal}
           onChange={(e) => setMinTotal(e.target.value)}
         />
         <input
           type="number"
-          min="0"
           placeholder="Max total"
           value={maxTotal}
           onChange={(e) => setMaxTotal(e.target.value)}
         />
 
         {/* Search */}
-        <form onSubmit={handleSearchSubmit} className={styles.searchForm}>
+        <form className={styles.searchForm} onSubmit={handleSearchSubmit}>
           <input
             type="text"
             placeholder="Search by ID, customer name, email, phone..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
-          <button type="submit">Search</button>
+          <button type="submit" style={{ background: branding.primaryColor }}>
+            Search
+          </button>
         </form>
       </div>
 
-      {/* Table */}
+      {/* ================= TABLE ================= */}
       <div className={styles.tableCard}>
         <div className={styles.tableHeaderRow}>
           <h3>Orders List</h3>
@@ -277,14 +289,16 @@ const ManagerOrders = () => {
                   <th></th>
                 </tr>
               </thead>
+
               <tbody>
                 {orders.map((o) => (
                   <tr key={o._id}>
                     <td className={styles.orderIdCell}>
                       <span className={styles.orderId}>
-                        #{String(o._id).slice(-6)}
+                        {shortId(o._id)}
                       </span>
                     </td>
+
                     <td>
                       <div className={styles.customerCell}>
                         <span className={styles.customerName}>
@@ -295,19 +309,25 @@ const ManagerOrders = () => {
                         </span>
                       </div>
                     </td>
+
                     <td>
                       <span className={getStatusBadgeClass(o.status)}>
                         {o.status}
                       </span>
                     </td>
+
                     <td>${formatMoney(o.total || 0)}</td>
+
                     <td>{formatDateTime(o.createdAt)}</td>
+
                     <td>{o.driverId?.name || "—"}</td>
+
                     <td>
                       <button
                         type="button"
                         className={styles.viewButton}
                         onClick={() => openDrawer(o)}
+                        style={{ background: branding.primaryColor }}
                       >
                         View
                       </button>
@@ -324,19 +344,19 @@ const ManagerOrders = () => {
           <div className={styles.paginationRow}>
             <button
               type="button"
-              onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page === 1}
             >
               Previous
             </button>
+
             <span>
               Page {page} / {totalPages}
             </span>
+
             <button
               type="button"
-              onClick={() =>
-                setPage((prev) => (prev < totalPages ? prev + 1 : prev))
-              }
+              onClick={() => setPage((p) => (p < totalPages ? p + 1 : p))}
               disabled={page >= totalPages}
             >
               Next
@@ -345,7 +365,7 @@ const ManagerOrders = () => {
         )}
       </div>
 
-      {/* Drawer */}
+      {/* ================= DRAWER ================= */}
       <ManagerOrderDrawer
         open={drawerOpen}
         onClose={closeDrawer}

@@ -1,9 +1,12 @@
-import React, { useEffect, useState } from "react";
+// client/src/components/company/CompanyCustomerDrawer.jsx
+import React, { useEffect, useState, useContext } from "react";
 import {
   getCompanyCustomerStatsApi,
   getCompanyCustomerOrdersApi,
   toggleCompanyCustomerStatusApi,
 } from "../../api/companyCustomersApi";
+
+import { BrandingContext } from "../../context/BrandingContext";
 
 import styles from "../../styles/company/companyCustomerDrawer.module.css";
 
@@ -14,7 +17,14 @@ const CompanyCustomerDrawer = ({ open, onClose, customer }) => {
   const [toggleLoading, setToggleLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Load stats + orders
+  // 🌈 BRANDING COLORS
+  const { branding } = useContext(BrandingContext);
+  const primary = branding?.primaryColor || "#1F2937";
+  const accent = branding?.accentColor || "#2563EB";
+
+  /* ==========================================================
+     LOAD STATS + ORDERS
+  ========================================================== */
   useEffect(() => {
     if (open && customer?._id) loadCustomerData(customer._id);
   }, [open, customer]);
@@ -39,15 +49,18 @@ const CompanyCustomerDrawer = ({ open, onClose, customer }) => {
     }
   };
 
-  // Toggle active/inactive
+  /* ==========================================================
+     TOGGLE ACTIVE/INACTIVE
+  ========================================================== */
   const handleToggleActive = async () => {
     if (!customer?._id) return;
 
     try {
       setToggleLoading(true);
+
       await toggleCompanyCustomerStatusApi(customer._id);
 
-      // Update local UI
+      // Update UI
       customer.isActive = !customer.isActive;
     } catch (err) {
       console.error(err);
@@ -66,24 +79,33 @@ const CompanyCustomerDrawer = ({ open, onClose, customer }) => {
 
   return (
     <div className={styles.drawerOverlay}>
-      <div className={styles.drawer}>
+      <div className={styles.drawer} style={{ borderColor: primary }}>
         {/* Close */}
         <button className={styles.closeBtn} onClick={onClose}>
           ✕
         </button>
 
         {/* Title */}
-        <h2 className={styles.drawerTitle}>Customer Details</h2>
+        <h2 className={styles.drawerTitle} style={{ color: primary }}>
+          Customer Details
+        </h2>
 
         {/* PROFILE */}
         <div className={styles.profileCard}>
-          <div className={styles.avatarCircle}>
+          <div
+            className={styles.avatarCircle}
+            style={{ backgroundColor: accent }}
+          >
             {customer.name?.charAt(0).toUpperCase() || "C"}
           </div>
 
           <div>
-            <h3 className={styles.customerName}>{customer.name}</h3>
+            <h3 className={styles.customerName} style={{ color: primary }}>
+              {customer.name}
+            </h3>
+
             <p className={styles.customerEmail}>{customer.email}</p>
+
             <p className={styles.customerPhone}>
               {customer.phoneNumber || "No phone"}
             </p>
@@ -94,6 +116,9 @@ const CompanyCustomerDrawer = ({ open, onClose, customer }) => {
                   ? styles.statusBadgeActive
                   : styles.statusBadgeInactive
               }
+              style={{
+                backgroundColor: customer.isActive ? accent : "#aaa",
+              }}
             >
               {customer.isActive ? "Active" : "Inactive"}
             </span>
@@ -105,6 +130,10 @@ const CompanyCustomerDrawer = ({ open, onClose, customer }) => {
             className={styles.toggleBtn}
             onClick={handleToggleActive}
             disabled={toggleLoading}
+            style={{
+              backgroundColor: customer.isActive ? "#d9534f" : accent,
+              color: "#fff",
+            }}
           >
             {toggleLoading
               ? "Updating..."
@@ -123,23 +152,23 @@ const CompanyCustomerDrawer = ({ open, onClose, customer }) => {
         {/* STATS */}
         {stats && (
           <div className={styles.statsGrid}>
-            <div className={styles.statCard}>
-              <h4>Total Orders</h4>
+            <div className={styles.statCard} style={{ borderColor: accent }}>
+              <h4 style={{ color: primary }}>Total Orders</h4>
               <p>{stats.totalOrders}</p>
             </div>
 
-            <div className={styles.statCard}>
-              <h4>Delivered</h4>
+            <div className={styles.statCard} style={{ borderColor: accent }}>
+              <h4 style={{ color: primary }}>Delivered</h4>
               <p>{stats.deliveredCount}</p>
             </div>
 
-            <div className={styles.statCard}>
-              <h4>Cancelled</h4>
+            <div className={styles.statCard} style={{ borderColor: accent }}>
+              <h4 style={{ color: primary }}>Cancelled</h4>
               <p>{stats.cancelledCount}</p>
             </div>
 
-            <div className={styles.statCard}>
-              <h4>Total Spent</h4>
+            <div className={styles.statCard} style={{ borderColor: accent }}>
+              <h4 style={{ color: primary }}>Total Spent</h4>
               <p>${stats.totalSpent?.toFixed(2) || "0.00"}</p>
             </div>
           </div>
@@ -147,7 +176,7 @@ const CompanyCustomerDrawer = ({ open, onClose, customer }) => {
 
         {/* ORDERS */}
         <div className={styles.section}>
-          <h3>Customer Orders</h3>
+          <h3 style={{ color: primary }}>Customer Orders</h3>
 
           {orders.length === 0 ? (
             <p className={styles.empty}>No orders found.</p>
@@ -155,7 +184,7 @@ const CompanyCustomerDrawer = ({ open, onClose, customer }) => {
             <div className={styles.tableWrapper}>
               <table className={styles.table}>
                 <thead>
-                  <tr>
+                  <tr style={{ background: primary, color: "#fff" }}>
                     <th>Date</th>
                     <th>Status</th>
                     <th>Total</th>
@@ -166,11 +195,24 @@ const CompanyCustomerDrawer = ({ open, onClose, customer }) => {
                   {orders.map((o) => (
                     <tr key={o._id}>
                       <td>{new Date(o.createdAt).toLocaleString()}</td>
+
                       <td>
-                        <span className={styles[`badge_${o.status}`]}>
+                        <span
+                          className={styles[`badge_${o.status}`]}
+                          style={{
+                            background:
+                              o.status === "delivered"
+                                ? accent
+                                : o.status === "cancelled"
+                                ? "#d9534f"
+                                : primary,
+                            color: "#fff",
+                          }}
+                        >
                           {o.status}
                         </span>
                       </td>
+
                       <td>${o.total?.toFixed(2) || "0.00"}</td>
                       <td>{o.driverId?.name || "—"}</td>
                     </tr>

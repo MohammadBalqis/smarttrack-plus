@@ -1,8 +1,8 @@
 // client/src/components/company/CompanyDriverDrawer.jsx
 import React, { useEffect, useState } from "react";
 import {
-  getDriverStatsApi,
-  getDriverRecentTripsApi,
+  getCompanyDriverStatsApi,
+  getCompanyDriverRecentTripsApi,
 } from "../../api/companyDriversApi";
 
 import styles from "../../styles/company/companyDriverDrawer.module.css";
@@ -25,8 +25,8 @@ const CompanyDriverDrawer = ({ open, onClose, driver }) => {
       setError("");
 
       const [statsRes, tripsRes] = await Promise.all([
-        getDriverStatsApi(driverId),
-        getDriverRecentTripsApi(driverId),
+        getCompanyDriverStatsApi(driverId),
+        getCompanyDriverRecentTripsApi(driverId),
       ]);
 
       if (statsRes.data.ok) setStats(statsRes.data.stats);
