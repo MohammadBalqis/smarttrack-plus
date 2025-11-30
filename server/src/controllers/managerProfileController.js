@@ -1,6 +1,6 @@
 // server/src/controllers/manager/managerProfileController.js
 
-import User from "../../models/User.js";
+import User from "../models/User.js";
 
 export const getManagerProfile = async (req, res) => {
   try {

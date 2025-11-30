@@ -40,7 +40,7 @@ import CustomerDashboard from "./pages/customer/CustomerDashboard";
 import CustomerTrips from "./pages/customer/CustomerTrips";
 import CustomerPayments from "./pages/customer/CustomerPayments";
 import CustomerProfile from "./pages/customer/CustomerProfile";
-
+import CustomerTrackTrip from "./pages/customer/TrackTrip";
 function App() {
   return (
     <AuthProvider>
@@ -116,9 +116,13 @@ function App() {
             }
           >
             <Route index element={<CustomerDashboard />} />
+            <Route path="create-trip" element={<CustomerCreateTrip />} /> {/* ⬅ NEW */}
             <Route path="trips" element={<CustomerTrips />} />
+            <Route path="trips/history" element={<CustomerTripHistory />} />
+            <Route path="trips/:tripId" element={<CustomerTrackTrip />} />
             <Route path="payments" element={<CustomerPayments />} />
             <Route path="profile" element={<CustomerProfile />} />
+            <Route path="select-company" element={<SelectCompany />} />
           </Route>
 
           {/* ==========================================================

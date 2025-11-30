@@ -1,45 +1,74 @@
-import React from "react";
+// client/src/layout/CustomerLayout.jsx
+import React, { useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { customerMenu } from "../components/sidebar/sidebarItems";
 
-import styles from "../styles/layouts/dashboardLayout.module.css";
+import styles from "../styles/layouts/customerLayout.module.css";
 
 const CustomerLayout = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
     navigate("/login");
   };
 
+  const closeSidebar = () => setSidebarOpen(false);
+
   return (
-    <div className={styles.container}>
-      {/* ================================
-          SIDEBAR (CUSTOMER)
-      ================================= */}
-      <aside className={styles.sidebar} style={{ background: "#0F172A" }}>
-        <div className={styles.logoBox}>
-          {/* SYSTEM NAME */}
-          <div className={styles.appName}>SmartTrack+</div>
-          <div className={styles.appTagline}>Global Customer</div>
+    <div className={styles.shell}>
+      {/* MOBILE BACKDROP */}
+      {sidebarOpen && (
+        <div
+          className={styles.backdrop}
+          onClick={closeSidebar}
+        />
+      )}
 
-          {/* PROFILE IMAGE */}
-          {user?.profileImage ? (
-            <img
-              src={user.profileImage}
-              alt="Customer"
-              className={styles.profileImgLarge}
-            />
-          ) : (
-            <div className={styles.defaultLogo}>Customer</div>
-          )}
+      {/* SIDEBAR */}
+      <aside
+        className={`${styles.sidebar} ${
+          sidebarOpen ? styles.sidebarOpen : ""
+        }`}
+      >
+        {/* Brand / Profile */}
+        <div className={styles.brandBox}>
+          <div className={styles.brandRow}>
+            <div className={styles.brandIcon}>🚀</div>
+            <div>
+              <div className={styles.brandTitle}>SmartTrack+</div>
+              <div className={styles.brandSubtitle}>Customer App</div>
+            </div>
+          </div>
 
-          {/* CUSTOMER NAME */}
-          <p className={styles.companyShort}>{user?.name || "Customer"}</p>
+          <div className={styles.profileBlock}>
+            {user?.profileImage ? (
+              <img
+                src={user.profileImage}
+                alt={user.name || "Customer"}
+                className={styles.profileImgLarge}
+              />
+            ) : (
+              <div className={styles.profilePlaceholder}>
+                {(user?.name || "C")
+                  .charAt(0)
+                  .toUpperCase()}
+              </div>
+            )}
 
-          <div className={styles.roleLabel}>CUSTOMER</div>
+            <div>
+              <div className={styles.profileName}>
+                {user?.name || "Customer"}
+              </div>
+              <div className={styles.profileEmail}>
+                {user?.email || ""}
+              </div>
+              <span className={styles.roleChip}>CUSTOMER</span>
+            </div>
+          </div>
         </div>
 
         {/* MENU */}
@@ -48,36 +77,46 @@ const CustomerLayout = () => {
             <NavLink
               key={item.path}
               to={item.path}
+              onClick={closeSidebar}
               className={({ isActive }) =>
-                isActive ? styles.activeLink : styles.link
-              }
-              style={({ isActive }) =>
-                isActive ? { background: "#374151" } : undefined
+                isActive ? styles.menuLinkActive : styles.menuLink
               }
             >
-              <span className={styles.icon}>{item.icon}</span>
-              {item.label}
+              <span className={styles.menuIcon}>{item.icon}</span>
+              <span>{item.label}</span>
             </NavLink>
           ))}
         </nav>
+
+        {/* Sidebar footer */}
+        <div className={styles.sidebarFooter}>
+          <span className={styles.footerAppName}>SmartTrack+</span>
+          <span className={styles.footerVersion}>v1.0</span>
+        </div>
       </aside>
 
-      {/* ================================
-          MAIN CONTENT AREA
-      ================================= */}
+      {/* MAIN AREA */}
       <div className={styles.main}>
-        <header
-          className={styles.topbar}
-          style={{ borderBottom: "3px solid #0F172A" }}
-        >
-          {/* LEFT: SYSTEM NAME (visible on all pages) */}
-          <div className={styles.topbarBrand}>
-            <span className={styles.topbarBrandMain}>SmartTrack+</span>
-            <span className={styles.topbarBrandSub}>Customer Portal</span>
+        {/* TOPBAR */}
+        <header className={styles.topbar}>
+          <div className={styles.leftTop}>
+            <button
+              type="button"
+              className={styles.menuToggle}
+              onClick={() => setSidebarOpen((prev) => !prev)}
+            >
+              ☰
+            </button>
+
+            <div className={styles.topBrandText}>
+              <span className={styles.topAppName}>SmartTrack+</span>
+              <span className={styles.topAppTagline}>
+                Track your deliveries in real time
+              </span>
+            </div>
           </div>
 
-          {/* RIGHT: USER INFO */}
-          <div className={styles.userInfo}>
+          <div className={styles.topUser}>
             {user?.profileImage && (
               <img
                 src={user.profileImage}
@@ -86,16 +125,26 @@ const CustomerLayout = () => {
               />
             )}
 
-            <span>{user?.name || "Customer"}</span>
+            <div className={styles.topUserText}>
+              <span className={styles.topUserName}>
+                {user?.name || "Customer"}
+              </span>
+              <span className={styles.topUserRole}>
+                {user?.role || "customer"}
+              </span>
+            </div>
 
-            <span className={styles.roleChip}>{user?.role}</span>
-
-            <button onClick={handleLogout} className={styles.logoutBtn}>
+            <button
+              type="button"
+              className={styles.logoutBtn}
+              onClick={handleLogout}
+            >
               Logout
             </button>
           </div>
         </header>
 
+        {/* PAGE CONTENT */}
         <main className={styles.content}>
           <Outlet />
         </main>

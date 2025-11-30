@@ -1,5 +1,5 @@
 // server/src/controllers/brandingController.js
-import Branding from "../models/Branding.js";
+import Branding from "../models/Brand.js";
 import User from "../models/User.js";
 import { resolveCompanyId } from "../utils/resolveCompanyId.js";
 

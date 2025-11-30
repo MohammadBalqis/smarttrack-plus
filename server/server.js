@@ -73,8 +73,9 @@ import companyProductRoutes from "./src/routes/companyProductRoutes.js";
 import companyVehicleRoutes from "./src/routes/companyVehicleRoutes.js";
 import companyPaymentRoutes from "./src/routes/companyPaymentRoutes.js";
 import companyDriverRoutes from "./src/routes/companyDriverRoutes.js";
-import companyOrdersRoutes from "./src/routes/companyOrderRoutes.js"; // NEW
+import companyOrdersRoutes from "./src/routes/companyOrderRoutes.js";
 import companyBrandingRoutes from "./src/routes/companyBrandingRoutes.js";
+
 import managerDashboardRoutes from "./src/routes/managerDashboardRoutes.js";
 import managerDriverRoutes from "./src/routes/managerDriverRoutes.js";
 import managerVehicleRoutes from "./src/routes/managerVehicleRoutes.js";
@@ -83,13 +84,16 @@ import managerCustomerRoutes from "./src/routes/managerCustomerRoutes.js";
 import managerOrderRoutes from "./src/routes/managerOrdersRoutes.js";
 import managerNotificationRoutes from "./src/routes/managerNotificationRoutes.js";
 import managerProfileRoutes from "./src/routes/managerProfileRoutes.js";
+import managerPaymentsRoutes from "./src/routes/managerPaymentsRoutes.js";
+
 import driverRoutes from "./src/routes/driverRoutes.js";
 import customerRoutes from "./src/routes/customerRoutes.js";
 import customerTripRoutes from "./src/routes/customerTripRoutes.js";
-import managerPaymentsRoutes from "./src/routes/managerPaymentsRoutes.js";
+
 import productRoutes from "./src/routes/productRoutes.js";
 import paymentRoutes from "./src/routes/paymentRoutes.js";
 import invoiceRoutes from "./src/routes/invoiceRoutes.js";
+
 import companySettingsRoutes from "./src/routes/companySettingsRoutes.js";
 import adminStatsRoutes from "./src/routes/adminStatsRoutes.js";
 import globalSettingsRoutes from "./src/routes/globalSettingsRoutes.js";
@@ -108,7 +112,6 @@ app.use("/api/public/company", publicApiRoutes);
 /* ==========================================================
    📌 MAIN ROUTES
 ========================================================== */
-// Auth
 app.use("/api/auth", authRoutes);
 
 // SuperAdmin
@@ -128,6 +131,7 @@ app.use("/api/company/payments", companyPaymentRoutes);
 app.use("/api/company/branding", brandingRoutes);
 app.use("/api/company/settings", companySettingsRoutes);
 app.use("/api/company/branding", companyBrandingRoutes);
+
 // Manager
 app.use("/api/manager/dashboard", managerDashboardRoutes);
 app.use("/api/manager/drivers", managerDriverRoutes);
@@ -138,6 +142,7 @@ app.use("/api/manager/orders", managerOrderRoutes);
 app.use("/api/manager/notifications", managerNotificationRoutes);
 app.use("/api/manager/profile", managerProfileRoutes);
 app.use("/api/manager", managerPaymentsRoutes);
+
 // Driver
 app.use("/api/driver", driverRoutes);
 
@@ -174,7 +179,7 @@ const connectDB = async () => {
 };
 
 /* ==========================================================
-   🔌 SOCKET.IO
+   🔌 SOCKET.IO (PREMIUM VERSION)
 ========================================================== */
 const server = http.createServer(app);
 
@@ -191,8 +196,44 @@ app.set("io", io);
 io.on("connection", (socket) => {
   console.log("🔵 Socket connected:", socket.id);
 
+  /* USER REGISTRATION */
   socket.on("register", (userId) => {
     if (userId) socket.join(String(userId));
+  });
+
+  /* JOIN TRIP ROOM */
+  socket.on("join_trip", ({ tripId }) => {
+    if (!tripId) return;
+    socket.join(`trip:${tripId}`);
+  });
+
+  /* LEAVE TRIP ROOM */
+  socket.on("leave_trip", ({ tripId }) => {
+    if (!tripId) return;
+    socket.leave(`trip:${tripId}`);
+  });
+
+  /* DRIVER LOCATION UPDATE */
+  socket.on("driver_location_update", ({ tripId, lat, lng }) => {
+    if (!tripId || !lat || !lng) return;
+
+    io.to(`trip:${tripId}`).emit("trip:location_update", {
+      tripId,
+      lat,
+      lng,
+      timestamp: Date.now(),
+    });
+  });
+
+  /* DRIVER STATUS UPDATE */
+  socket.on("driver_status_update", ({ tripId, status }) => {
+    if (!tripId || !status) return;
+
+    io.to(`trip:${tripId}`).emit("trip:status_update", {
+      tripId,
+      status,
+      timestamp: Date.now(),
+    });
   });
 
   socket.on("disconnect", () => {

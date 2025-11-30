@@ -12,3 +12,6 @@ export const selectCustomerCompanyApi = (companyId) =>
 // Get currently active company for this customer
 export const getActiveCustomerCompanyApi = () =>
   api.get("/customer/active-company");
+
+export const getCustomerActiveCompanyApi = () =>
+  apiClient.get("/customer-companies/active-company");

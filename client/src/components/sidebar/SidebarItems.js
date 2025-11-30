@@ -1,3 +1,5 @@
+// client/src/components/sidebar/sidebarItems.js
+
 export const managerMenu = [
   { label: "Dashboard", icon: "📊", path: "/manager" },
   { label: "Trips", icon: "🛣️", path: "/manager/trips" },
@@ -8,6 +10,7 @@ export const managerMenu = [
   { label: "Products", icon: "📦", path: "/manager/products" },
   { label: "Payments", icon: "💳", path: "/manager/payments" },
 ];
+
 export const companyMenu = [
   { label: "Dashboard", icon: "📊", path: "/company" },
   { label: "Products", icon: "📦", path: "/company/products" },
@@ -18,9 +21,12 @@ export const companyMenu = [
   { label: "Vehicles", icon: "🚘", path: "/company/vehicles" },
   { label: "Payments", icon: "💳", path: "/company/payments" },
 ];
+
+// 🚀 CUSTOMER MENU (GLOBAL CUSTOMER)
 export const customerMenu = [
-  { label: "Dashboard", icon: "🏢", path: "/customer" },          // shows companies
-  { label: "Active Orders", icon: "🚚", path: "/customer/trips" },
+  { label: "Dashboard", icon: "🏠", path: "/customer" },
+  { label: "New Order", icon: "🛒", path: "/customer/create-trip" }, // ⬅ NEW
+  { label: "My Trips", icon: "📦", path: "/customer/trips" },      // active + history tabs later
   { label: "Payments", icon: "💳", path: "/customer/payments" },
   { label: "Profile", icon: "👤", path: "/customer/profile" },
 ];

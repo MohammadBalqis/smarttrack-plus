@@ -8,3 +8,15 @@ export const getCustomerActiveTripsApi = () =>
 // History (delivered / cancelled)
 export const getCustomerHistoryTripsApi = () =>
   apiClient.get("/customer-trips/history");
+
+// ✅ Create new customer trip (order)
+export const createCustomerTripApi = (payload) =>
+  apiClient.post("/customer-trips/create", payload);
+
+// (For later: tracking screen)
+export const getCustomerTripDetailsApi = (tripId) =>
+  apiClient.get(`/customer-trips/details/${tripId}`);
+
+// ✅ Customer confirms delivery (will notify company/manager)
+export const markTripReceivedApi = (tripId) =>
+  apiClient.post(`/customer-trips/${tripId}/confirm-received`);

@@ -1,214 +1,158 @@
 .page {
   padding: 24px;
+  max-width: 900px;
+  margin: auto;
 }
 
-/* HEADER */
-.header {
-  display: flex;
-  justify-content: space-between;
-  gap: 18px;
-  margin-bottom: 20px;
-  align-items: center;
+/* Welcome Card */
+.welcomeCard {
+  background: white;
+  padding: 22px;
+  border-radius: 14px;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.06);
+  text-align: center;
 }
 
-.header h1 {
-  margin: 0 0 6px;
-  font-size: 22px;
+.title {
+  font-size: 28px;
   font-weight: 700;
-  color: #111827;
-}
-
-.header p {
-  margin: 0;
-  font-size: 14px;
-  color: #6b7280;
-}
-
-.kpiBox {
-  min-width: 130px;
-  text-align: right;
-}
-
-.kpiLabel {
-  display: block;
-  font-size: 12px;
-  color: #6b7280;
-}
-
-.kpiValue {
-  font-size: 26px;
-  font-weight: 700;
-  color: #111827;
-}
-
-/* ACTIVE COMPANY BANNER */
-.activeBanner {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
-  border-radius: 12px;
-  padding: 12px 14px;
-  margin-bottom: 16px;
-}
-
-.activeLabel {
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: #1d4ed8;
-}
-
-.activeName {
-  font-size: 16px;
-  font-weight: 700;
-  color: #111827;
-}
-
-.activeAddress {
-  font-size: 13px;
-  color: #4b5563;
-}
-
-.activeBadge {
-  padding: 4px 10px;
-  background: #1d4ed8;
-  color: white;
-  border-radius: 999px;
-  font-size: 12px;
-}
-
-/* SEARCH */
-.searchRow {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 14px;
-}
-
-.searchRow input {
-  flex: 1;
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px solid #d1d5db;
-  font-size: 14px;
-}
-
-.smallInfo {
-  font-size: 13px;
-  color: #6b7280;
-}
-
-.error {
-  color: #b91c1c;
-  font-size: 14px;
-  margin-bottom: 8px;
-}
-
-.empty {
-  font-size: 14px;
-  color: #6b7280;
-}
-
-/* GRID */
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 14px;
-}
-
-/* CARD */
-.card {
-  background: #ffffff;
-  border-radius: 12px;
-  padding: 14px 14px 12px;
-  border: 1px solid #e5e7eb;
-  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.03);
-}
-
-.cardHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
   margin-bottom: 6px;
 }
 
-.cardHeader h3 {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: #111827;
-}
-
-.category {
-  display: inline-block;
-  margin-top: 2px;
-  font-size: 11px;
-  padding: 2px 6px;
-  border-radius: 999px;
-  background: #eff6ff;
-  color: #1d4ed8;
-}
-
-.selectedChip {
-  padding: 4px 8px;
-  font-size: 11px;
-  border-radius: 999px;
-  background: #dcfce7;
-  color: #166534;
-}
-
-.address {
-  font-size: 13px;
-  color: #4b5563;
-  margin: 4px 0 6px;
-}
-
-/* META & FOOTER */
-.metaRow {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  font-size: 12px;
+.subtitle {
   color: #6b7280;
-  margin-bottom: 10px;
+  font-size: 15px;
 }
 
-.metaItem {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
+/* Company Card */
+.companyCard {
+  background: #f9fafb;
+  padding: 18px;
+  border-radius: 14px;
+  margin-top: 18px;
+  border: 1px solid #e5e7eb;
 }
 
-.footerRow {
+.companyHeader {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  gap: 14px;
 }
 
-.selectBtn {
-  padding: 7px 14px;
+.companyLogo {
+  width: 60px;
+  height: 60px;
+  object-fit: contain;
+}
+
+.companyLogoPlaceholder {
+  width: 60px;
+  height: 60px;
+  background: #e5e7eb;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 14px;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.companyName {
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.companyCategory {
   font-size: 13px;
+  color: #6b7280;
+  margin-top: 2px;
+}
+
+.changeCompanyBtn {
+  margin-top: 12px;
+  padding: 8px 14px;
   border-radius: 999px;
   border: none;
   background: #2563eb;
-  color: #ffffff;
+  color: white;
+  font-size: 14px;
   cursor: pointer;
 }
 
-.selectBtn:disabled {
-  background: #9ca3af;
-  cursor: default;
+/* Sections */
+.section {
+  margin-top: 30px;
 }
 
-/* MOBILE */
-@media (max-width: 640px) {
-  .header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
+.sectionTitle {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
 
-  .kpiBox {
-    text-align: left;
-  }
+.info {
+  color: #6b7280;
+}
+
+/* Trip List */
+.tripList {
+  display: grid;
+  gap: 14px;
+}
+
+.tripCard {
+  background: white;
+  padding: 18px;
+  border-radius: 14px;
+  border: 1px solid #e5e7eb;
+}
+
+.tripTitle {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.tripStatus {
+  color: #2563eb;
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+.trackBtn {
+  margin-top: 10px;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 8px;
+  background: #2563eb;
+  color: white;
+  cursor: pointer;
+}
+
+/* Quick Actions */
+.actionsGrid {
+  margin-top: 30px;
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+}
+
+.actionCard {
+  background: white;
+  padding: 18px;
+  text-align: center;
+  border-radius: 14px;
+  border: 1px solid #e5e7eb;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.actionCard:hover {
+  background: #f3f4f6;
+}
+
+.loading {
+  padding: 40px;
+  text-align: center;
+  color: #6b7280;
 }

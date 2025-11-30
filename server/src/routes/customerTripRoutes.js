@@ -170,5 +170,56 @@ router.get(
     }
   }
 );
+/* ==========================================================
+   ✅ 5. CUSTOMER CONFIRMS DELIVERY (mark as received)
+   ========================================================== */
+router.post(
+  "/:tripId/confirm-received",
+  protect,
+  authorizeRoles("customer"),
+  async (req, res) => {
+    try {
+      const { tripId } = req.params;
+
+      const trip = await Trip.findOne({
+        _id: tripId,
+        customerId: req.user._id,
+      });
+
+      if (!trip) {
+        return res.status(404).json({ error: "Trip not found" });
+      }
+
+      if (trip.status !== "delivered") {
+        return res.status(400).json({
+          error: "Trip is not delivered yet.",
+        });
+      }
+
+      if (trip.customerConfirmed) {
+        return res.json({
+          ok: true,
+          message: "Already confirmed.",
+          trip,
+        });
+      }
+
+      trip.customerConfirmed = true;
+      trip.confirmationTime = new Date();
+      await trip.save();
+
+      // (optional later) emit socket event to company/manager
+
+      res.json({
+        ok: true,
+        message: "Delivery confirmed. Thank you!",
+        trip,
+      });
+    } catch (err) {
+      console.error("❌ confirm-received error:", err.message);
+      res.status(500).json({ error: "Server error confirming delivery" });
+    }
+  }
+);
 
 export default router;

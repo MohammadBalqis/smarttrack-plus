@@ -1,175 +1,147 @@
 import React, { useEffect, useState } from "react";
-import {
-  getCustomerCompaniesApi,
-  selectCustomerCompanyApi,
-  getActiveCustomerCompanyApi,
-} from "../../api/customerCompanyApi";
+import { getActiveCompanyApi } from "../../api/customerCompaniesApi";
+import { getCustomerActiveTripsApi } from "../../api/customerTripsApi";
 import styles from "../../styles/customer/customerDashboard.module.css";
 
 const CustomerDashboard = () => {
-  const [companies, setCompanies] = useState([]);
-  const [activeCompany, setActiveCompany] = useState(null);
-  const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [selectingId, setSelectingId] = useState("");
-  const [error, setError] = useState("");
-
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      setError("");
-
-      const [companiesRes, activeRes] = await Promise.all([
-        getCustomerCompaniesApi(),
-        getActiveCustomerCompanyApi(),
-      ]);
-
-      setCompanies(companiesRes.data.companies || []);
-      if (activeRes.data.ok) {
-        setActiveCompany(activeRes.data.company || null);
-      } else {
-        setActiveCompany(null);
-      }
-    } catch (err) {
-      console.error(err);
-      const msg = err.response?.data?.error || "Failed to load companies.";
-      setError(msg);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [company, setCompany] = useState(null);
+  const [activeTrips, setActiveTrips] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadData();
+    const load = async () => {
+      try {
+        const res1 = await getActiveCompanyApi();
+        if (res1.data.ok) setCompany(res1.data.company);
+
+        const res2 = await getCustomerActiveTripsApi();
+        setActiveTrips(res2.data.trips || []);
+      } catch (err) {
+        console.error("Dashboard load error:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    load();
   }, []);
 
-  const handleSelect = async (companyId) => {
-    try {
-      setSelectingId(companyId);
-      setError("");
-      await selectCustomerCompanyApi(companyId);
-      await loadData();
-    } catch (err) {
-      console.error(err);
-      const msg =
-        err.response?.data?.error || "Failed to select this company.";
-      setError(msg);
-    } finally {
-      setSelectingId("");
-    }
-  };
-
-  const filtered = companies.filter((c) => {
-    if (!search.trim()) return true;
-    const q = search.toLowerCase();
-    return (
-      c.name?.toLowerCase().includes(q) ||
-      c.businessCategory?.toLowerCase().includes(q) ||
-      c.address?.toLowerCase().includes(q)
-    );
-  });
+  if (loading) {
+    return <div className={styles.loading}>Loading dashboard...</div>;
+  }
 
   return (
     <div className={styles.page}>
-      {/* HEADER */}
-      <div className={styles.header}>
-        <div>
-          <h1>Choose a company to order from</h1>
-          <p>
-            SmartTrack+ lets you order from any subscribed company. Select one
-            and start creating delivery requests.
-          </p>
-        </div>
-        <div className={styles.kpiBox}>
-          <span className={styles.kpiLabel}>Total companies</span>
-          <span className={styles.kpiValue}>{companies.length}</span>
-        </div>
+      {/* -------------------------------- */}
+      {/* WELCOME SECTION */}
+      {/* -------------------------------- */}
+      <div className={styles.welcomeCard}>
+        <h1 className={styles.title}>Welcome 👋</h1>
+        <p className={styles.subtitle}>
+          Manage your orders, track deliveries, and explore products.
+        </p>
       </div>
 
-      {/* ACTIVE COMPANY BANNER */}
-      {activeCompany && (
-        <div className={styles.activeBanner}>
-          <div>
-            <div className={styles.activeLabel}>Current company</div>
-            <div className={styles.activeName}>{activeCompany.name}</div>
-            {activeCompany.address && (
-              <div className={styles.activeAddress}>
-                {activeCompany.address}
+      {/* -------------------------------- */}
+      {/* SELECTED COMPANY INFO */}
+      {/* -------------------------------- */}
+      {company ? (
+        <div className={styles.companyCard}>
+          <div className={styles.companyHeader}>
+            {company.logo ? (
+              <img src={company.logo} alt="logo" className={styles.companyLogo} />
+            ) : (
+              <div className={styles.companyLogoPlaceholder}>
+                {company.name[0]}
               </div>
             )}
+
+            <div>
+              <h3 className={styles.companyName}>{company.name}</h3>
+              {company.businessCategory && (
+                <p className={styles.companyCategory}>
+                  {company.businessCategory.toUpperCase()}
+                </p>
+              )}
+            </div>
           </div>
-          <div className={styles.activeBadge}>Selected</div>
+
+          <button
+            className={styles.changeCompanyBtn}
+            onClick={() => (window.location.href = "/customer/select-company")}
+          >
+            Change Company
+          </button>
+        </div>
+      ) : (
+        <div className={styles.noCompanyBox}>
+          <p>No company selected yet.</p>
+          <button
+            className={styles.primaryBtn}
+            onClick={() => (window.location.href = "/customer/select-company")}
+          >
+            Select a Company
+          </button>
         </div>
       )}
 
-      {/* SEARCH */}
-      <div className={styles.searchRow}>
-        <input
-          type="text"
-          placeholder="Search by name, category, or address..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-        {loading && <span className={styles.smallInfo}>Loading…</span>}
+      {/* -------------------------------- */}
+      {/* ACTIVE ORDERS */}
+      {/* -------------------------------- */}
+      <div className={styles.section}>
+        <h2 className={styles.sectionTitle}>Active Deliveries</h2>
+
+        {activeTrips.length === 0 ? (
+          <p className={styles.info}>No active orders right now.</p>
+        ) : (
+          <div className={styles.tripList}>
+            {activeTrips.map((t) => (
+              <div key={t._id} className={styles.tripCard}>
+                <h4 className={styles.tripTitle}>
+                  Order #{t._id.slice(-5).toUpperCase()}
+                </h4>
+
+                <p className={styles.tripStatus}>{t.status}</p>
+
+                <button
+                  className={styles.trackBtn}
+                  onClick={() =>
+                    (window.location.href = `/customer/trips?trip=${t._id}`)
+                  }
+                >
+                  Track Order →
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
-      {error && <p className={styles.error}>{error}</p>}
+      {/* -------------------------------- */}
+      {/* QUICK ACTIONS */}
+      {/* -------------------------------- */}
+      <div className={styles.actionsGrid}>
+        <button
+          className={styles.actionCard}
+          onClick={() => (window.location.href = "/customer/products")}
+        >
+          📦 Browse Products
+        </button>
 
-      {/* GRID */}
-      {filtered.length === 0 && !loading ? (
-        <p className={styles.empty}>No companies available yet.</p>
-      ) : (
-        <div className={styles.grid}>
-          {filtered.map((c) => {
-            const isActive =
-              activeCompany && String(activeCompany._id) === String(c._id);
+        <button
+          className={styles.actionCard}
+          onClick={() => (window.location.href = "/customer/trips")}
+        >
+          🚚 Track Your Trips
+        </button>
 
-            return (
-              <div key={c._id} className={styles.card}>
-                <div className={styles.cardHeader}>
-                  <div>
-                    <h3>{c.name}</h3>
-                    {c.businessCategory && (
-                      <span className={styles.category}>
-                        {c.businessCategory.toUpperCase()}
-                      </span>
-                    )}
-                  </div>
-                  {isActive && <span className={styles.selectedChip}>Active</span>}
-                </div>
-
-                {c.address && (
-                  <p className={styles.address}>{c.address}</p>
-                )}
-
-                <div className={styles.metaRow}>
-                  {c.phone && (
-                    <span className={styles.metaItem}>📞 {c.phone}</span>
-                  )}
-                  {c.email && (
-                    <span className={styles.metaItem}>✉️ {c.email}</span>
-                  )}
-                </div>
-
-                <div className={styles.footerRow}>
-                  <button
-                    type="button"
-                    className={styles.selectBtn}
-                    onClick={() => handleSelect(c._id)}
-                    disabled={selectingId === c._id}
-                  >
-                    {selectingId === c._id
-                      ? "Selecting..."
-                      : isActive
-                      ? "Selected"
-                      : "Select company"}
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+        <button
+          className={styles.actionCard}
+          onClick={() => (window.location.href = "/customer/payments")}
+        >
+          💳 Payment History
+        </button>
+      </div>
     </div>
   );
 };

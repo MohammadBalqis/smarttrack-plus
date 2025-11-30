@@ -1,6 +1,6 @@
 // server/src/controllers/managerPaymentsController.js
 import Payment from "../models/Payment.js";
-import { resolveCompanyIdFromUser } from "../utils/resolveCompanyId.js";
+import { resolveCompanyId } from "../utils/resolveCompanyId.js";
 
 /* ==========================================================
    📌 GET MANAGER PAYMENTS (LIST + FILTERS)
