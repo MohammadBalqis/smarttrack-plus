@@ -447,3 +447,132 @@
     width: 100%;
   }
 }
+/* ============================= */
+/* PREMIUM DRAWER TABS & LAYOUT */
+/* ============================= */
+
+.tabRow {
+  display: flex;
+  gap: 10px;
+  margin: 12px 0 16px;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 8px;
+}
+
+.tabBtn {
+  padding: 6px 12px;
+  background: none;
+  border: none;
+  font-size: 14px;
+  cursor: pointer;
+  color: #475569;
+  font-weight: 500;
+}
+
+.tabBtnActive {
+  font-weight: 600;
+  border-bottom: 2px solid var(--brand-primary, #2563eb);
+}
+
+/* Overview */
+
+.overviewHeader {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.infoBox {
+  display: flex;
+  flex-direction: column;
+}
+
+.label {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.value {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.totalValue {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+/* Grid */
+.grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+/* Cards */
+.card {
+  background: #ffffff;
+  padding: 14px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  margin-top: 12px;
+}
+
+.cardTitle {
+  margin: 0 0 8px 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+/* Route */
+.routeRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.routeLabel {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.routeAddress {
+  font-size: 14px;
+  color: #1e293b;
+}
+
+.routeArrow {
+  font-size: 18px;
+  color: #64748b;
+}
+
+/* Items Totals */
+.totalsRow {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  margin-top: 12px;
+  gap: 10px;
+}
+
+/* Timeline */
+.timelineList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.timelineItem {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid #eef2f7;
+}
+
+.timelineStatus {
+  font-weight: 500;
+}
+
+.timelineTime {
+  font-size: 13px;
+  color: #64748b;
+}

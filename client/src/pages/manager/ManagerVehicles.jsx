@@ -1,328 +1,304 @@
 // client/src/pages/manager/ManagerVehicles.jsx
 import React, { useEffect, useState } from "react";
-import { getCompanyVehiclesApi } from "../../api/companyVehiclesApi";
-import { getCompanyDriversApi } from "../../api/companyDriversApi";
 import {
-  updateVehicleStatusApi,
-  getVehicleTripsApi,
-  assignVehicleDriverApi,
-} from "../../api/managerVehiclesApi";
+  getCompanyVehiclesApi,
+  createCompanyVehicleApi,
+  updateCompanyVehicleApi,
+  updateCompanyVehicleStatusApi,
+} from "../../api/companyVehiclesApi";
 
-import { useBranding } from "../../context/BrandingContext";
 import ManagerVehicleDrawer from "../../components/manager/ManagerVehicleDrawer";
+
 import styles from "../../styles/manager/managerVehicles.module.css";
 
+const emptyForm = {
+  plateNumber: "",
+  brand: "",
+  model: "",
+  type: "car",
+  capacityKg: "",
+};
+
 const ManagerVehicles = () => {
-  const { branding } = useBranding();
-
   const [vehicles, setVehicles] = useState([]);
-  const [drivers, setDrivers] = useState([]);
-
-  const [typeFilter, setTypeFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
-  const [driverFilter, setDriverFilter] = useState("");
-  const [plateSearch, setPlateSearch] = useState("");
-
   const [loading, setLoading] = useState(false);
-  const [driversLoading, setDriversLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // Filter
+  const [statusFilter, setStatusFilter] = useState("");
+
+  // Form
+  const [form, setForm] = useState(emptyForm);
+  const [saving, setSaving] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+
+  // Drawer
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState(null);
 
-  const [statusSavingId, setStatusSavingId] = useState(null);
-
-  /* ==========================================================
-     LOAD VEHICLES
-  ========================================================== */
+  // Load vehicles
   const loadVehicles = async () => {
     try {
       setLoading(true);
       setError("");
 
       const params = {};
-      if (typeFilter) params.type = typeFilter;
       if (statusFilter) params.status = statusFilter;
-      if (driverFilter) params.driverId = driverFilter;
-      if (plateSearch) params.plate = plateSearch;
 
       const res = await getCompanyVehiclesApi(params);
       setVehicles(res.data.vehicles || []);
     } catch (err) {
-      console.error("Error loading vehicles:", err);
-      const msg =
-        err.response?.data?.error || "Failed to load vehicles. Try again.";
-      setError(msg);
+      console.error(err);
+      setError("Failed to load vehicles.");
     } finally {
       setLoading(false);
     }
   };
 
-  /* ==========================================================
-     LOAD DRIVERS
-  ========================================================== */
-  const loadDrivers = async () => {
-    try {
-      setDriversLoading(true);
-      const res = await getCompanyDriversApi();
-      setDrivers(res.data.drivers || []);
-    } catch (err) {
-      console.error("Error loading drivers:", err);
-    } finally {
-      setDriversLoading(false);
-    }
-  };
-
   useEffect(() => {
     loadVehicles();
-  }, [typeFilter, statusFilter, driverFilter, plateSearch]);
+  }, [statusFilter]);
 
-  useEffect(() => {
-    loadDrivers();
-  }, []);
+  /* ---------------- Form Logic ---------------- */
 
-  /* ==========================================================
-     UI HELPERS
-  ========================================================== */
-  const openDrawer = (v) => {
-    setSelectedVehicle(v);
-    setDrawerOpen(true);
+  const handleFormChange = (e) => {
+    const { name, value } = e.target;
+    setForm((p) => ({ ...p, [name]: value }));
   };
 
-  const closeDrawer = () => {
-    setSelectedVehicle(null);
-    setDrawerOpen(false);
+  const resetForm = () => {
+    setForm(emptyForm);
+    setEditingId(null);
+    setError("");
   };
 
-  const getDriverLabel = (vehicle) => {
-    if (!vehicle.driverId) return "Unassigned";
-
-    if (typeof vehicle.driverId === "object") {
-      return vehicle.driverId.name || "Unnamed driver";
-    }
-
-    return "Driver";
-  };
-
-  const getLastTripDate = (vehicle) => {
-    const lastTrip = vehicle.lastTripId;
-    if (!lastTrip || !lastTrip.createdAt) return "—";
-
-    const d = new Date(lastTrip.createdAt);
-    return isNaN(d) ? "—" : d.toLocaleDateString();
-  };
-
-  /* ==========================================================
-     UPDATE VEHICLE STATUS
-  ========================================================== */
-  const handleStatusChange = async (vehicleId, newStatus) => {
+  const handleSubmit = async (e) => {
+    e.preventDefault();
     try {
-      setStatusSavingId(vehicleId);
-      setError("");
+      setSaving(true);
 
-      await updateVehicleStatusApi(vehicleId, newStatus);
+      const payload = {
+        ...form,
+        capacityKg: form.capacityKg ? Number(form.capacityKg) : undefined,
+      };
 
-      // Update UI state
+      if (!editingId) {
+        const res = await createCompanyVehicleApi(payload);
+        setVehicles((prev) => [res.data.vehicle, ...prev]);
+      } else {
+        const res = await updateCompanyVehicleApi(editingId, payload);
+        const updated = res.data.vehicle;
+
+        setVehicles((prev) =>
+          prev.map((v) => (v._id === updated._id ? updated : v))
+        );
+      }
+
+      resetForm();
+    } catch (err) {
+      console.error(err);
+      setError(err.response?.data?.error || "Failed to save vehicle.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleToggleStatus = async (id, currentStatus) => {
+    try {
+      const newStatus = currentStatus === "active" ? "inactive" : "active";
+
+      const res = await updateCompanyVehicleStatusApi(id, newStatus);
+      const updated = res.data.vehicle;
+
       setVehicles((prev) =>
-        prev.map((v) =>
-          v._id === vehicleId ? { ...v, status: newStatus } : v
-        )
+        prev.map((v) => (v._id === updated._id ? updated : v))
       );
     } catch (err) {
-      console.error("Error updating vehicle status:", err);
-      const msg =
-        err.response?.data?.error || "Failed to update vehicle status.";
-      setError(msg);
-    } finally {
-      setStatusSavingId(null);
+      console.error(err);
+      setError("Failed to update status.");
     }
   };
 
-  const statusOptions = [
-    { value: "available", label: "Available" },
-    { value: "in_use", label: "In Use" },
-    { value: "maintenance", label: "Maintenance" },
-  ];
-
-  /* ==========================================================
-     RENDER
-  ========================================================== */
+  const handleEdit = (vehicle) => {
+    setEditingId(vehicle._id);
+    setForm({
+      plateNumber: vehicle.plateNumber,
+      brand: vehicle.brand,
+      model: vehicle.model,
+      type: vehicle.type || "car",
+      capacityKg: vehicle.capacityKg || "",
+    });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   return (
     <div className={styles.page}>
-      {/* ================= HEADER ================= */}
       <div className={styles.header}>
-        <div>
-          <h1 className={styles.title}>Vehicles</h1>
-          <p className={styles.subtitle}>
-            Overview of your company’s fleet. Filter, view details, and update
-            their status.
-          </p>
-        </div>
-
-        <button
-          type="button"
-          className={styles.refreshBtn}
-          onClick={loadVehicles}
-          disabled={loading}
-          style={{ background: branding.primaryColor }}
-        >
-          {loading ? "Refreshing..." : "Refresh"}
-        </button>
-      </div>
-
-      {/* ================= FILTERS ================= */}
-      <div className={styles.filtersRow}>
-        <select
-          value={typeFilter}
-          onChange={(e) => setTypeFilter(e.target.value)}
-        >
-          <option value="">All types</option>
-          <option value="car">Car</option>
-          <option value="motor">Motor</option>
-          <option value="truck">Truck</option>
-          <option value="van">Van</option>
-          <option value="pickup">Pickup</option>
-        </select>
+        <h1>Vehicles</h1>
+        <p>Manage company vehicles used in deliveries.</p>
 
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
+          className={styles.filterSelect}
         >
-          <option value="">All status</option>
-          <option value="available">Available</option>
-          <option value="in_use">In Use</option>
-          <option value="maintenance">Maintenance</option>
+          <option value="">All</option>
+          <option value="active">Active only</option>
+          <option value="inactive">Inactive only</option>
         </select>
-
-        <select
-          value={driverFilter}
-          onChange={(e) => setDriverFilter(e.target.value)}
-        >
-          <option value="">All drivers</option>
-          {drivers.map((d) => (
-            <option key={d._id} value={d._id}>
-              {d.name}
-            </option>
-          ))}
-        </select>
-
-        <input
-          type="text"
-          placeholder="Search by plate..."
-          value={plateSearch}
-          onChange={(e) => setPlateSearch(e.target.value)}
-        />
       </div>
 
-      {/* ================= VEHICLES TABLE ================= */}
-      <div className={styles.tableCard}>
-        <div className={styles.tableHeaderRow}>
-          <h3>Vehicles List</h3>
-
-          <div className={styles.headerInfo}>
-            {driversLoading && (
-              <span className={styles.smallInfo}>Loading drivers...</span>
-            )}
-            {loading && (
-              <span className={styles.smallInfo}>Loading vehicles...</span>
-            )}
-            {statusSavingId && (
-              <span className={styles.smallInfo}>Updating vehicle status...</span>
-            )}
-          </div>
-        </div>
+      {/* FORM */}
+      <div className={styles.formCard}>
+        <h3>{editingId ? "Edit Vehicle" : "Add Vehicle"}</h3>
 
         {error && <p className={styles.error}>{error}</p>}
 
-        {!loading && vehicles.length === 0 ? (
+        <form onSubmit={handleSubmit} className={styles.form}>
+          <label>Plate Number *</label>
+          <input
+            name="plateNumber"
+            value={form.plateNumber}
+            onChange={handleFormChange}
+            required
+          />
+
+          <label>Brand *</label>
+          <input
+            name="brand"
+            value={form.brand}
+            onChange={handleFormChange}
+            required
+          />
+
+          <label>Model *</label>
+          <input
+            name="model"
+            value={form.model}
+            onChange={handleFormChange}
+            required
+          />
+
+          <label>Type</label>
+          <select
+            name="type"
+            value={form.type}
+            onChange={handleFormChange}
+          >
+            <option value="car">Car</option>
+            <option value="bike">Bike</option>
+            <option value="van">Van</option>
+            <option value="truck">Truck</option>
+            <option value="mototr">Motor</option>
+          </select>
+
+          <label>Capacity (kg)</label>
+          <input
+            type="number"
+            name="capacityKg"
+            value={form.capacityKg}
+            onChange={handleFormChange}
+          />
+
+          <div className={styles.actions}>
+            {editingId && (
+              <button
+                type="button"
+                className={styles.secondaryBtn}
+                onClick={resetForm}
+              >
+                Cancel
+              </button>
+            )}
+
+            <button
+              type="submit"
+              className={styles.primaryBtn}
+              disabled={saving}
+            >
+              {saving ? "Saving…" : editingId ? "Save Changes" : "Create Vehicle"}
+            </button>
+          </div>
+        </form>
+      </div>
+
+      {/* TABLE */}
+      <div className={styles.tableCard}>
+        <h3>Vehicles List</h3>
+
+        {loading ? (
+          <p>Loading...</p>
+        ) : vehicles.length === 0 ? (
           <p className={styles.empty}>No vehicles found.</p>
         ) : (
           <div className={styles.tableWrapper}>
             <table className={styles.table}>
               <thead>
                 <tr>
-                  <th>Image</th>
-                  <th>Type</th>
-                  <th>Brand / Model</th>
                   <th>Plate</th>
-                  <th>Driver</th>
+                  <th>Brand / Model</th>
+                  <th>Type</th>
                   <th>Status</th>
-                  <th>Last Trip</th>
-                  <th></th>
+                  <th>Created</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
 
               <tbody>
                 {vehicles.map((v) => (
                   <tr key={v._id}>
-                    <td>
-                      {v.vehicleImage ? (
-                        <img
-                          src={v.vehicleImage}
-                          alt={v.plateNumber}
-                          className={styles.thumbnail}
-                        />
-                      ) : (
-                        <div
-                          className={styles.noImage}
-                          style={{ borderColor: branding.primaryColor }}
-                        >
-                          No Image
-                        </div>
-                      )}
-                    </td>
-
-                    <td className={styles.typeCell}>{v.type}</td>
-
-                    <td>
-                      {v.brand} {v.model}
-                    </td>
-
                     <td>{v.plateNumber}</td>
-
-                    <td>{getDriverLabel(v)}</td>
-
+                    <td>{v.brand} {v.model}</td>
+                    <td>{v.type || "—"}</td>
                     <td>
-                      <select
-                        className={styles.statusSelect}
-                        value={v.status}
-                        onChange={(e) =>
-                          handleStatusChange(v._id, e.target.value)
+                      <span
+                        className={
+                          v.isActive ? styles.activeBadge : styles.inactiveBadge
                         }
-                        disabled={!!statusSavingId}
                       >
-                        {statusOptions.map((opt) => (
-                          <option key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </option>
-                        ))}
-                      </select>
+                        {v.isActive ? "Active" : "Inactive"}
+                      </span>
                     </td>
-
-                    <td>{getLastTripDate(v)}</td>
-
+                    <td>{v.createdAt ? new Date(v.createdAt).toLocaleDateString() : "—"}</td>
                     <td>
                       <button
-                        className={styles.viewBtn}
-                        onClick={() => openDrawer(v)}
-                        style={{ background: branding.primaryColor }}
+                        className={styles.smallBtn}
+                        onClick={() => {
+                          setSelectedVehicle(v);
+                          setDrawerOpen(true);
+                        }}
                       >
-                        View Details
+                        View
+                      </button>
+
+                      <button
+                        className={styles.smallBtn}
+                        onClick={() => handleEdit(v)}
+                      >
+                        Edit
+                      </button>
+
+                      <button
+                        className={styles.smallBtn}
+                        onClick={() => handleToggleStatus(v._id, v.isActive ? "active" : "inactive")}
+                      >
+                        {v.isActive ? "Suspend" : "Activate"}
                       </button>
                     </td>
                   </tr>
                 ))}
               </tbody>
+
             </table>
+
           </div>
         )}
       </div>
 
-      {/* ================= DRAWER ================= */}
+      {/* DRAWER */}
       <ManagerVehicleDrawer
         open={drawerOpen}
-        onClose={closeDrawer}
+        onClose={() => setDrawerOpen(false)}
         vehicle={selectedVehicle}
       />
     </div>

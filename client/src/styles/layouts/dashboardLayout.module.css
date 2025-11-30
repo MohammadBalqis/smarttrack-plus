@@ -104,3 +104,84 @@
   overflow-y: auto;
   background: #f3f4f6;
 }
+/* SmartTrack+ Title in Topbar */
+.systemName {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1F2937;
+  margin-right: auto;
+}
+
+/* Profile Photo Large (Sidebar) */
+.profileImgLarge {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-bottom: 12px;
+  border: 3px solid #1F2937;
+}
+
+/* Profile Photo Small (Topbar) */
+.profileImgSmall {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+/* Default Avatar */
+.defaultLogo {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: #1F2937;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 20px;
+  border: 3px solid #334155;
+  color: white;
+}
+
+.logoBox {
+  text-align: center;
+  margin-bottom: 22px;
+}
+
+.icon {
+  margin-right: 10px;
+  font-size: 18px;
+}
+/* ====== SmartTrack+ brand for sidebar ====== */
+.appName {
+  font-size: 18px;
+  font-weight: 700;
+  color: #f9fafb;
+  letter-spacing: 0.04em;
+}
+
+.appTagline {
+  font-size: 11px;
+  color: #9ca3af;
+  margin-bottom: 12px;
+}
+
+/* ====== Topbar brand (system name on all pages) ====== */
+.topbarBrand {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.topbarBrandMain {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.topbarBrandSub {
+  font-size: 12px;
+  color: #6b7280;
+}

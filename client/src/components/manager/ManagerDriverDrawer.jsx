@@ -1,216 +1,124 @@
-// client/src/components/manager/ManagerCustomerDrawer.jsx
+// client/src/components/manager/ManagerDriverDrawer.jsx
 import React, { useEffect, useState } from "react";
 import {
-  getManagerCustomerOrdersApi,
-  getManagerCustomerStatsApi,
-} from "../../api/managerCustomersApi";
-import styles from "../../styles/manager/managerCustomers.module.css";
+  getCompanyDriverStatsApi,
+  getCompanyDriverRecentTripsApi,
+} from "../../api/companyDriversApi";
 
-const ManagerCustomerDrawer = ({ open, onClose, customer }) => {
-  const [loadingStats, setLoadingStats] = useState(false);
-  const [loadingOrders, setLoadingOrders] = useState(false);
+import styles from "../../styles/manager/managerDriverDrawer.module.css";
+
+const ManagerDriverDrawer = ({ open, onClose, driver }) => {
   const [stats, setStats] = useState(null);
-  const [orders, setOrders] = useState([]);
-  const [error, setError] = useState("");
+  const [recentTrips, setRecentTrips] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!open || !customer?._id) return;
+    if (open && driver?._id) loadDetails(driver._id);
+  }, [open, driver]);
 
-    const load = async () => {
-      setError("");
-      setStats(null);
-      setOrders([]);
-      setLoadingStats(true);
-      setLoadingOrders(true);
+  const loadDetails = async (driverId) => {
+    try {
+      setLoading(true);
+      const [statsRes, tripsRes] = await Promise.all([
+        getCompanyDriverStatsApi(driverId),
+        getCompanyDriverRecentTripsApi(driverId),
+      ]);
 
-      try {
-        const [statsRes, ordersRes] = await Promise.all([
-          getManagerCustomerStatsApi(customer._id).catch((err) => {
-            console.error("Stats error:", err);
-            return null;
-          }),
-          getManagerCustomerOrdersApi(customer._id).catch((err) => {
-            console.error("Orders error:", err);
-            return null;
-          }),
-        ]);
-
-        if (statsRes?.data?.stats) {
-          setStats(statsRes.data.stats);
-        }
-
-        if (ordersRes?.data?.orders) {
-          setOrders(ordersRes.data.orders);
-        }
-      } catch (err) {
-        console.error(err);
-        setError("Failed to load customer details.");
-      } finally {
-        setLoadingStats(false);
-        setLoadingOrders(false);
-      }
-    };
-
-    load();
-  }, [open, customer]);
-
-  if (!open || !customer) return null;
-
-  const getInitials = (name) => {
-    if (!name) return "?";
-    const parts = name.trim().split(" ");
-    if (parts.length === 1) return parts[0][0].toUpperCase();
-    return (parts[0][0] + parts[1][0]).toUpperCase();
+      setStats(statsRes.data.stats || null);
+      setRecentTrips(tripsRes.data.recentTrips || []);
+    } catch (err) {
+      console.error("Drawer load error:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  return (
-    <div className={styles.drawerOverlay}>
-      <div className={styles.drawer}>
-        {/* Header */}
-        <div className={styles.drawerHeader}>
-          <h3>Customer Details</h3>
-          <button className={styles.closeBtn} onClick={onClose}>
-            ✕
-          </button>
-        </div>
+  if (!open || !driver) return null;
 
-        {/* Basic info */}
-        <div className={styles.customerInfo}>
-          <div className={styles.avatarWrapper}>
-            {customer.profileImage ? (
-              <img
-                src={customer.profileImage}
-                alt={customer.name}
-                className={styles.avatar}
-              />
-            ) : (
-              <div className={styles.avatarFallback}>
-                {getInitials(customer.name)}
-              </div>
-            )}
+  const joined = driver.createdAt
+    ? new Date(driver.createdAt).toLocaleDateString()
+    : "—";
+
+  return (
+    <div className={styles.overlay}>
+      <div className={styles.drawer}>
+        <button className={styles.closeBtn} onClick={onClose}>
+          ✕
+        </button>
+
+        <h2 className={styles.title}>Driver Details</h2>
+
+        {/* PROFILE */}
+        <div className={styles.profileCard}>
+          <div className={styles.avatar}>
+            {driver.name?.charAt(0).toUpperCase()}
           </div>
-          <div className={styles.customerTextInfo}>
-            <h4>{customer.name || "Unnamed customer"}</h4>
-            <p>{customer.email}</p>
-            <p>{customer.phone || "No phone"}</p>
+
+          <div className={styles.info}>
+            <h3>{driver.name}</h3>
+            <p>{driver.email}</p>
+            <p>{driver.phoneNumber || "No phone"}</p>
+
             <span
               className={
-                customer.isActive
-                  ? styles.statusBadgeActive
-                  : styles.statusBadgeInactive
+                driver.isActive ? styles.activeBadge : styles.inactiveBadge
               }
             >
-              {customer.isActive ? "Active" : "Inactive"}
+              {driver.isActive ? "Active" : "Inactive"}
             </span>
+
+            <p>Joined: {joined}</p>
           </div>
         </div>
 
-        {/* Stats */}
-        <div className={styles.statsSection}>
-          <h4>Customer Stats (for this company)</h4>
-          {loadingStats && <p className={styles.smallInfo}>Loading stats...</p>}
-          {!loadingStats && stats && (
-            <div className={styles.statsGrid}>
-              <div className={styles.statCard}>
-                <span className={styles.statLabel}>Total Orders</span>
-                <span className={styles.statValue}>
-                  {stats.totalOrders ?? 0}
-                </span>
-              </div>
-              <div className={styles.statCard}>
-                <span className={styles.statLabel}>Delivered</span>
-                <span className={styles.statValue}>
-                  {stats.deliveredCount ?? 0}
-                </span>
-              </div>
-              <div className={styles.statCard}>
-                <span className={styles.statLabel}>Cancelled</span>
-                <span className={styles.statValue}>
-                  {stats.cancelledCount ?? 0}
-                </span>
-              </div>
-              <div className={styles.statCard}>
-                <span className={styles.statLabel}>Total Spent</span>
-                <span className={styles.statValue}>
-                  {stats.totalSpent?.toFixed
-                    ? stats.totalSpent.toFixed(2)
-                    : Number(stats.totalSpent || 0).toFixed(2)}{" "}
-                  $
-                </span>
-              </div>
-              <div className={styles.statCardWide}>
-                <span className={styles.statLabel}>Last Order</span>
-                <span className={styles.statValue}>
-                  {stats.lastOrderDate
-                    ? new Date(stats.lastOrderDate).toLocaleString()
-                    : "—"}
-                </span>
-              </div>
+        {loading && <p className={styles.loading}>Loading...</p>}
+
+        {/* KPI */}
+        {stats && (
+          <div className={styles.kpiGrid}>
+            <div className={styles.kpiCard}>
+              <h4>Total Trips</h4>
+              <p>{stats.totalTrips}</p>
             </div>
-          )}
-          {!loadingStats && !stats && !error && (
-            <p className={styles.smallInfo}>No stats yet for this customer.</p>
-          )}
-        </div>
 
-        {/* Orders list */}
-        <div className={styles.ordersSection}>
-          <h4>Recent Orders with this Company</h4>
-          {loadingOrders && (
-            <p className={styles.smallInfo}>Loading orders...</p>
-          )}
-          {error && <p className={styles.error}>{error}</p>}
-
-          {!loadingOrders && orders.length === 0 && !error && (
-            <p className={styles.smallInfo}>No orders found.</p>
-          )}
-
-          {!loadingOrders && orders.length > 0 && (
-            <div className={styles.ordersList}>
-              {orders.slice(0, 10).map((o) => (
-                <div key={o._id} className={styles.orderItem}>
-                  <div>
-                    <div className={styles.orderHeaderRow}>
-                      <span className={styles.orderId}>
-                        #{String(o._id).slice(-6)}
-                      </span>
-                      <span
-                        className={
-                          o.status === "delivered"
-                            ? styles.badgeDelivered
-                            : o.status === "cancelled"
-                            ? styles.badgeCancelled
-                            : styles.badgePending
-                        }
-                      >
-                        {o.status}
-                      </span>
-                    </div>
-                    <p className={styles.orderMeta}>
-                      Total:{" "}
-                      <strong>
-                        {Number(o.total || 0).toFixed(2)} $
-                      </strong>
-                      {" · "}
-                      {o.createdAt
-                        ? new Date(o.createdAt).toLocaleString()
-                        : ""}
-                    </p>
-                    {o.driverId && (
-                      <p className={styles.orderMeta}>
-                        Driver: {o.driverId.name || "—"}
-                      </p>
-                    )}
-                    {o.vehicleId && (
-                      <p className={styles.orderMeta}>
-                        Vehicle: {o.vehicleId.plateNumber} (
-                        {o.vehicleId.brand} {o.vehicleId.model})
-                      </p>
-                    )}
-                  </div>
-                </div>
-              ))}
+            <div className={styles.kpiCard}>
+              <h4>Total Revenue</h4>
+              <p>${stats.totalRevenue?.toFixed(2)}</p>
             </div>
+
+            <div className={styles.kpiCard}>
+              <h4>Avg Delivery Time</h4>
+              <p>{stats.avgDeliveryTimeMin} min</p>
+            </div>
+          </div>
+        )}
+
+        {/* RECENT TRIPS */}
+        <div className={styles.section}>
+          <h3>Recent Trips</h3>
+
+          {recentTrips.length === 0 ? (
+            <p>No recent trips.</p>
+          ) : (
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Status</th>
+                  <th>Amount</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {recentTrips.map((t) => (
+                  <tr key={t._id}>
+                    <td>{new Date(t.createdAt).toLocaleString()}</td>
+                    <td>{t.status}</td>
+                    <td>${t.totalAmount?.toFixed(2) || "0"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           )}
         </div>
       </div>
@@ -218,4 +126,4 @@ const ManagerCustomerDrawer = ({ open, onClose, customer }) => {
   );
 };
 
-export default ManagerCustomerDrawer;
+export default ManagerDriverDrawer;

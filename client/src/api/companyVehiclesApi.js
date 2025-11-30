@@ -26,3 +26,6 @@ export const updateCompanyVehicleStatusApi = (vehicleId, status) =>
 // Trip history
 export const getCompanyVehicleTripsApi = (vehicleId) =>
   api.get(`/company/vehicles/${vehicleId}/trips`);
+// For Manager Toggle Active (wrapper around your status API)
+export const toggleCompanyVehicleActiveApi = (vehicleId) =>
+  updateCompanyVehicleStatusApi(vehicleId, "toggle");

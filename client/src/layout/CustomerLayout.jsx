@@ -17,10 +17,14 @@ const CustomerLayout = () => {
   return (
     <div className={styles.container}>
       {/* ================================
-          SIDEBAR (NO BRANDING)
+          SIDEBAR (CUSTOMER)
       ================================= */}
-      <aside className={styles.sidebar} style={{ background: "#1F2937" }}>
+      <aside className={styles.sidebar} style={{ background: "#0F172A" }}>
         <div className={styles.logoBox}>
+          {/* SYSTEM NAME */}
+          <div className={styles.appName}>SmartTrack+</div>
+          <div className={styles.appTagline}>Global Customer</div>
+
           {/* PROFILE IMAGE */}
           {user?.profileImage ? (
             <img
@@ -62,7 +66,17 @@ const CustomerLayout = () => {
           MAIN CONTENT AREA
       ================================= */}
       <div className={styles.main}>
-        <header className={styles.topbar} style={{ borderBottom: "3px solid #1F2937" }}>
+        <header
+          className={styles.topbar}
+          style={{ borderBottom: "3px solid #0F172A" }}
+        >
+          {/* LEFT: SYSTEM NAME (visible on all pages) */}
+          <div className={styles.topbarBrand}>
+            <span className={styles.topbarBrandMain}>SmartTrack+</span>
+            <span className={styles.topbarBrandSub}>Customer Portal</span>
+          </div>
+
+          {/* RIGHT: USER INFO */}
           <div className={styles.userInfo}>
             {user?.profileImage && (
               <img
@@ -75,11 +89,11 @@ const CustomerLayout = () => {
             <span>{user?.name || "Customer"}</span>
 
             <span className={styles.roleChip}>{user?.role}</span>
-          </div>
 
-          <button onClick={handleLogout} className={styles.logoutBtn}>
-            Logout
-          </button>
+            <button onClick={handleLogout} className={styles.logoutBtn}>
+              Logout
+            </button>
+          </div>
         </header>
 
         <main className={styles.content}>

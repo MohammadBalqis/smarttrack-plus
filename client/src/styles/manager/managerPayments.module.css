@@ -1,126 +1,110 @@
-/* =======================================
-   PAGE LAYOUT
-======================================= */
+/* ===========================================================
+   PREMIUM MANAGER PAYMENTS MODULE
+   Smooth, consistent, modern UI
+=========================================================== */
+
 .page {
-  padding: 25px;
-  display: flex;
-  flex-direction: column;
-  gap: 26px;
-  font-family: "Inter", sans-serif;
+  padding: 28px;
 }
 
-/* =======================================
+/* -------------------------------------
    HEADER
-======================================= */
+-------------------------------------- */
 .header h1 {
-  font-size: 27px;
   margin: 0;
-  font-weight: 600;
-}
-
-.header p {
-  color: #6b7280;
-  margin-top: 4px;
-  font-size: 14px;
-}
-
-/* =======================================
-   STAT CARDS
-======================================= */
-.statsGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(165px, 1fr));
-  gap: 16px;
-}
-
-.statCard {
-  background: #fff;
-  padding: 16px 18px;
-  border-radius: 10px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
-  text-align: center;
-  border-left: 4px solid #1976d2; /* dynamically replaced by branding */
-  transition: 0.2s ease;
-}
-
-.statCard:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 10px rgba(0,0,0,0.10);
-}
-
-.statCard h3 {
-  font-size: 15px;
-  margin: 0;
-  padding-bottom: 4px;
-  font-weight: 500;
-  color: #374151;
-}
-
-.statCard p {
-  font-size: 20px;
-  margin: 6px 0 0;
+  font-size: 26px;
   font-weight: 700;
   color: #111827;
 }
 
-/* =======================================
+.header p {
+  margin: 4px 0 20px;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+/* -------------------------------------
+   SUMMARY GRID
+-------------------------------------- */
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 18px;
+  margin-bottom: 28px;
+}
+
+.statCard {
+  background: #ffffff;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+  text-align: center;
+  border: 1px solid #f3f4f6;
+}
+
+.statCard h3 {
+  font-size: 15px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 6px;
+}
+
+.statCard p {
+  font-size: 20px;
+  font-weight: 700;
+  color: #111827;
+}
+
+/* -------------------------------------
    FILTERS
-======================================= */
+-------------------------------------- */
 .filtersRow {
   display: flex;
-  align-items: center;
-  gap: 12px;
   flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 18px;
 }
 
 .filtersRow select,
-.filtersRow input {
-  padding: 9px 12px;
+.filtersRow input[type="date"],
+.filtersRow input[type="text"] {
+  padding: 10px 12px;
   border: 1px solid #d1d5db;
   border-radius: 8px;
-  min-width: 160px;
-  font-size: 14px;
   background: #fff;
-  transition: 0.15s;
-}
-
-.filtersRow select:focus,
-.filtersRow input:focus {
-  outline: none;
-  border-color: #1976d2;
-  box-shadow: 0 0 0 2px rgba(25,118,210,0.15);
+  font-size: 14px;
 }
 
 .resetBtn {
-  background: #e5e7eb;
+  padding: 10px 16px;
   border: none;
-  padding: 9px 16px;
+  color: #fff;
   border-radius: 8px;
   cursor: pointer;
-  font-size: 14px;
-  transition: 0.2s;
+  font-weight: 600;
 }
 
-.resetBtn:hover {
-  background: #d4d4d8;
-}
-
-/* =======================================
+/* -------------------------------------
    TABLE CARD
-======================================= */
+-------------------------------------- */
 .tableCard {
-  background: #fff;
-  border-radius: 10px;
-  overflow: hidden;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+  background: #ffffff;
+  padding: 20px;
+  border-radius: 14px;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.06);
+  border: 1px solid #f3f4f6;
 }
 
 .tableHeaderRow {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  padding: 14px 16px;
-  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 14px;
+}
+
+.tableHeaderRow h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
 }
 
 .smallInfo {
@@ -128,6 +112,20 @@
   color: #6b7280;
 }
 
+.error {
+  color: #ef4444;
+  font-size: 14px;
+  margin: 8px 0;
+}
+
+.empty {
+  text-align: center;
+  padding: 20px;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+/* Table */
 .tableWrapper {
   overflow-x: auto;
 }
@@ -138,190 +136,258 @@
   font-size: 14px;
 }
 
-.table thead {
-  background: #f3f4f6;
-}
-
 .table th {
-  padding: 12px 14px;
+  text-align: left;
+  padding: 12px 10px;
+  background: #f9fafb;
   font-weight: 600;
   color: #374151;
-  border-bottom: 1px solid #e5e7eb;
 }
 
 .table td {
-  padding: 12px 14px;
-  color: #374151;
-  border-bottom: 1px solid #f1f1f1;
-}
-
-/* =======================================
-   BADGES
-======================================= */
-.statusBadge {
-  display: inline-block;
-  padding: 4px 11px;
-  border-radius: 30px;
-  font-size: 12px;
-  font-weight: 600;
-  background: #e6f2ff;
-  color: #1976d2;
-  text-transform: capitalize;
+  padding: 12px 10px;
+  border-bottom: 1px solid #f3f4f6;
+  color: #111827;
 }
 
 .methodBadge {
-  display: inline-block;
-  padding: 4px 9px;
-  border-radius: 8px;
-  background: #eef2f7;
+  padding: 4px 8px;
   font-size: 12px;
-  font-weight: 500;
-  color: #111827;
+  background: #eef2ff;
+  color: #4f46e5;
+  border-radius: 6px;
+  font-weight: 600;
 }
 
-/* =======================================
-   VIEW BUTTON
-======================================= */
+.statusBadge {
+  padding: 4px 8px;
+  font-size: 12px;
+  background: #e5f3ff;
+  color: #2563eb;
+  border-radius: 6px;
+  font-weight: 600;
+}
+
 .viewBtn {
-  background: #1976d2;
-  border: none;
   padding: 8px 14px;
-  color: white;
+  font-size: 13px;
+  background: var(--brand-primary, #2563eb);
+  border: none;
+  color: #fff;
   border-radius: 8px;
   cursor: pointer;
-  font-size: 14px;
-  transition: 0.2s;
 }
 
-.viewBtn:hover {
-  background: #145aa2;
-}
-
-/* =======================================
+/* -------------------------------------
    PAGINATION
-======================================= */
+-------------------------------------- */
 .pagination {
-  padding: 16px;
   display: flex;
   justify-content: center;
-  align-items: center;
-  gap: 14px;
+  gap: 12px;
+  margin-top: 16px;
 }
 
 .pagination button {
-  background: #1976d2;
   padding: 8px 14px;
-  border: none;
+  border: 1px solid #d1d5db;
+  background: #fff;
   border-radius: 8px;
-  font-size: 14px;
-  color: #fff;
   cursor: pointer;
-  transition: 0.2s;
 }
 
-.pagination button:hover:not(:disabled) {
-  background: #145aa2;
+.pagination span {
+  padding: 8px 12px;
 }
 
-.pagination button:disabled {
-  background: #9bbad8;
-  cursor: not-allowed;
-}
+/* ===========================================================
+   PREMIUM DRAWER
+=========================================================== */
 
-/* =======================================
-   DRAWER OVERLAY
-======================================= */
 .drawerOverlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.45);
+  background: rgba(17, 24, 39, 0.55);
+  backdrop-filter: blur(4px);
+  z-index: 2000;
   display: flex;
   justify-content: flex-end;
-  z-index: 2000;
-  animation: fadeIn 0.2s ease-out;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-/* =======================================
-   DRAWER
-======================================= */
 .drawer {
-  width: 440px;
-  max-width: 100%;
-  height: 100%;
-  background: #fff;
-  padding: 26px;
+  width: 480px;
+  height: 100vh;
+  background: #ffffff;
+  padding: 28px;
   overflow-y: auto;
+  animation: slideIn 0.28s ease-out;
   position: relative;
-  box-shadow: -3px 0 10px rgba(0,0,0,0.15);
-  animation: slideIn 0.28s ease-out forwards;
+  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.12);
 }
 
 @keyframes slideIn {
-  from { transform: translateX(100%); }
-  to   { transform: translateX(0); }
+  from {
+    transform: translateX(60px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
-.closeBtn {
-  background: none;
-  font-size: 28px;
-  border: none;
-  cursor: pointer;
+.drawerCloseBtn {
   position: absolute;
-  right: 16px;
-  top: 12px;
-  color: #333;
+  right: 18px;
+  top: 18px;
+  background: #f3f4f6;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
 }
 
-/* Drawer title matches your JSX */
 .drawerTitle {
+  margin: 0 0 18px;
   font-size: 22px;
-  font-weight: 600;
-  margin-bottom: 12px;
+  font-weight: 700;
 }
 
-/* =======================================
-   DRAWER CONTENT
-======================================= */
-.section {
-  margin-top: 24px;
+/* TOP ROW */
+.drawerTopRow {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 18px;
+  margin-bottom: 22px;
 }
 
-.section h3 {
-  font-size: 17px;
-  margin-bottom: 8px;
+.drawerStatusBlock {
+  background: #f9fafb;
+  padding: 14px;
+  border-radius: 10px;
+  border: 1px solid #f3f4f6;
+}
+
+.drawerLabel {
+  display: block;
+  font-size: 12px;
+  color: #6b7280;
+  margin-bottom: 4px;
+}
+
+.drawerValue {
+  font-size: 14px;
   color: #111827;
+}
+
+.drawerTotal {
+  font-size: 20px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.methodTag {
+  padding: 4px 10px;
+  background: #eef2ff;
+  color: #4f46e5;
+  font-size: 12px;
+  border-radius: 6px;
   font-weight: 600;
 }
 
-/* =======================================
-   EMPTY / ERROR / LOADING
-======================================= */
-.empty {
-  padding: 20px;
-  text-align: center;
-  color: #888;
+/* STATUS COLORS */
+.statusBadge_paid {
+  background: #dcfce7;
+  color: #166534;
 }
 
-.error {
-  padding: 12px 16px;
-  color: #b91c1c;
-  font-weight: 500;
+.statusBadge_pending {
+  background: #fef9c3;
+  color: #854d0e;
 }
 
+.statusBadge_failed {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.statusBadge_refunded {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.statusBadge_default {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+/* DRAWER GRID */
+.drawerGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.drawerCard {
+  background: #ffffff;
+  border: 1px solid #f3f4f6;
+  padding: 16px;
+  border-radius: 12px;
+}
+
+.drawerCardTitle {
+  margin: 0 0 10px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+/* BREAKDOWN */
+.breakdownRow {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.drawerDivider {
+  margin: 12px 0;
+  border: none;
+  border-top: 1px solid #e5e7eb;
+}
+
+/* TIMELINE (if later needed) */
+.timelineList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.timelineItem {
+  padding: 8px 0;
+  border-bottom: 1px solid #f3f4f6;
+  display: flex;
+  justify-content: space-between;
+}
+
+.timelineStatus {
+  font-weight: 600;
+}
+
+.timelineTime {
+  color: #6b7280;
+  font-size: 13px;
+}
+
+/* LOADING OVERLAY */
 .loadingOverlay {
   position: fixed;
   inset: 0;
+  background: rgba(255, 255, 255, 0.65);
   display: flex;
   align-items: center;
   justify-content: center;
-  pointer-events: none;
-  color: white;
-  font-size: 22px;
-  font-weight: 600;
-  text-shadow: 0 0 4px rgba(0,0,0,0.7);
+  font-size: 18px;
+  z-index: 3000;
 }

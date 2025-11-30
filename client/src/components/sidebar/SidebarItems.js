@@ -18,3 +18,9 @@ export const companyMenu = [
   { label: "Vehicles", icon: "🚘", path: "/company/vehicles" },
   { label: "Payments", icon: "💳", path: "/company/payments" },
 ];
+export const customerMenu = [
+  { label: "Dashboard", icon: "🏢", path: "/customer" },          // shows companies
+  { label: "Active Orders", icon: "🚚", path: "/customer/trips" },
+  { label: "Payments", icon: "💳", path: "/customer/payments" },
+  { label: "Profile", icon: "👤", path: "/customer/profile" },
+];

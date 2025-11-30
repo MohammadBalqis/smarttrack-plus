@@ -1,0 +1,27 @@
+.topbar {
+  height: 60px;
+  background: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 20px;
+  border-bottom: 1px solid #ddd;
+}
+
+.title {
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.right {
+  display: flex;
+  align-items: center;
+}
+
+.roleBadge {
+  background: #2563eb;
+  padding: 6px 12px;
+  color: white;
+  border-radius: 5px;
+  font-size: 14px;
+}

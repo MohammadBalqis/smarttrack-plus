@@ -5,16 +5,24 @@ import {
   getManagerOrderTimelineApi,
 } from "../../api/managerOrdersApi";
 import styles from "../../styles/manager/managerOrders.module.css";
+import { useBranding } from "../../context/BrandingContext";
+
+const TABS = ["overview", "items", "timeline", "trip"];
 
 const ManagerOrderDrawer = ({ open, onClose, order }) => {
+  const { branding } = useBranding();
+  const primaryColor = branding?.primaryColor || "#2563EB";
+
+  const [activeTab, setActiveTab] = useState("overview");
   const [details, setDetails] = useState(null);
   const [timeline, setTimeline] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [timelineLoading, setTimelineLoading] = useState(false);
+  const [loadingDetails, setLoadingDetails] = useState(false);
+  const [loadingTimeline, setLoadingTimeline] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
     if (open && order?._id) {
+      setActiveTab("overview");
       loadDetails(order._id);
       loadTimeline(order._id);
     } else {
@@ -26,155 +34,172 @@ const ManagerOrderDrawer = ({ open, onClose, order }) => {
 
   const loadDetails = async (orderId) => {
     try {
-      setLoading(true);
-      setError("");
+      setLoadingDetails(true);
       const res = await getManagerOrderDetailsApi(orderId);
-      if (res.data?.ok) {
-        setDetails(res.data.order || null);
-      } else {
-        setError("Failed to load order details.");
-      }
-    } catch (err) {
-      console.error("Drawer details error:", err);
+      if (res.data?.ok) setDetails(res.data.order);
+      else setError("Failed to load order details.");
+    } catch {
       setError("Failed to load order details.");
     } finally {
-      setLoading(false);
+      setLoadingDetails(false);
     }
   };
 
   const loadTimeline = async (orderId) => {
     try {
-      setTimelineLoading(true);
+      setLoadingTimeline(true);
       const res = await getManagerOrderTimelineApi(orderId);
-      if (res.data?.ok) {
-        setTimeline(res.data.timeline || []);
-      } else {
-        setTimeline([]);
-      }
-    } catch (err) {
-      console.error("Drawer timeline error:", err);
+      if (res.data?.ok) setTimeline(res.data.timeline || []);
+      else setTimeline([]);
+    } catch {
       setTimeline([]);
     } finally {
-      setTimelineLoading(false);
+      setLoadingTimeline(false);
     }
   };
 
   if (!open || !order) return null;
 
-  const formatMoney = (value) => {
-    if (typeof value !== "number") return "0.00";
-    return value.toFixed(2);
-  };
-
-  const formatDateTime = (value) => {
-    if (!value) return "—";
-    const d = new Date(value);
-    if (Number.isNaN(d.getTime())) return "—";
-    return d.toLocaleString();
-  };
-
   const d = details || order;
+
+  const formatMoney = (v) => (typeof v === "number" ? v.toFixed(2) : "0.00");
+  const formatDateTime = (v) => {
+    if (!v) return "—";
+    const date = new Date(v);
+    return isNaN(date) ? "—" : date.toLocaleString();
+  };
 
   return (
     <div className={styles.drawerOverlay}>
       <div className={styles.drawer}>
+        {/* CLOSE BUTTON */}
         <button className={styles.drawerCloseBtn} onClick={onClose}>
           ✕
         </button>
 
+        {/* TITLE */}
         <h2 className={styles.drawerTitle}>
           Order #{String(order._id).slice(-6)}
         </h2>
 
-        {loading ? (
-          <p className={styles.smallInfo}>Loading order details...</p>
-        ) : error ? (
-          <p className={styles.error}>{error}</p>
-        ) : (
-          <>
-            {/* Top info */}
-            <div className={styles.drawerTopRow}>
-              <div className={styles.drawerStatusBlock}>
-                <span className={styles.drawerLabel}>Status</span>
-                <span
-                  className={
-                    styles[`badge_${d.status}`] || styles.badge_default
-                  }
-                >
-                  {d.status}
-                </span>
-              </div>
-              <div className={styles.drawerStatusBlock}>
-                <span className={styles.drawerLabel}>Total</span>
-                <span className={styles.drawerTotal}>
-                  ${formatMoney(d.total || 0)}
-                </span>
-              </div>
-              <div className={styles.drawerStatusBlock}>
-                <span className={styles.drawerLabel}>Created</span>
-                <span className={styles.drawerValue}>
-                  {formatDateTime(d.createdAt)}
-                </span>
-              </div>
-            </div>
+        {/* TABS */}
+        <div className={styles.tabRow}>
+          {TABS.map((t) => (
+            <button
+              key={t}
+              className={`${styles.tabBtn} ${
+                activeTab === t ? styles.tabBtnActive : ""
+              }`}
+              style={activeTab === t ? { color: primaryColor } : {}}
+              onClick={() => setActiveTab(t)}
+            >
+              {t === "overview"
+                ? "Overview"
+                : t === "items"
+                ? "Items"
+                : t === "timeline"
+                ? "Timeline"
+                : "Trip / Payment"}
+            </button>
+          ))}
+        </div>
 
-            {/* Customer + Delivery */}
-            <div className={styles.drawerGrid}>
-              {/* Customer */}
-              <div className={styles.drawerCard}>
-                <h3 className={styles.drawerCardTitle}>Customer</h3>
-                <p className={styles.drawerValue}>
-                  <strong>{d.customerId?.name || "—"}</strong>
-                </p>
-                <p className={styles.drawerMuted}>
-                  {d.customerId?.email || ""}
-                </p>
-                <p className={styles.drawerMuted}>
-                  {d.customerId?.phone || d.customerPhone || ""}
-                </p>
-              </div>
+        {/* CONTENT */}
+        <div className={styles.drawerContent}>
+          {/* ====================== OVERVIEW TAB ====================== */}
+          {activeTab === "overview" && (
+            <>
+              {loadingDetails ? (
+                <p className={styles.smallInfo}>Loading details...</p>
+              ) : (
+                <>
+                  {/* TOP INFO */}
+                  <div className={styles.overviewHeader}>
+                    <div className={styles.infoBox}>
+                      <span className={styles.label}>Status</span>
+                      <span
+                        className={
+                          styles[`badge_${d.status}`] || styles.badge_default
+                        }
+                      >
+                        {d.status}
+                      </span>
+                    </div>
 
-              {/* Driver */}
-              <div className={styles.drawerCard}>
-                <h3 className={styles.drawerCardTitle}>Driver & Vehicle</h3>
-                <p className={styles.drawerValue}>
-                  <strong>{d.driverId?.name || "Not assigned"}</strong>
-                </p>
-                <p className={styles.drawerMuted}>
-                  {d.vehicleId
-                    ? `${d.vehicleId.plateNumber || ""} ${
-                        d.vehicleId.brand || ""
-                      }`
-                    : "No vehicle"}
-                </p>
-              </div>
-            </div>
+                    <div className={styles.infoBox}>
+                      <span className={styles.label}>Total</span>
+                      <span className={styles.value}>
+                        ${formatMoney(d.total)}
+                      </span>
+                    </div>
 
-            {/* Addresses */}
-            <div className={styles.drawerCard}>
-              <h3 className={styles.drawerCardTitle}>Route</h3>
-              <div className={styles.routeRow}>
-                <div>
-                  <span className={styles.routeLabel}>Pickup</span>
-                  <p className={styles.routeAddress}>
-                    {d.pickupLocation?.address || "—"}
-                  </p>
-                </div>
-                <span className={styles.routeArrow}>→</span>
-                <div>
-                  <span className={styles.routeLabel}>Dropoff</span>
-                  <p className={styles.routeAddress}>
-                    {d.dropoffLocation?.address || "—"}
-                  </p>
-                </div>
-              </div>
-            </div>
+                    <div className={styles.infoBox}>
+                      <span className={styles.label}>Created</span>
+                      <span className={styles.value}>
+                        {formatDateTime(d.createdAt)}
+                      </span>
+                    </div>
+                  </div>
 
-            {/* Items table */}
-            <div className={styles.drawerCard}>
-              <h3 className={styles.drawerCardTitle}>Items</h3>
-              {(!d.items || d.items.length === 0) ? (
-                <p className={styles.empty}>No items in this order.</p>
+                  {/* Customer / Driver */}
+                  <div className={styles.grid2}>
+                    <div className={styles.card}>
+                      <h3 className={styles.cardTitle}>Customer</h3>
+                      <p className={styles.value}>
+                        <strong>{d.customerId?.name || "—"}</strong>
+                      </p>
+                      <p className={styles.muted}>{d.customerId?.email}</p>
+                      <p className={styles.muted}>
+                        {d.customerId?.phone || d.customerPhone}
+                      </p>
+                    </div>
+
+                    <div className={styles.card}>
+                      <h3 className={styles.cardTitle}>Driver / Vehicle</h3>
+                      <p className={styles.value}>
+                        <strong>{d.driverId?.name || "Not assigned"}</strong>
+                      </p>
+                      <p className={styles.muted}>
+                        {d.vehicleId
+                          ? `${d.vehicleId.plateNumber || ""} ${
+                              d.vehicleId.brand || ""
+                            }`
+                          : "No vehicle"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Route */}
+                  <div className={styles.card}>
+                    <h3 className={styles.cardTitle}>Route</h3>
+                    <div className={styles.routeRow}>
+                      <div>
+                        <span className={styles.routeLabel}>Pickup</span>
+                        <p className={styles.routeAddress}>
+                          {d.pickupLocation?.address || "—"}
+                        </p>
+                      </div>
+                      <span className={styles.routeArrow}>→</span>
+                      <div>
+                        <span className={styles.routeLabel}>Dropoff</span>
+                        <p className={styles.routeAddress}>
+                          {d.dropoffLocation?.address || "—"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+            </>
+          )}
+
+          {/* ====================== ITEMS TAB ====================== */}
+          {activeTab === "items" && (
+            <div className={styles.card}>
+              <h3 className={styles.cardTitle}>Items</h3>
+
+              {!d.items || d.items.length === 0 ? (
+                <p className={styles.empty}>No items found.</p>
               ) : (
                 <div className={styles.tableWrapper}>
                   <table className={styles.table}>
@@ -187,12 +212,12 @@ const ManagerOrderDrawer = ({ open, onClose, order }) => {
                       </tr>
                     </thead>
                     <tbody>
-                      {d.items.map((item, idx) => (
+                      {d.items.map((i, idx) => (
                         <tr key={idx}>
-                          <td>{item.name || "—"}</td>
-                          <td>${formatMoney(item.price || 0)}</td>
-                          <td>{item.quantity || 0}</td>
-                          <td>${formatMoney(item.subtotal || 0)}</td>
+                          <td>{i.name}</td>
+                          <td>${formatMoney(i.price)}</td>
+                          <td>{i.quantity}</td>
+                          <td>${formatMoney(i.subtotal)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -200,45 +225,45 @@ const ManagerOrderDrawer = ({ open, onClose, order }) => {
                 </div>
               )}
 
-              {/* Totals */}
               <div className={styles.totalsRow}>
                 <div>
-                  <span className={styles.drawerLabel}>Subtotal</span>
-                  <span className={styles.drawerValue}>
-                    ${formatMoney(d.subtotal || 0)}
+                  <span className={styles.label}>Subtotal</span>
+                  <span className={styles.value}>
+                    ${formatMoney(d.subtotal)}
                   </span>
                 </div>
                 <div>
-                  <span className={styles.drawerLabel}>Delivery Fee</span>
-                  <span className={styles.drawerValue}>
-                    ${formatMoney(d.deliveryFee || 0)}
+                  <span className={styles.label}>Delivery Fee</span>
+                  <span className={styles.value}>
+                    ${formatMoney(d.deliveryFee)}
                   </span>
                 </div>
                 <div>
-                  <span className={styles.drawerLabel}>Discount</span>
-                  <span className={styles.drawerValue}>
-                    -${formatMoney(d.discount || 0)}
+                  <span className={styles.label}>Discount</span>
+                  <span className={styles.value}>
+                    -${formatMoney(d.discount)}
                   </span>
                 </div>
                 <div>
-                  <span className={styles.drawerLabel}>Tax</span>
-                  <span className={styles.drawerValue}>
-                    ${formatMoney(d.tax || 0)}
-                  </span>
+                  <span className={styles.label}>Tax</span>
+                  <span className={styles.value}>${formatMoney(d.tax)}</span>
                 </div>
                 <div>
-                  <span className={styles.drawerLabel}>Total</span>
-                  <span className={styles.drawerTotal}>
-                    ${formatMoney(d.total || 0)}
+                  <span className={styles.label}>Total</span>
+                  <span className={styles.totalValue}>
+                    ${formatMoney(d.total)}
                   </span>
                 </div>
               </div>
             </div>
+          )}
 
-            {/* Timeline */}
-            <div className={styles.drawerCard}>
-              <h3 className={styles.drawerCardTitle}>Timeline</h3>
-              {timelineLoading ? (
+          {/* ====================== TIMELINE TAB ====================== */}
+          {activeTab === "timeline" && (
+            <div className={styles.card}>
+              <h3 className={styles.cardTitle}>Timeline</h3>
+
+              {loadingTimeline ? (
                 <p className={styles.smallInfo}>Loading timeline...</p>
               ) : timeline.length === 0 ? (
                 <p className={styles.empty}>No timeline entries.</p>
@@ -257,8 +282,49 @@ const ManagerOrderDrawer = ({ open, onClose, order }) => {
                 </ul>
               )}
             </div>
-          </>
-        )}
+          )}
+
+          {/* ====================== TRIP / PAYMENT TAB ====================== */}
+          {activeTab === "trip" && (
+            <div className={styles.card}>
+              <h3 className={styles.cardTitle}>Trip & Payment</h3>
+
+              {!details?.tripId && !details?.payment ? (
+                <p className={styles.empty}>No trip or payment info.</p>
+              ) : (
+                <>
+                  {details?.tripId && (
+                    <div className={styles.section}>
+                      <h4>Trip</h4>
+                      <p><strong>Status:</strong> {details.tripId.status}</p>
+                      <p>
+                        <strong>Start:</strong>{" "}
+                        {formatDateTime(details.tripId.startTime)}
+                      </p>
+                      <p>
+                        <strong>End:</strong>{" "}
+                        {formatDateTime(details.tripId.endTime)}
+                      </p>
+                    </div>
+                  )}
+
+                  {details?.payment && (
+                    <div className={styles.section}>
+                      <h4>Payment</h4>
+                      <p>
+                        <strong>Status:</strong> {details.payment.paymentStatus}
+                      </p>
+                      <p>
+                        <strong>Amount:</strong> $
+                        {formatMoney(details.payment.amount || 0)}
+                      </p>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

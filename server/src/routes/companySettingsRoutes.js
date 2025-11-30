@@ -1,0 +1,22 @@
+// server/src/routes/companySettingsRoutes.js
+import { Router } from "express";
+import { protect } from "../middleware/authMiddleware.js";
+import { authorizeRoles } from "../middleware/roleMiddleware.js";
+import {
+  getCompanyProfile,
+  updateCompanyProfile,
+  updateCompanyPassword,
+  updateCompanyPreferences,
+} from "../controllers/companySettingsController.js";
+
+const router = Router();
+
+// All routes: only for role "company"
+router.use(protect, authorizeRoles("company"));
+
+router.get("/profile", getCompanyProfile);
+router.put("/profile", updateCompanyProfile);
+router.put("/password", updateCompanyPassword);
+router.put("/preferences", updateCompanyPreferences);
+
+export default router;

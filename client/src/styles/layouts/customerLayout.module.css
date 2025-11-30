@@ -1,54 +1,290 @@
 .container {
   display: flex;
   height: 100vh;
-  background: #f1f5f9;
-  font-family: "Inter", sans-serif;
+  background: #e5e7eb;
+  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
 }
 
+/* ================================
+   SIDEBAR
+================================ */
 .sidebar {
-  width: 240px;
-  background: #1e293b;
-  color: white;
-  padding: 25px 15px;
+  width: 250px;
+  background: #020617; /* dark navy */
+  color: #f9fafb;
+  padding: 20px 16px;
   display: flex;
   flex-direction: column;
+  gap: 18px;
 }
 
-.logo {
-  font-size: 22px;
+/* Profile / identity block */
+.logoBox {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.profileImgLarge {
+  width: 52px;
+  height: 52px;
+  border-radius: 999px;
+  object-fit: cover;
+  border: 2px solid #22c55e;
+}
+
+.defaultAvatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #2563eb, #22c55e);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-weight: 700;
-  margin-bottom: 40px;
+  font-size: 20px;
+  color: #f9fafb;
 }
 
-.menu {
+.identity {
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 2px;
 }
 
-.link {
-  color: #cbd5e1;
-  text-decoration: none;
+.customerName {
   font-size: 16px;
-  padding: 10px 12px;
+  font-weight: 600;
+}
+
+.roleLabel {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #9ca3af;
+}
+
+/* SmartTrack+ tag */
+.systemTag {
+  margin-top: 4px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+.systemName {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.systemSub {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+/* Menu */
+.menu {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.link,
+.activeLink {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
   border-radius: 8px;
-  transition: 0.25s;
+  font-size: 14px;
+  text-decoration: none;
+  color: #e5e7eb;
+  transition: background 0.16s ease, color 0.16s ease, transform 0.1s ease;
 }
 
 .link:hover {
-  background: #334155;
-  color: white;
+  background: #1f2937;
+  transform: translateX(2px);
 }
 
 .activeLink {
-  background: #475569;
-  color: white;
-  border-radius: 8px;
-  padding: 10px 12px;
+  background: #2563eb;
+  color: #ffffff;
 }
 
+.icon {
+  width: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ================================
+   MAIN / TOPBAR
+================================ */
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Topbar */
+.topbar {
+  height: 64px;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  box-shadow: 0 2px 4px rgba(15, 23, 42, 0.06);
+  border-bottom: 3px solid #0f172a;
+}
+
+.brand {
+  display: flex;
+  flex-direction: column;
+}
+
+.brandName {
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.brandSubtitle {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* user area */
+.userArea {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.userInfo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.profileImgSmall {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  object-fit: cover;
+}
+
+.profileImgSmallFallback {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: #0f172a;
+  color: #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.userText {
+  display: flex;
+  flex-direction: column;
+}
+
+.userName {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.roleChip {
+  align-self: flex-start;
+  margin-top: 2px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #e5e7eb;
+  color: #111827;
+  font-size: 11px;
+}
+
+/* Logout button */
+.logoutBtn {
+  border: none;
+  background: #ef4444;
+  color: #ffffff;
+  padding: 7px 16px;
+  border-radius: 999px;
+  font-size: 13px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.15s ease, transform 0.08s ease;
+}
+
+.logoutBtn:hover {
+  background: #dc2626;
+  transform: translateY(-1px);
+}
+
+/* Page content */
 .content {
   flex: 1;
-  padding: 25px;
+  padding: 20px 22px;
   overflow-y: auto;
+  background: #f3f4f6;
+}
+
+/* ================================
+   RESPONSIVE
+================================ */
+@media (max-width: 900px) {
+  .container {
+    flex-direction: column;
+    height: auto;
+    min-height: 100vh;
+  }
+
+  .sidebar {
+    width: 100%;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+  }
+
+  .menu {
+    flex-direction: row;
+    gap: 6px;
+    overflow-x: auto;
+  }
+
+  .link,
+  .activeLink {
+    white-space: nowrap;
+    padding: 6px 10px;
+    font-size: 13px;
+  }
+
+  .systemTag {
+    display: none; /* hide small badge on narrow screens */
+  }
+
+  .topbar {
+    padding: 0 14px;
+  }
+
+  .brandSubtitle {
+    display: none;
+  }
+
+  .content {
+    padding: 14px;
+  }
 }

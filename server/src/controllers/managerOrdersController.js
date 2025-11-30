@@ -1,4 +1,4 @@
-// server/src/controllers/managerOrderController.js
+// server/src/controllers/managerOrdersController.js
 import Order from "../models/Order.js";
 import Trip from "../models/Trip.js";
 import User from "../models/User.js";

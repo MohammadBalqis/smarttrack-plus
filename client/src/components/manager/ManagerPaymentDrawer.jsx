@@ -4,194 +4,161 @@ import { useBranding } from "../../context/BrandingContext";
 import styles from "../../styles/manager/managerPayments.module.css";
 
 const ManagerPaymentDrawer = ({ open, onClose, payment }) => {
-  if (!open) return null;
-
   const { branding } = useBranding();
 
-  const formatDateTime = (value) => {
-    if (!value) return "—";
-    const d = new Date(value);
+  if (!open || !payment) return null;
+
+  const formatMoney = (v) => (v ? Number(v).toFixed(2) : "0.00");
+
+  const formatDateTime = (v) => {
+    if (!v) return "—";
+    const d = new Date(v);
     return isNaN(d.getTime()) ? "—" : d.toLocaleString();
   };
 
-  const formatCurrency = (value) => {
-    if (value === null || value === undefined) return "0.00";
-    const num = Number(value);
-    return isNaN(num) ? "0.00" : num.toFixed(2);
-  };
-
   return (
-    <div className={styles.drawerOverlay} onClick={onClose}>
-      <div className={styles.drawer} onClick={(e) => e.stopPropagation()}>
-        {/* Close Button */}
-        <button
-          className={styles.closeBtn}
-          onClick={onClose}
-          style={{ color: branding.primaryColor }}
-        >
-          ×
-        </button>
+    <div className={styles.drawerOverlay}>
+      <div className={styles.drawer}>
 
-        <h2 className={styles.drawerTitle}>Payment Details</h2>
+        {/* === HEADER === */}
+        <div className={styles.drawerHeader}>
+          <h2 style={{ color: branding.primaryColor }}>
+            Payment #{String(payment._id).slice(-6)}
+          </h2>
 
-        {!payment ? (
-          <p>No payment data.</p>
-        ) : (
-          <>
-            {/* ===========================
-                BASIC INFO
-            ============================ */}
-            <div className={styles.section}>
-              <h3>Basic Info</h3>
+          <button className={styles.closeBtn} onClick={onClose}>
+            ✕
+          </button>
+        </div>
 
-              <p>
-                <strong>Payment ID:</strong> {payment._id}
-              </p>
+        {/* === TOP TAGS === */}
+        <div className={styles.topTags}>
+          <span
+            className={`${styles.badge} ${
+              styles[`badgeStatus_${payment.status}`] || ""
+            }`}
+          >
+            {payment.status}
+          </span>
 
-              <p>
-                <strong>Trip ID:</strong>{" "}
-                {payment.tripId?._id || payment.tripId || "—"}
-              </p>
+          <span className={styles.methodTag}>
+            {payment.method?.toUpperCase() || "—"}
+          </span>
 
-              <p>
-                <strong>Customer:</strong>{" "}
-                {payment.customerId?.name || "—"}
-              </p>
+          <span className={styles.totalTag}>
+            ${formatMoney(payment.totalAmount)}
+          </span>
+        </div>
 
-              <p>
-                <strong>Driver:</strong>{" "}
-                {payment.driverId?.name || "—"}
-              </p>
+        {/* === DATETIME === */}
+        <div className={styles.secondaryInfo}>
+          Paid: {formatDateTime(payment.paidAt || payment.createdAt)}
+        </div>
 
-              <p>
-                <strong>Method:</strong>{" "}
-                <span className={styles.methodBadge}>
-                  {payment.method || "—"}
-                </span>
-              </p>
+        {/* =========================================================
+            SECTION: CUSTOMER / DRIVER / COMPANY
+        ========================================================== */}
+        <div className={styles.sectionTitle}>People</div>
 
-              <p>
-                <strong>Status:</strong>{" "}
-                <span className={styles.statusBadge}>
-                  {payment.status}
-                </span>
-              </p>
-            </div>
+        <div className={styles.infoGrid}>
+          {/* Customer */}
+          <div className={styles.infoCard}>
+            <h3>Customer</h3>
+            <p className={styles.mainValue}>
+              {payment.customerId?.name || "—"}
+            </p>
+            <p className={styles.muted}>{payment.customerId?.email}</p>
+            <p className={styles.muted}>{payment.customerId?.phone}</p>
+          </div>
 
-            {/* ===========================
-                AMOUNTS
-            ============================ */}
-            <div className={styles.section}>
-              <h3>Amount Breakdown</h3>
+          {/* Driver */}
+          <div className={styles.infoCard}>
+            <h3>Driver</h3>
+            <p className={styles.mainValue}>
+              {payment.driverId?.name || "—"}
+            </p>
+            <p className={styles.muted}>{payment.driverId?.email}</p>
+            <p className={styles.muted}>{payment.driverId?.phone}</p>
+          </div>
 
-              <p>
-                <strong>Total Amount:</strong>{" "}
-                {formatCurrency(payment.totalAmount)}{" "}
-                {payment.currency || "USD"}
-              </p>
+          {/* Company */}
+          <div className={styles.infoCard}>
+            <h3>Company</h3>
+            <p className={styles.mainValue}>
+              {payment.companyId?.name || "—"}
+            </p>
+            <p className={styles.muted}>{payment.companyId?.email}</p>
+          </div>
+        </div>
 
-              <p>
-                <strong>Delivery Fee:</strong>{" "}
-                {formatCurrency(payment.deliveryFee)}
-              </p>
+        {/* =========================================================
+            SECTION: BREAKDOWN
+        ========================================================== */}
+        <div className={styles.sectionTitle}>Payment Breakdown</div>
 
-              <p>
-                <strong>Products Total:</strong>{" "}
-                {formatCurrency(payment.productTotal)}
-              </p>
+        <div className={styles.breakdownCard}>
+          <div className={styles.breakdownRow}>
+            <span>Delivery Fee</span>
+            <strong>${formatMoney(payment.deliveryFee)}</strong>
+          </div>
 
-              <p>
-                <strong>Discount:</strong>{" "}
-                {formatCurrency(payment.discountAmount)}
-              </p>
+          <div className={styles.breakdownRow}>
+            <span>Items Total</span>
+            <strong>${formatMoney(payment.productTotal)}</strong>
+          </div>
 
-              <p>
-                <strong>Tax:</strong>{" "}
-                {formatCurrency(payment.taxAmount)}
-              </p>
+          <div className={styles.breakdownRow}>
+            <span>Discount</span>
+            <strong>-${formatMoney(payment.discountAmount)}</strong>
+          </div>
 
-              <p>
-                <strong>Gateway Fee:</strong>{" "}
-                {formatCurrency(payment.gatewayFee)}
-              </p>
-            </div>
+          <div className={styles.breakdownRow}>
+            <span>Tax</span>
+            <strong>${formatMoney(payment.taxAmount)}</strong>
+          </div>
 
-            {/* ===========================
-                EARNINGS
-            ============================ */}
-            <div className={styles.section}>
-              <h3>Earnings</h3>
+          <div className={styles.breakdownRow}>
+            <span>Gateway Fee</span>
+            <strong>${formatMoney(payment.gatewayFee)}</strong>
+          </div>
 
-              <p>
-                <strong>Driver Earning:</strong>{" "}
-                {formatCurrency(payment.driverEarning)}
-              </p>
+          <div className={styles.breakdownRow}>
+            <span>Currency</span>
+            <strong>{payment.currency || "USD"}</strong>
+          </div>
 
-              <p>
-                <strong>Company Earning:</strong>{" "}
-                {formatCurrency(payment.companyEarning)}
-              </p>
+          <hr className={styles.divider} />
 
-              <p>
-                <strong>Platform Earning:</strong>{" "}
-                {formatCurrency(payment.platformEarning)}
-              </p>
-            </div>
+          <div className={styles.breakdownRow}>
+            <span>Company Earning</span>
+            <strong>${formatMoney(payment.companyEarning)}</strong>
+          </div>
 
-            {/* ===========================
-                INVOICE
-            ============================ */}
-            <div className={styles.section}>
-              <h3>Invoice</h3>
+          <div className={styles.breakdownRow}>
+            <span>Driver Earning</span>
+            <strong>${formatMoney(payment.driverEarning)}</strong>
+          </div>
 
-              <p>
-                <strong>Invoice Number:</strong>{" "}
-                {payment.invoiceNumber || "—"}
-              </p>
+          <div className={styles.breakdownRow}>
+            <span>Platform Earning</span>
+            <strong>${formatMoney(payment.platformEarning)}</strong>
+          </div>
+        </div>
 
-              <p>
-                <strong>Invoice Generated:</strong>{" "}
-                {formatDateTime(payment.generationDate)}
-              </p>
+        {/* =========================================================
+            SECTION: TRIP
+        ========================================================== */}
+        <div className={styles.sectionTitle}>Trip Info</div>
 
-              {payment.invoicePdfUrl && (
-                <p>
-                  <a
-                    href={payment.invoicePdfUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className={styles.link}
-                    style={{ color: branding.primaryColor }}
-                  >
-                    View Invoice PDF
-                  </a>
-                </p>
-              )}
-            </div>
+        <div className={styles.infoCard}>
+          <p className={styles.mainValue}>
+            Trip #{payment.tripId?._id || payment.tripId || "—"}
+          </p>
+          <p className={styles.muted}>
+            Status: {payment.tripId?.status || "—"}
+          </p>
+        </div>
 
-            {/* ===========================
-                TIMING
-            ============================ */}
-            <div className={styles.section}>
-              <h3>Timing</h3>
-
-              <p>
-                <strong>Paid At:</strong>{" "}
-                {formatDateTime(payment.paidAt)}
-              </p>
-
-              <p>
-                <strong>Created:</strong>{" "}
-                {formatDateTime(payment.createdAt)}
-              </p>
-
-              <p>
-                <strong>Updated:</strong>{" "}
-                {formatDateTime(payment.updatedAt)}
-              </p>
-            </div>
-          </>
-        )}
       </div>
     </div>
   );

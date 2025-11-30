@@ -11,10 +11,10 @@ import CompanyLayout from "./layout/CompanyLayout";
 import ManagerLayout from "./layout/ManagerLayout";
 import CustomerLayout from "./layout/CustomerLayout";
 
-// Admin
+// Admin Pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
 
-// Company pages
+// Company Pages
 import CompanyDashboard from "./pages/company/CompanyDashboard";
 import CompanyProducts from "./pages/company/CompanyProducts";
 import CompanyDrivers from "./pages/company/CompanyDrivers";
@@ -23,9 +23,9 @@ import CompanyTrips from "./pages/company/CompanyTrips";
 import CompanyOrders from "./pages/company/CompanyOrders";
 import CompanyVehicles from "./pages/company/CompanyVehicles";
 import CompanyPayments from "./pages/company/CompanyPayments";
-import CompanyProfile from "./pages/company/CompanyProfile";   // ⬅ NEW
+import CompanyProfile from "./pages/company/CompanyProfile";
 
-// Manager pages
+// Manager Pages
 import ManagerDashboard from "./pages/manager/ManagerDashboard";
 import ManagerTrips from "./pages/manager/ManagerTrips";
 import ManagerDrivers from "./pages/manager/ManagerDrivers";
@@ -35,7 +35,7 @@ import ManagerVehicles from "./pages/manager/ManagerVehicles";
 import ManagerOrders from "./pages/manager/ManagerOrders";
 import ManagerPayments from "./pages/manager/ManagerPayments";
 
-// Customer pages
+// Customer Pages
 import CustomerDashboard from "./pages/customer/CustomerDashboard";
 import CustomerTrips from "./pages/customer/CustomerTrips";
 import CustomerPayments from "./pages/customer/CustomerPayments";
@@ -47,9 +47,9 @@ function App() {
       <BrowserRouter>
         <Routes>
 
-          {/* ===========================================
+          {/* ==========================================================
               SUPERADMIN
-          =========================================== */}
+          ========================================================== */}
           <Route
             path="/admin"
             element={
@@ -61,9 +61,9 @@ function App() {
             <Route index element={<AdminDashboard />} />
           </Route>
 
-          {/* ===========================================
-              COMPANY
-          =========================================== */}
+          {/* ==========================================================
+              COMPANY OWNER
+          ========================================================== */}
           <Route
             path="/company"
             element={
@@ -80,12 +80,12 @@ function App() {
             <Route path="orders" element={<CompanyOrders />} />
             <Route path="vehicles" element={<CompanyVehicles />} />
             <Route path="payments" element={<CompanyPayments />} />
-            <Route path="profile" element={<CompanyProfile />} /> {/* ⬅ NEW */}
+            <Route path="profile" element={<CompanyProfile />} />
           </Route>
 
-          {/* ===========================================
+          {/* ==========================================================
               MANAGER
-          =========================================== */}
+          ========================================================== */}
           <Route
             path="/manager"
             element={
@@ -104,9 +104,9 @@ function App() {
             <Route path="payments" element={<ManagerPayments />} />
           </Route>
 
-          {/* ===========================================
-              CUSTOMER
-          =========================================== */}
+          {/* ==========================================================
+              CUSTOMER (APP USER)
+          ========================================================== */}
           <Route
             path="/customer"
             element={
@@ -121,8 +121,11 @@ function App() {
             <Route path="profile" element={<CustomerProfile />} />
           </Route>
 
-          {/* FALLBACK */}
+          {/* ==========================================================
+              WILDCARD → LOGIN
+          ========================================================== */}
           <Route path="*" element={<Navigate to="/login" />} />
+
         </Routes>
       </BrowserRouter>
     </AuthProvider>
