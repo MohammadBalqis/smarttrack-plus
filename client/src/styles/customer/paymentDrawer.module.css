@@ -1,0 +1,107 @@
+/* OVERLAY */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(3px);
+  z-index: 998;
+}
+
+/* DRAWER */
+.drawer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 82vh;
+  background: #ffffff;
+  border-radius: 18px 18px 0 0;
+  padding: 18px;
+  overflow-y: auto;
+  z-index: 999;
+  animation: slideUp .3s ease;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+/* HEADER */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.closeBtn {
+  font-size: 20px;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+/* STATUS BOX */
+.statusBox {
+  background: #f3f4f6;
+  padding: 12px;
+  border-radius: 12px;
+  margin: 14px 0;
+}
+
+.status_paid { color: #16a34a; }
+.status_unpaid { color: #dc2626; }
+.status_pending { color: #d97706; }
+
+/* SECTIONS */
+.section {
+  background: #f9fafb;
+  padding: 12px;
+  border-radius: 12px;
+  margin-bottom: 16px;
+}
+
+.section h3 {
+  margin-bottom: 6px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+/* DRIVER CARD */
+.driverCard {
+  display: flex;
+  gap: 12px;
+  background: #eef2ff;
+  padding: 12px;
+  border-radius: 12px;
+  margin-bottom: 16px;
+}
+
+.driverCard img {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+}
+
+.vehicleBox {
+  margin-left: auto;
+  text-align: right;
+  font-size: 13px;
+}
+
+/* QR & BARCODE */
+.qrBox, .barcodeBox {
+  text-align: center;
+  margin: 20px 0;
+}
+
+/* BUTTON */
+.closeDrawerBtn {
+  width: 100%;
+  padding: 12px;
+  border-radius: 12px;
+  background: #e5e7eb;
+  border: none;
+  font-size: 15px;
+  cursor: pointer;
+}

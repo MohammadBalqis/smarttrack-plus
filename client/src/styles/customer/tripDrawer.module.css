@@ -1,0 +1,146 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(3px);
+  z-index: 998;
+}
+
+.drawer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 80vh;
+  background: #ffffff;
+  border-radius: 18px 18px 0 0;
+  padding: 18px;
+  overflow-y: auto;
+  z-index: 999;
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+/* Header */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.closeBtn {
+  background: transparent;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+/* Timeline */
+.timeline {
+  display: flex;
+  justify-content: space-between;
+  margin: 20px 0;
+}
+
+.timelineStep {
+  text-align: center;
+  opacity: 0.4;
+}
+
+.timelineStep p {
+  font-size: 12px;
+}
+
+.active {
+  opacity: 1;
+}
+
+.circle {
+  width: 14px;
+  height: 14px;
+  background: #2563eb;
+  border-radius: 50%;
+  margin: 0 auto 6px;
+}
+
+/* Driver card */
+.driverCard {
+  display: flex;
+  gap: 12px;
+  background: #f9fafb;
+  padding: 12px;
+  border-radius: 10px;
+  margin-bottom: 15px;
+}
+
+.driverCard img {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+}
+
+.vehicleBox {
+  margin-left: auto;
+  text-align: right;
+  font-size: 13px;
+}
+
+/* Locations */
+.locationBox h4 {
+  margin: 6px 0 2px;
+}
+
+.locationBox {
+  background: #f3f4f6;
+  padding: 12px;
+  border-radius: 10px;
+  margin-bottom: 15px;
+}
+
+/* Payment */
+.paymentBox {
+  background: #e0f2fe;
+  padding: 12px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  font-size: 15px;
+}
+
+.paymentBox span {
+  display: block;
+  color: #475569;
+}
+
+/* QR & Barcode */
+.qrSection, .barcodeBox {
+  text-align: center;
+  margin: 20px 0;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.trackBtn {
+  background: #2563eb;
+  color: white;
+  border: none;
+  padding: 12px;
+  border-radius: 12px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.closeDrawerBtn {
+  background: #e5e7eb;
+  border: none;
+  padding: 10px;
+  border-radius: 12px;
+  cursor: pointer;
+}

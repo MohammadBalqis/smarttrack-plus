@@ -1,144 +1,188 @@
-// client/src/layout/CustomerLayout.jsx
-import React, { useState } from "react";
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { Outlet, NavLink } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { customerMenu } from "../components/sidebar/sidebarItems";
-
-import styles from "../styles/layouts/customerLayout.module.css";
+import { customerMenu } from "../components/sidebar/customerMenu";
+import styles from "../styles/layout/customerLayout.module.css";
+import { io } from "socket.io-client";
 
 const CustomerLayout = () => {
   const { user, logout } = useAuth();
-  const navigate = useNavigate();
+
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [toast, setToast] = useState(null);
 
-  const handleLogout = () => {
-    logout();
-    navigate("/login");
-  };
+  /* ==========================================================
+     🔵 SOCKET.IO — REAL-TIME NOTIFICATIONS
+  ========================================================== */
 
-  const closeSidebar = () => setSidebarOpen(false);
+  useEffect(() => {
+    if (!user?._id) return;
+
+    const socket = io(import.meta.env.VITE_API_URL, {
+      transports: ["websocket"],
+    });
+
+    // Register customer room
+    socket.emit("register", user._id);
+
+    // Listen for new notifications
+    socket.on("notification:new", (notif) => {
+      // Update unread count UI
+      setUnreadCount((prev) => prev + 1);
+
+      // Show toast popup
+      setToast({
+        title: notif.title || "New update",
+        message: notif.message,
+      });
+
+      // Hide toast after 4 seconds
+      setTimeout(() => setToast(null), 4000);
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [user]);
+
+  /* ==========================================================
+     🟡 GET UNREAD COUNT ON FIRST LOAD
+  ========================================================== */
+
+  useEffect(() => {
+    const fetchUnread = async () => {
+      try {
+        const res = await fetch(
+          `${import.meta.env.VITE_API_URL}/api/notifications/list?status=unread`,
+          {
+            credentials: "include",
+            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+          }
+        );
+
+        const data = await res.json();
+        if (data.ok) setUnreadCount(data.total || 0);
+      } catch (err) {
+        console.error("Unread load error", err);
+      }
+    };
+
+    fetchUnread();
+  }, []);
+
+  /* ==========================================================
+     UI + LAYOUT
+  ========================================================== */
+
+  const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
   return (
     <div className={styles.shell}>
-      {/* MOBILE BACKDROP */}
-      {sidebarOpen && (
-        <div
-          className={styles.backdrop}
-          onClick={closeSidebar}
-        />
-      )}
-
-      {/* SIDEBAR */}
+      {/* ========== SIDEBAR ========== */}
       <aside
         className={`${styles.sidebar} ${
           sidebarOpen ? styles.sidebarOpen : ""
         }`}
       >
-        {/* Brand / Profile */}
         <div className={styles.brandBox}>
           <div className={styles.brandRow}>
-            <div className={styles.brandIcon}>🚀</div>
+            <div className={styles.brandIcon}>🚚</div>
             <div>
               <div className={styles.brandTitle}>SmartTrack+</div>
-              <div className={styles.brandSubtitle}>Customer App</div>
+              <div className={styles.brandSubtitle}>Customer</div>
             </div>
           </div>
 
           <div className={styles.profileBlock}>
             {user?.profileImage ? (
               <img
-                src={user.profileImage}
-                alt={user.name || "Customer"}
+                src={`${import.meta.env.VITE_API_URL}${user.profileImage}`}
+                alt="profile"
                 className={styles.profileImgLarge}
               />
             ) : (
               <div className={styles.profilePlaceholder}>
-                {(user?.name || "C")
-                  .charAt(0)
-                  .toUpperCase()}
+                {user?.name?.[0] || "?"}
               </div>
             )}
 
             <div>
-              <div className={styles.profileName}>
-                {user?.name || "Customer"}
-              </div>
-              <div className={styles.profileEmail}>
-                {user?.email || ""}
-              </div>
-              <span className={styles.roleChip}>CUSTOMER</span>
+              <div className={styles.profileName}>{user?.name}</div>
+              <div className={styles.profileEmail}>{user?.email}</div>
+              <div className={styles.roleChip}>CUSTOMER</div>
             </div>
           </div>
         </div>
 
         {/* MENU */}
         <nav className={styles.menu}>
-          {customerMenu.map((item) => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              onClick={closeSidebar}
-              className={({ isActive }) =>
-                isActive ? styles.menuLinkActive : styles.menuLink
-              }
-            >
-              <span className={styles.menuIcon}>{item.icon}</span>
-              <span>{item.label}</span>
-            </NavLink>
-          ))}
+          {customerMenu.map((item) => {
+            const isNotifications = item.path.includes("notifications");
+
+            return (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                className={({ isActive }) =>
+                  isActive ? styles.menuLinkActive : styles.menuLink
+                }
+                onClick={() => setSidebarOpen(false)}
+              >
+                <span className={styles.menuIcon}>{item.icon}</span>
+                {item.label}
+
+                {/* 🔴 unread badge */}
+                {isNotifications && unreadCount > 0 && (
+                  <span className={styles.unreadBadge}>{unreadCount}</span>
+                )}
+              </NavLink>
+            );
+          })}
         </nav>
 
-        {/* Sidebar footer */}
         <div className={styles.sidebarFooter}>
           <span className={styles.footerAppName}>SmartTrack+</span>
-          <span className={styles.footerVersion}>v1.0</span>
+          <span>{new Date().getFullYear()}</span>
         </div>
       </aside>
 
-      {/* MAIN AREA */}
+      {/* BACKDROP */}
+      {sidebarOpen && (
+        <div className={styles.backdrop} onClick={toggleSidebar}></div>
+      )}
+
+      {/* ========== MAIN ========== */}
       <div className={styles.main}>
-        {/* TOPBAR */}
         <header className={styles.topbar}>
           <div className={styles.leftTop}>
-            <button
-              type="button"
-              className={styles.menuToggle}
-              onClick={() => setSidebarOpen((prev) => !prev)}
-            >
+            <button className={styles.menuToggle} onClick={toggleSidebar}>
               ☰
             </button>
 
             <div className={styles.topBrandText}>
-              <span className={styles.topAppName}>SmartTrack+</span>
-              <span className={styles.topAppTagline}>
-                Track your deliveries in real time
-              </span>
+              <div className={styles.topAppName}>SmartTrack+</div>
+              <div className={styles.topAppTagline}>Customer Portal</div>
             </div>
           </div>
 
           <div className={styles.topUser}>
-            {user?.profileImage && (
+            {user?.profileImage ? (
               <img
-                src={user.profileImage}
-                alt="profile"
+                src={`${import.meta.env.VITE_API_URL}${user.profileImage}`}
                 className={styles.profileImgSmall}
+                alt="avatar"
               />
+            ) : (
+              <div className={styles.profilePlaceholder}>U</div>
             )}
 
             <div className={styles.topUserText}>
-              <span className={styles.topUserName}>
-                {user?.name || "Customer"}
-              </span>
-              <span className={styles.topUserRole}>
-                {user?.role || "customer"}
-              </span>
+              <div className={styles.topUserName}>{user?.name}</div>
+              <div className={styles.topUserRole}>CUSTOMER</div>
             </div>
 
-            <button
-              type="button"
-              className={styles.logoutBtn}
-              onClick={handleLogout}
-            >
+            <button className={styles.logoutBtn} onClick={logout}>
               Logout
             </button>
           </div>
@@ -149,6 +193,14 @@ const CustomerLayout = () => {
           <Outlet />
         </main>
       </div>
+
+      {/* ========== TOAST NOTIFICATION ========== */}
+      {toast && (
+        <div className={styles.toast}>
+          <strong>{toast.title}</strong>
+          <p>{toast.message}</p>
+        </div>
+      )}
     </div>
   );
 };

@@ -120,8 +120,11 @@ function App() {
             <Route path="trips" element={<CustomerTrips />} />
             <Route path="trips/history" element={<CustomerTripHistory />} />
             <Route path="trips/:tripId" element={<CustomerTrackTrip />} />
+            <Route path="trips/track/:tripId" element={<CustomerTrackTrip />} />
             <Route path="payments" element={<CustomerPayments />} />
             <Route path="profile" element={<CustomerProfile />} />
+            <Route path="edit-profile" element={<CustomerEditProfile />} />
+            <Route path="sessions" element={<CustomerSessions />} /> 
             <Route path="select-company" element={<SelectCompany />} />
           </Route>
 

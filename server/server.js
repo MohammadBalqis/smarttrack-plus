@@ -75,6 +75,7 @@ import companyPaymentRoutes from "./src/routes/companyPaymentRoutes.js";
 import companyDriverRoutes from "./src/routes/companyDriverRoutes.js";
 import companyOrdersRoutes from "./src/routes/companyOrderRoutes.js";
 import companyBrandingRoutes from "./src/routes/companyBrandingRoutes.js";
+import customerNotificationRoutes from "./src/routes/customerNotificationRoutes.js";
 
 import managerDashboardRoutes from "./src/routes/managerDashboardRoutes.js";
 import managerDriverRoutes from "./src/routes/managerDriverRoutes.js";
@@ -85,15 +86,15 @@ import managerOrderRoutes from "./src/routes/managerOrdersRoutes.js";
 import managerNotificationRoutes from "./src/routes/managerNotificationRoutes.js";
 import managerProfileRoutes from "./src/routes/managerProfileRoutes.js";
 import managerPaymentsRoutes from "./src/routes/managerPaymentsRoutes.js";
-
+import notificationRoutes from "./src/routes/notificationRoutes.js";
 import driverRoutes from "./src/routes/driverRoutes.js";
 import customerRoutes from "./src/routes/customerRoutes.js";
 import customerTripRoutes from "./src/routes/customerTripRoutes.js";
-
+import customerPaymentRoutes from "./src/routes/customerPaymentRoutes.js";
 import productRoutes from "./src/routes/productRoutes.js";
 import paymentRoutes from "./src/routes/paymentRoutes.js";
 import invoiceRoutes from "./src/routes/invoiceRoutes.js";
-
+import customerSettingsRoutes from "./src/routes/customerSettingsRoutes.js";
 import companySettingsRoutes from "./src/routes/companySettingsRoutes.js";
 import adminStatsRoutes from "./src/routes/adminStatsRoutes.js";
 import globalSettingsRoutes from "./src/routes/globalSettingsRoutes.js";
@@ -108,7 +109,7 @@ import sessionRoutes from "./src/routes/sessionRoutes.js";
 ========================================================== */
 app.use("/api/public", apiLimiter);
 app.use("/api/public/company", publicApiRoutes);
-
+app.use("/api/notifications", notificationRoutes);
 /* ==========================================================
    📌 MAIN ROUTES
 ========================================================== */
@@ -149,6 +150,9 @@ app.use("/api/driver", driverRoutes);
 // Customer
 app.use("/api/customer/profile", customerRoutes);
 app.use("/api/customer/trips", customerTripRoutes);
+app.use("/api/customer/payments", customerPaymentRoutes);
+app.use("/api/customer/settings", customerSettingsRoutes);
+app.use("/api/customer/notifications", customerNotificationRoutes);
 
 // Shared
 app.use("/api/products", productRoutes);

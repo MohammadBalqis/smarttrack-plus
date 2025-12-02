@@ -22,10 +22,12 @@ const CustomerTripHistory = () => {
   const loadTrips = async () => {
     try {
       setLoading(true);
+      setError("");
       const res = await getCustomerHistoryTripsApi();
       if (res.data.ok) {
-        setTrips(res.data.trips || []);
-        setFiltered(res.data.trips || []);
+        const list = res.data.trips || [];
+        setTrips(list);
+        setFiltered(list);
       } else {
         setError("Failed to load history.");
       }
@@ -53,16 +55,25 @@ const CustomerTripHistory = () => {
     if (value === "cancelled") {
       return setFiltered(trips.filter((t) => t.status === "cancelled"));
     }
+
+    setFiltered(trips);
   };
 
   const openDrawer = async (tripId) => {
     try {
       const res = await getCustomerTripDetailsApi(tripId);
-      setSelectedTrip(res.data.trip);
-      setDrawerOpen(true);
+      if (res.data?.ok && res.data.trip) {
+        setSelectedTrip(res.data.trip);
+        setDrawerOpen(true);
+      }
     } catch (err) {
       console.error(err);
     }
+  };
+
+  const formatDate = (value) => {
+    if (!value) return "—";
+    return new Date(value).toLocaleString();
   };
 
   if (loading) return <p className={styles.info}>Loading history…</p>;
@@ -119,15 +130,22 @@ const CustomerTripHistory = () => {
                   styles.statusBadge_default
                 }
               >
-                {trip.status}
+                {trip.status === "in_progress"
+                  ? "In Progress"
+                  : trip.status?.charAt(0).toUpperCase() +
+                    trip.status?.slice(1)}
               </span>
             </div>
 
             <p className={styles.line}>
-              <strong>Pickup:</strong> {trip.pickupLocation.address}
+              <strong>Pickup:</strong> {trip.pickupLocation?.address || "—"}
             </p>
             <p className={styles.line}>
-              <strong>Dropoff:</strong> {trip.dropoffLocation.address}
+              <strong>Dropoff:</strong> {trip.dropoffLocation?.address || "—"}
+            </p>
+
+            <p className={styles.line}>
+              <strong>Date:</strong> {formatDate(trip.createdAt)}
             </p>
 
             {trip.driverId && (
@@ -149,7 +167,10 @@ const CustomerTripHistory = () => {
       {/* DRAWER */}
       <CustomerTripDrawer
         open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
+        onClose={() => {
+          setDrawerOpen(false);
+          setSelectedTrip(null);
+        }}
         trip={selectedTrip}
       />
     </div>

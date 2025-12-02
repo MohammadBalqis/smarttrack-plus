@@ -29,4 +29,5 @@ export const customerMenu = [
   { label: "My Trips", icon: "📦", path: "/customer/trips" },      // active + history tabs later
   { label: "Payments", icon: "💳", path: "/customer/payments" },
   { label: "Profile", icon: "👤", path: "/customer/profile" },
+  { label: "Sessions & Devices", icon: "💻", path: "/customer/sessions" }, // NEW
 ];

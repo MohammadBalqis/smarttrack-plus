@@ -1,0 +1,77 @@
+.page {
+  padding: 22px;
+  font-family: "Inter", sans-serif;
+}
+
+.title {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.sub {
+  font-size: 14px;
+  color: #6b7280;
+  margin-bottom: 18px;
+}
+
+.info {
+  padding: 16px;
+  text-align: center;
+  color: #6b7280;
+}
+
+.error {
+  padding: 14px;
+  color: #b91c1c;
+}
+
+.grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.card {
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06);
+  border: 1px solid #e5e7eb;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.paidBadge {
+  background: #10b981;
+  color: white;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+}
+
+.line {
+  font-size: 14px;
+  margin: 4px 0;
+}
+
+.totalPayment {
+  font-size: 16px;
+  margin: 10px 0;
+  color: #111827;
+}
+
+.viewBtn {
+  width: 100%;
+  background: #2563eb;
+  color: white;
+  border: none;
+  padding: 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  margin-top: 10px;
+}

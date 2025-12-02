@@ -4,14 +4,11 @@ import {
   getCustomerActiveTripsApi,
   getCustomerTripDetailsApi,
 } from "../../api/customerTripsApi";
-import CustomerTripDrawer from "../../components/customer/CustomerTripDrawer";
 
-import { useNavigate } from "react-router-dom";
+import CustomerTripDrawer from "../../components/customer/CustomerTripDrawer";
 import styles from "../../styles/customer/trips.module.css";
 
 const CustomerTrips = () => {
-  const navigate = useNavigate();
-
   const [trips, setTrips] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -39,8 +36,10 @@ const CustomerTrips = () => {
   const openDrawer = async (tripId) => {
     try {
       const res = await getCustomerTripDetailsApi(tripId);
-      setSelectedTrip(res.data.trip);
-      setDrawerOpen(true);
+      if (res.data?.ok && res.data.trip) {
+        setSelectedTrip(res.data.trip);
+        setDrawerOpen(true);
+      }
     } catch (err) {
       console.error(err);
     }
@@ -56,73 +55,73 @@ const CustomerTrips = () => {
 
   if (trips.length === 0)
     return (
-      <p className={styles.info}>
-        No active trips. Create a delivery order to get started.
-      </p>
+      <div className={styles.page}>
+        <h1 className={styles.title}>Active Orders</h1>
+        <p className={styles.sub}>Track your pending and in-progress orders.</p>
+
+        <p className={styles.info}>You currently have no active trips.</p>
+      </div>
     );
 
   return (
     <div className={styles.page}>
       <h1 className={styles.title}>Active Orders</h1>
-      <p className={styles.sub}>
-        Track your pending and in-progress deliveries.
-      </p>
+      <p className={styles.sub}>Track your pending and in-progress deliveries.</p>
 
       <div className={styles.grid}>
-        {trips.map((trip) => (
-          <div key={trip._id} className={styles.card}>
-            <div className={styles.cardHeader}>
-              <h3>#{String(trip._id).slice(-6)}</h3>
-              <span
-                className={
-                  styles[`statusBadge_${trip.status}`] ||
-                  styles.statusBadge_default
-                }
-              >
-                {trip.status}
-              </span>
-            </div>
+        {trips.map((trip) => {
+          const badgeClass =
+            styles[`statusBadge_${trip.status}`] ||
+            styles.statusBadge_default;
 
-            <p className={styles.line}>
-              <strong>Pickup:</strong> {trip.pickupLocation.address}
-            </p>
-            <p className={styles.line}>
-              <strong>Dropoff:</strong> {trip.dropoffLocation.address}
-            </p>
+          return (
+            <div key={trip._id} className={styles.card}>
+              {/* Header */}
+              <div className={styles.cardHeader}>
+                <h3>#{String(trip._id).slice(-6)}</h3>
+                <span className={badgeClass}>
+                  {trip.status === "in_progress"
+                    ? "In Progress"
+                    : trip.status.charAt(0).toUpperCase() +
+                      trip.status.slice(1)}
+                </span>
+              </div>
 
-            {trip.driverId && (
+              {/* Addresses */}
               <p className={styles.line}>
-                <strong>Driver:</strong> {trip.driverId.name}
+                <strong>Pickup:</strong> {trip.pickupLocation?.address}
               </p>
-            )}
 
-            {/* VIEW DETAILS */}
-            <button
-              className={styles.viewBtn}
-              onClick={() => openDrawer(trip._id)}
-            >
-              View Details
-            </button>
+              <p className={styles.line}>
+                <strong>Dropoff:</strong> {trip.dropoffLocation?.address}
+              </p>
 
-            {/* NEW: TRACK ORDER */}
-            {["pending", "assigned", "in_progress"].includes(trip.status) && (
+              {/* Driver */}
+              {trip.driverId && (
+                <p className={styles.line}>
+                  <strong>Driver:</strong> {trip.driverId.name}
+                </p>
+              )}
+
+              {/* Track button */}
               <button
                 className={styles.trackBtn}
-                onClick={() =>
-                  navigate(`/customer/trips/track/${trip._id}`)
-                }
+                onClick={() => openDrawer(trip._id)}
               >
-                Track Live
+                Track Order
               </button>
-            )}
-          </div>
-        ))}
+            </div>
+          );
+        })}
       </div>
 
-      {/* DRAWER */}
+      {/* Drawer */}
       <CustomerTripDrawer
         open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
+        onClose={() => {
+          setDrawerOpen(false);
+          setSelectedTrip(null);
+        }}
         trip={selectedTrip}
       />
     </div>

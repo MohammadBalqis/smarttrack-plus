@@ -9,7 +9,7 @@ const router = Router();
 /* ==========================================================
    📋 1. GET notifications (all roles)
    Filters + pagination + sorting
-   ========================================================== */
+========================================================== */
 router.get("/list", protect, async (req, res) => {
   try {
     const settings = await GlobalSettings.findOne();
@@ -29,10 +29,11 @@ router.get("/list", protect, async (req, res) => {
       priority,
     } = req.query;
 
-    const filter = { userId: req.user._id };
+    // 🔥 IMPORTANT: match your model field name
+    const filter = { recipientId: req.user._id };
 
-    if (status === "unread") filter.read = false;
-    if (status === "read") filter.read = true;
+    if (status === "unread") filter.isRead = false;
+    if (status === "read") filter.isRead = true;
     if (type) filter.type = type;
     if (category) filter.category = category;
     if (priority) filter.priority = priority;
@@ -64,12 +65,12 @@ router.get("/list", protect, async (req, res) => {
 
 /* ==========================================================
    📌 2. MARK ONE NOTIFICATION AS READ
-   ========================================================== */
+========================================================== */
 router.patch("/mark-read/:id", protect, async (req, res) => {
   try {
     const notif = await Notification.findOneAndUpdate(
-      { _id: req.params.id, userId: req.user._id },
-      { read: true },
+      { _id: req.params.id, recipientId: req.user._id },
+      { isRead: true },
       { new: true }
     );
 
@@ -89,12 +90,12 @@ router.patch("/mark-read/:id", protect, async (req, res) => {
 
 /* ==========================================================
    📌 3. MARK ALL NOTIFICATIONS AS READ
-   ========================================================== */
+========================================================== */
 router.patch("/mark-all", protect, async (req, res) => {
   try {
     await Notification.updateMany(
-      { userId: req.user._id, read: false },
-      { read: true }
+      { recipientId: req.user._id, isRead: false },
+      { isRead: true }
     );
 
     res.json({
@@ -108,13 +109,13 @@ router.patch("/mark-all", protect, async (req, res) => {
 });
 
 /* ==========================================================
-   🗑️ 4. DELETE ONE NOTIFICATION (optional)
-   ========================================================== */
+   🗑️ 4. DELETE ONE NOTIFICATION
+========================================================== */
 router.delete("/delete/:id", protect, async (req, res) => {
   try {
     const deleted = await Notification.findOneAndDelete({
       _id: req.params.id,
-      userId: req.user._id,
+      recipientId: req.user._id,
     });
 
     if (!deleted)
@@ -131,11 +132,11 @@ router.delete("/delete/:id", protect, async (req, res) => {
 });
 
 /* ==========================================================
-   🗑️ 5. DELETE ALL NOTIFICATIONS (optional)
-   ========================================================== */
+   🗑️ 5. DELETE ALL NOTIFICATIONS
+========================================================== */
 router.delete("/delete-all", protect, async (req, res) => {
   try {
-    await Notification.deleteMany({ userId: req.user._id });
+    await Notification.deleteMany({ recipientId: req.user._id });
 
     res.json({
       ok: true,

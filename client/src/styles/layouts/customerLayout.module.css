@@ -308,3 +308,51 @@
     justify-content: center;
   }
 }
+/* ================= NOTIFICATION BADGE ================= */
+.unreadBadge {
+  margin-left: auto;
+  background: #ef4444;
+  color: white;
+  padding: 2px 7px;
+  font-size: 11px;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+/* ================= TOAST POPUP ================= */
+.toast {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  background: #1e293b;
+  color: #f8fafc;
+  padding: 14px 18px;
+  border-radius: 12px;
+  box-shadow: 0 4px 22px rgba(0, 0, 0, 0.35);
+  z-index: 9999;
+  width: 260px;
+  animation: slideUp 0.35s ease-out;
+}
+
+.toast strong {
+  font-size: 15px;
+  margin-bottom: 4px;
+  display: block;
+}
+
+.toast p {
+  font-size: 13px;
+  opacity: 0.85;
+}
+
+/* Toast animation */
+@keyframes slideUp {
+  from {
+    transform: translateY(50px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
