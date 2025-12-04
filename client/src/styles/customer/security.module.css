@@ -1,0 +1,53 @@
+.page {
+  padding: 24px;
+  color: #e5e7eb;
+}
+
+.title {
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.sub {
+  color: #9ca3af;
+  margin-bottom: 18px;
+}
+
+/* Button */
+.logoutAllBtn {
+  background: #ef4444;
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 8px;
+  margin-bottom: 18px;
+  cursor: pointer;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.item {
+  background: #0f172a;
+  padding: 16px;
+  border-radius: 10px;
+  border: 1px solid #334155;
+  display: flex;
+  justify-content: space-between;
+}
+
+.inactive {
+  opacity: 0.5;
+}
+
+.logoutBtn {
+  background: #2563eb;
+  color: white;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+}

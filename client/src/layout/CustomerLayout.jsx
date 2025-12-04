@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Outlet, NavLink } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { customerMenu } from "../components/sidebar/customerMenu";
-import styles from "../styles/layout/customerLayout.module.css";
+import styles from "../styles/layouts/customerLayout.module.css";
 import { io } from "socket.io-client";
 
 const CustomerLayout = () => {

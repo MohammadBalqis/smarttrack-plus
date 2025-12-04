@@ -1,7 +1,7 @@
 import React from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { companyMenu } from "../components/sidebar/sidebarItems";
+import { companyMenu } from "../components/sidebar/SidebarItems";
 
 import styles from "../styles/layouts/dashboardLayout.module.css";
 

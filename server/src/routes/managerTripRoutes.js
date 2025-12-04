@@ -3,33 +3,28 @@ import { Router } from "express";
 import { protect } from "../middleware/authMiddleware.js";
 import { authorizeRoles } from "../middleware/roleMiddleware.js";
 
-// From your existing core controller:
-import { managerSearchTrips } from "../controllers/trip/tripCoreController.js";
-// New stats controller:
-import { getManagerTripStats } from "../controllers/trip/tripManagerController.js";
+import {
+  getManagerTrips,
+  getManagerTripDetails,
+  getManagerTripTimeline,
+  getManagerTripSummary,
+} from "../controllers/managerTripController.js";
 
 const router = Router();
 
-/* ==========================================================
-   📋 MANAGER TRIPS LIST (with filters + pagination)
-   Only trips for the company he works in (handled in controller)
-========================================================== */
-router.get(
-  "/trips",
-  protect,
-  authorizeRoles("manager", "company"),
-  managerSearchTrips
-);
+// manager & company
+router.use(protect, authorizeRoles("manager", "company"));
 
-/* ==========================================================
-   📊 MANAGER TRIPS STATS
-   Only for his company (see getManagerTripStats)
-========================================================== */
-router.get(
-  "/trips/stats",
-  protect,
-  authorizeRoles("manager", "company"),
-  getManagerTripStats
-);
+// GET all trips
+router.get("/", getManagerTrips);
+
+// single trip details
+router.get("/:id", getManagerTripDetails);
+
+// timeline
+router.get("/:id/timeline", getManagerTripTimeline);
+
+// summary
+router.get("/summary/data", getManagerTripSummary);
 
 export default router;

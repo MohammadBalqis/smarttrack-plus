@@ -1,5 +1,6 @@
 // server/src/controllers/authController.js
 import User from "../models/User.js";
+import Shop from "../models/Shop.js";
 import Session from "../models/Session.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
@@ -10,37 +11,26 @@ import { getClientInfo } from "../utils/clientInfo.js";
    🔐 JWT + SESSION HELPERS
 ========================================================== */
 
-// Maximum active sessions per user (can tweak: 2, 3, 5…)
 const MAX_ACTIVE_SESSIONS = 3;
 
-/**
- * Generate JWT keeping your original payload shape
- * but adding `sid` for the session.
- */
 const generateTokenWithSession = (user, sessionId) =>
   jwt.sign(
     {
-      // ✅ keep legacy keys so frontend doesn’t break
       uid: user._id,
       role: user.role,
       companyId: user.companyId || null,
-      managerId: user.managerId || null,
+      shopId: user.shopId || null,
       isSuperAdmin: user.role === "superadmin",
-      // ➕ new: session id
-      sid: sessionId,
+      sid: sessionId, // session id
     },
     process.env.JWT_SECRET,
     { expiresIn: "12h" }
   );
 
-/**
- * Create / rotate session and return JWT token + session document.
- * Used inside login + register.
- */
 const createAuthTokenWithSession = async (req, user) => {
   const client = getClientInfo(req);
 
-  // 1) Enforce max active sessions: revoke oldest if too many
+  // (1) ENFORCE MAX ACTIVE SESSIONS
   const activeSessions = await Session.find({
     userId: user._id,
     isActive: true,
@@ -50,13 +40,12 @@ const createAuthTokenWithSession = async (req, user) => {
     .lean();
 
   if (activeSessions.length >= MAX_ACTIVE_SESSIONS) {
-    // How many to revoke to keep (MAX - 1) then add new one
     const toRevoke = activeSessions.slice(
       0,
       activeSessions.length - (MAX_ACTIVE_SESSIONS - 1)
     );
 
-    if (toRevoke.length) {
+    if (toRevoke.length > 0) {
       await Session.updateMany(
         { _id: { $in: toRevoke.map((s) => s._id) } },
         { isActive: false, isRevoked: true, revokedAt: new Date() }
@@ -64,7 +53,7 @@ const createAuthTokenWithSession = async (req, user) => {
     }
   }
 
-  // 2) Create new session
+  // (2) CREATE NEW SESSION
   const session = await Session.create({
     userId: user._id,
     ipAddress: client.ipAddress,
@@ -77,14 +66,14 @@ const createAuthTokenWithSession = async (req, user) => {
     isRevoked: false,
   });
 
-  // 3) Create JWT that includes session id (sid)
+  // (3) CREATE JWT
   const token = generateTokenWithSession(user, session._id.toString());
 
   return { token, session };
 };
 
 /* ==========================================================
-   🟢 REGISTER — Public (Customer only)
+   🟢 REGISTER — Public (CUSTOMERS ONLY)
 ========================================================== */
 export const register = async (req, res) => {
   try {
@@ -111,7 +100,6 @@ export const register = async (req, res) => {
       isActive: true,
     });
 
-    // ✅ Activity Log
     await logActivity({
       userId: user._id,
       action: "REGISTER",
@@ -120,7 +108,6 @@ export const register = async (req, res) => {
       deviceInfo: req.headers["user-agent"],
     });
 
-    // 🔐 Create session + token so user is logged in directly
     const { token, session } = await createAuthTokenWithSession(req, user);
 
     res.status(201).json({
@@ -151,11 +138,9 @@ export const login = async (req, res) => {
     const user = await User.findOne({ email });
 
     if (!user) {
-      // ❌ Log failed login
       await logActivity({
-        userId: null,
         action: "LOGIN_FAILED",
-        description: `Login failed — email not found: ${email}`,
+        description: `Email not found: ${email}`,
         ipAddress: req.ip,
         deviceInfo: req.headers["user-agent"],
       });
@@ -166,7 +151,7 @@ export const login = async (req, res) => {
       await logActivity({
         userId: user._id,
         action: "LOGIN_FAILED_SUSPENDED",
-        description: `Suspended account tried to log in: ${email}`,
+        description: `Suspended account tried to login: ${email}`,
         ipAddress: req.ip,
         deviceInfo: req.headers["user-agent"],
       });
@@ -175,21 +160,16 @@ export const login = async (req, res) => {
 
     const isMatch = await user.matchPassword(password);
     if (!isMatch) {
-      // ❌ Wrong password
       await logActivity({
         userId: user._id,
         action: "LOGIN_INVALID_PASSWORD",
-        description: `Invalid password for: ${email}`,
+        description: `Invalid password: ${email}`,
         ipAddress: req.ip,
         deviceInfo: req.headers["user-agent"],
       });
       return res.status(401).json({ error: "Invalid password" });
     }
 
-    // Store userId for any external middlewares if you use res.locals
-    res.locals.userId = user._id;
-
-    // ✅ LOGIN SUCCESS — create session + token
     const { token, session } = await createAuthTokenWithSession(req, user);
 
     await logActivity({
@@ -215,7 +195,7 @@ export const login = async (req, res) => {
         email: user.email,
         role: user.role,
         companyId: user.companyId,
-        managerId: user.managerId,
+        shopId: user.shopId,
         isSuperAdmin: user.role === "superadmin",
       },
       token,
@@ -228,7 +208,7 @@ export const login = async (req, res) => {
 };
 
 /* ==========================================================
-   🟣 SUPERADMIN CREATES COMPANY
+   👑 SUPERADMIN CREATES COMPANY
 ========================================================== */
 export const superAdminCreateCompany = async (req, res) => {
   try {
@@ -251,7 +231,6 @@ export const superAdminCreateCompany = async (req, res) => {
       isActive: true,
     });
 
-    // ✅ LOG ACTION
     await logActivity({
       userId: req.user._id,
       action: "SUPERADMIN_CREATE_COMPANY",
@@ -276,7 +255,7 @@ export const superAdminCreateCompany = async (req, res) => {
 ========================================================== */
 export const companyCreateUser = async (req, res) => {
   try {
-    const { name, email, password, role, managerId } = req.body;
+    const { name, email, password, role, shopId } = req.body;
 
     if (!name || !email || !password || !role)
       return res.status(400).json({ error: "Missing fields" });
@@ -292,17 +271,42 @@ export const companyCreateUser = async (req, res) => {
 
     const passwordHash = await bcrypt.hash(password, 10);
 
+    /* ==========================================================
+       🟣 MANAGER MUST HAVE shopId
+    ========================================================== */
+    if (role === "manager") {
+      if (!shopId)
+        return res
+          .status(400)
+          .json({ error: "shopId is required when creating a manager" });
+
+      const shop = await Shop.findOne({
+        _id: shopId,
+        companyId: req.user._id,
+        isActive: true,
+      });
+
+      if (!shop) {
+        return res.status(404).json({
+          error: "Shop not found or does not belong to your company",
+        });
+      }
+    }
+
+    /* ==========================================================
+       🟡 DRIVER shopId = optional
+    ========================================================== */
+
     const newUser = await User.create({
       name,
       email,
       passwordHash,
       role,
       companyId: req.user._id,
-      managerId: role === "driver" ? managerId || null : null,
+      shopId: shopId || null,
       isActive: true,
     });
 
-    // ✅ Activity Log
     await logActivity({
       userId: req.user._id,
       action: "COMPANY_CREATE_USER",

@@ -1,10 +1,11 @@
-// server/src/routes/authRoutes.js
-
 import { Router } from "express";
+import sanitize from "sanitize-html";
+import Joi from "joi";
+import { UAParser } from "ua-parser-js";
+
+
 import { protect } from "../middleware/authMiddleware.js";
 import { authorizeRoles } from "../middleware/roleMiddleware.js";
-
-// ✅ Use ONLY ONE RATE LIMITER FILE
 import { loginLimiter, registerLimiter } from "../middleware/rateLimiters.js";
 
 import {
@@ -15,19 +16,18 @@ import {
 } from "../controllers/authController.js";
 
 import { logActivity } from "../utils/activityLogger.js";
-import sanitize from "sanitize-html";
-import Joi from "joi";
+import Session from "../models/Session.js";
 
 const router = Router();
 
 /* ==========================================================
-   🧼 INPUT VALIDATION SCHEMAS
+   🧼 VALIDATION SCHEMAS
 ========================================================== */
 const registerSchema = Joi.object({
   name: Joi.string().min(3).max(40).required(),
   email: Joi.string().email().required(),
   password: Joi.string().min(6).max(80).required(),
-  role: Joi.string().valid("customer", "driver", "manager", "company").optional(),
+  role: Joi.string().valid("customer", "driver", "manager", "company"),
 });
 
 const loginSchema = Joi.object({
@@ -36,14 +36,12 @@ const loginSchema = Joi.object({
 });
 
 /* ==========================================================
-   🔐 REGISTER — Public + Rate Limited
+   🔐 REGISTER
 ========================================================== */
 router.post("/register", registerLimiter, async (req, res, next) => {
   try {
     const { error } = registerSchema.validate(req.body);
-    if (error) {
-      return res.status(400).json({ error: error.details[0].message });
-    }
+    if (error) return res.status(400).json({ error: error.details[0].message });
 
     req.body.email = sanitize(req.body.email);
     req.body.name = sanitize(req.body.name);
@@ -64,28 +62,44 @@ router.post("/register", registerLimiter, async (req, res, next) => {
 });
 
 /* ==========================================================
-   🔐 LOGIN — All Roles + Rate Limited
+   🔐 LOGIN
 ========================================================== */
 router.post("/login", loginLimiter, async (req, res, next) => {
   try {
     const { error } = loginSchema.validate(req.body);
     if (error) return res.status(400).json({ error: error.details[0].message });
 
-    await login(req, res);
+    // run login controller
+    const loginResult = await login(req, res);
+    if (!loginResult || !res.locals.userId) return; // login controller handles failures
 
-    if (res.statusCode === 200) {
-      await logActivity({
-        userId: res.locals.userId,
-        action: "LOGIN_SUCCESS",
-        description: `User logged in: ${req.body.email}`,
-        ipAddress: req.ip,
-        deviceInfo: req.headers["user-agent"],
-      });
-    }
+    /* ==========================================================
+       🎯 CREATE USER SESSION
+    ========================================================== */
+    const parser = new UAParser(req.headers["user-agent"]);
+    const ua = parser.getResult();
+
+    await Session.create({
+      userId: res.locals.userId,
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"],
+      deviceType: parser.getDevice().type || "desktop",
+      os: ua.os?.name,
+      browser: ua.browser?.name,
+      lastActivityAt: new Date(),
+    });
+
+    await logActivity({
+      userId: res.locals.userId,
+      action: "LOGIN_SUCCESS",
+      description: `User logged in: ${req.body.email}`,
+      ipAddress: req.ip,
+      deviceInfo: req.headers["user-agent"],
+    });
   } catch (err) {
     await logActivity({
       action: "LOGIN_FAILED",
-      description: `Failed login: ${req.body.email}`,
+      description: `Failed login attempt: ${req.body.email}`,
       ipAddress: req.ip,
       deviceInfo: req.headers["user-agent"],
     });
@@ -94,7 +108,7 @@ router.post("/login", loginLimiter, async (req, res, next) => {
 });
 
 /* ==========================================================
-   👑 SUPERADMIN → CREATE COMPANY
+   👑 SUPERADMIN CREATE COMPANY
 ========================================================== */
 router.post(
   "/superadmin/create-company",
@@ -107,11 +121,11 @@ router.post(
 
       await superAdminCreateCompany(req, res);
 
-      if (res.statusCode === 201 || res.statusCode === 200) {
+      if (res.statusCode === 200 || res.statusCode === 201) {
         await logActivity({
           userId: req.user._id,
           action: "SUPERADMIN_CREATE_COMPANY",
-          description: `SuperAdmin created company: ${req.body.email}`,
+          description: `Company created: ${req.body.email}`,
           ipAddress: req.ip,
           deviceInfo: req.headers["user-agent"],
         });
@@ -123,7 +137,7 @@ router.post(
 );
 
 /* ==========================================================
-   🟠 COMPANY OWNER → CREATE USER
+   🟠 COMPANY OWNER CREATE USER
 ========================================================== */
 router.post(
   "/company/create-user",
@@ -133,9 +147,9 @@ router.post(
     try {
       const allowedRoles = ["manager", "driver"];
       if (!allowedRoles.includes(req.body.role)) {
-        return res.status(400).json({
-          error: "Company owners can only create managers or drivers.",
-        });
+        return res
+          .status(400)
+          .json({ error: "Company can only create managers or drivers" });
       }
 
       req.body.email = sanitize(req.body.email || "");
@@ -143,11 +157,11 @@ router.post(
 
       await companyCreateUser(req, res);
 
-      if (res.statusCode === 201 || res.statusCode === 200) {
+      if (res.statusCode === 200 || res.statusCode === 201) {
         await logActivity({
           userId: req.user._id,
           action: "COMPANY_CREATE_USER",
-          description: `Company created ${req.body.role}: ${req.body.email}`,
+          description: `Created user: ${req.body.email}`,
           ipAddress: req.ip,
           deviceInfo: req.headers["user-agent"],
         });

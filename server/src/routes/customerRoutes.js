@@ -4,15 +4,17 @@ import { protect } from "../middleware/authMiddleware.js";
 import { authorizeRoles } from "../middleware/roleMiddleware.js";
 import User from "../models/User.js";
 import GlobalSettings from "../models/GlobalSettings.js";
+import Session from "../models/Session.js";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import bcrypt from "bcryptjs";
 
 const router = Router();
 
 /* ==========================================================
    🛡 MAINTENANCE MODE CHECK
-   ========================================================== */
+========================================================== */
 const ensureNotInMaintenance = async (req, res) => {
   const settings = await GlobalSettings.findOne();
   if (settings?.maintenanceMode && req.user.role !== "superadmin") {
@@ -139,6 +141,63 @@ router.put(
     } catch (err) {
       console.error("❌ Update customer image error:", err.message);
       res.status(500).json({ error: "Error updating image" });
+    }
+  }
+);
+
+/* ==========================================================
+   🔴 DELETE MY ACCOUNT (soft delete)
+========================================================== */
+router.delete(
+  "/delete-account",
+  protect,
+  authorizeRoles("customer"),
+  async (req, res) => {
+    try {
+      if (!(await ensureNotInMaintenance(req, res))) return;
+
+      const { password, reason } = req.body || {};
+
+      if (!password) {
+        return res.status(400).json({ error: "Password is required" });
+      }
+
+      // we need passwordHash for comparison
+      const user = await User.findById(req.user._id).select("+passwordHash");
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const isMatch = await bcrypt.compare(password, user.passwordHash);
+      if (!isMatch) {
+        return res.status(401).json({ error: "Incorrect password" });
+      }
+
+      // Soft delete: deactivate + mark deleted. These fields are safe even if not defined in schema.
+      user.isActive = false;
+      user.isDeleted = true;
+      user.deletedAt = new Date();
+      user.deletedReason = reason || null;
+
+      // Optional: anonymize email to avoid conflicts
+      const suffix = Date.now();
+      user.email = `deleted_${user._id}_${suffix}@deleted.local`;
+
+      await user.save();
+
+      // Revoke all active sessions
+      await Session.updateMany(
+        { userId: user._id, isActive: true },
+        { isActive: false, isRevoked: true }
+      );
+
+      res.json({
+        ok: true,
+        message: "Account deleted and all sessions logged out.",
+      });
+    } catch (err) {
+      console.error("❌ Delete account error:", err.message);
+      res.status(500).json({ error: "Error deleting account" });
     }
   }
 );

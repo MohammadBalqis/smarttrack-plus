@@ -13,5 +13,9 @@ export const selectCustomerCompanyApi = (companyId) =>
 export const getActiveCustomerCompanyApi = () =>
   api.get("/customer/active-company");
 
+// Duplicate variant (fixed to use correct axios instance)
 export const getCustomerActiveCompanyApi = () =>
-  apiClient.get("/customer-companies/active-company");
+  api.get("/customer/active-company");
+
+// 🔥 Compatibility alias (this fixes your error)
+export const getActiveCompanyApi = getActiveCustomerCompanyApi;

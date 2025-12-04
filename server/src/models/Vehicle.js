@@ -7,8 +7,16 @@ const vehicleSchema = new mongoose.Schema(
   {
     companyId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User", // Company Owner
+      ref: "User",
       required: true,
+    },
+
+    // NEW — Required for managers seeing only their shop's fleet
+    shopId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Shop",
+      default: null,
+      index: true,
     },
 
     // 🔗 Driver assigned to the vehicle
@@ -44,9 +52,13 @@ const vehicleSchema = new mongoose.Schema(
     nextServiceDue: { type: Date, default: null },
 
     // 🛣 Performance & Usage
-    mileage: { type: Number, default: 0 }, // km
-    fuelType: { type: String, enum: ["petrol", "diesel", "electric", "hybrid", "unknown"], default: "unknown" },
-    engineCapacity: { type: String, default: null }, // 1.6L, 2.0L, etc.
+    mileage: { type: Number, default: 0 },
+    fuelType: {
+      type: String,
+      enum: ["petrol", "diesel", "electric", "hybrid", "unknown"],
+      default: "unknown",
+    },
+    engineCapacity: { type: String, default: null },
 
     // 📍 Last known trip for dashboard preview
     lastTripId: {

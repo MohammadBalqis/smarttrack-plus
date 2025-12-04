@@ -12,7 +12,7 @@ router.get("/my-sessions", protect, async (req, res) => {
     const sessions = await Session.find({
       userId: req.user._id,
       isActive: true,
-    }).sort({ lastActiveAt: -1 });
+    }).sort({ lastActivityAt: -1 });
 
     res.json({ ok: true, sessions });
   } catch (err) {
@@ -38,6 +38,7 @@ router.delete("/logout/:sessionId", protect, async (req, res) => {
     }
 
     session.isActive = false;
+    session.isRevoked = true;
     await session.save();
 
     res.json({ ok: true, message: "Session logged out" });
@@ -48,16 +49,16 @@ router.delete("/logout/:sessionId", protect, async (req, res) => {
 });
 
 /* ==========================================================
-   🔴 LOGOUT ALL (EXCEPT CURRENT)
+   🔴 LOGOUT ALL OTHERS SESSIONS
 ========================================================== */
 router.delete("/logout-all", protect, async (req, res) => {
   try {
     await Session.updateMany(
       {
         userId: req.user._id,
-        _id: { $ne: req.sessionId }, // keep current
+        _id: { $ne: req.session._id }, // keep current session
       },
-      { isActive: false }
+      { isActive: false, isRevoked: true }
     );
 
     res.json({
@@ -71,17 +72,18 @@ router.delete("/logout-all", protect, async (req, res) => {
 });
 
 /* ==========================================================
-   🔵 PING — UPDATE LAST ACTIVITY
+   🔵 UPDATE LAST ACTIVITY TIMESTAMP (PING)
 ========================================================== */
 router.patch("/ping", protect, async (req, res) => {
   try {
-    await Session.findByIdAndUpdate(req.sessionId, {
-      lastActiveAt: new Date(),
+    await Session.findByIdAndUpdate(req.session._id, {
+      lastActivityAt: new Date(),
     });
 
     res.json({ ok: true });
   } catch (err) {
     console.error("❌ Ping session error:", err.message);
+    res.status(200).json({ ok: false });
   }
 });
 

@@ -18,14 +18,7 @@ const resolveCompanyId = (user) => {
 };
 
 /* ==========================================================
-   1) GET ALL ORDERS FOR MANAGER'S COMPANY
-   - Filters:
-     • status            (?status=pending,delivered)
-     • date range        (?startDate=2025-01-01&endDate=2025-01-31)
-     • min/max total     (?minTotal=10&maxTotal=200)
-     • search            (?search=zahleh)
-   - Pagination:
-     • page, limit
+   1) GET ALL ORDERS FOR MANAGER/COMPANY
 ========================================================== */
 export const getManagerOrders = async (req, res) => {
   try {
@@ -35,6 +28,9 @@ export const getManagerOrders = async (req, res) => {
         .status(400)
         .json({ ok: false, error: "Unable to resolve companyId" });
     }
+
+    const isManager = req.user.role === "manager";
+    const shopId = isManager ? req.user.shopId : null;
 
     let {
       status,
@@ -50,9 +46,8 @@ export const getManagerOrders = async (req, res) => {
     page = Number(page) || 1;
     limit = Number(limit) || 20;
 
-    const filter = {
-      companyId,
-    };
+    const filter = { companyId };
+    if (shopId) filter.shopId = shopId;
 
     // 🟡 Status filter (supports comma-separated list)
     if (status) {
@@ -67,7 +62,6 @@ export const getManagerOrders = async (req, res) => {
         filter.createdAt.$gte = new Date(startDate);
       }
       if (endDate) {
-        // include full day of endDate
         const end = new Date(endDate);
         end.setHours(23, 59, 59, 999);
         filter.createdAt.$lte = end;
@@ -81,16 +75,16 @@ export const getManagerOrders = async (req, res) => {
       if (maxTotal) filter.total.$lte = Number(maxTotal);
     }
 
-    // Base query (without search on populated fields)
+    // Base query
     const baseQuery = Order.find(filter)
       .sort({ createdAt: -1 })
       .populate("customerId", "name email phone")
       .populate("driverId", "name phone")
       .populate("vehicleId", "plateNumber brand model");
 
-    // For search, we will filter in memory after population
     let allOrders = await baseQuery.lean();
 
+    // 🔍 In-memory search on populated fields
     if (search && search.trim().length > 0) {
       const q = search.trim().toLowerCase();
 
@@ -136,13 +130,7 @@ export const getManagerOrders = async (req, res) => {
 };
 
 /* ==========================================================
-   2) GET SINGLE ORDER DETAILS (SECURE BY COMPANY)
-   - Includes:
-     • customer
-     • driver
-     • vehicle
-     • trip (if linked)
-     • optional payment info (by tripId)
+   2) GET SINGLE ORDER DETAILS
 ========================================================== */
 export const getManagerOrderDetails = async (req, res) => {
   try {
@@ -153,12 +141,15 @@ export const getManagerOrderDetails = async (req, res) => {
         .json({ ok: false, error: "Unable to resolve companyId" });
     }
 
+    const isManager = req.user.role === "manager";
+    const shopId = isManager ? req.user.shopId : null;
+
     const { orderId } = req.params;
 
-    const order = await Order.findOne({
-      _id: orderId,
-      companyId,
-    })
+    const match = { _id: orderId, companyId };
+    if (shopId) match.shopId = shopId;
+
+    const order = await Order.findOne(match)
       .populate("customerId", "name email phone profileImage createdAt")
       .populate("driverId", "name email phone profileImage")
       .populate("vehicleId", "plateNumber brand model type status vehicleImage")
@@ -167,16 +158,18 @@ export const getManagerOrderDetails = async (req, res) => {
     if (!order) {
       return res
         .status(404)
-        .json({ ok: false, error: "Order not found for your company" });
+        .json({ ok: false, error: "Order not found for your scope" });
     }
 
-    // 🔍 Try to load payment linked to its trip (if exists)
     let payment = null;
     if (order.tripId) {
-      payment = await Payment.findOne({
+      const payMatch = {
         tripId: order.tripId._id,
         companyId,
-      })
+      };
+      if (shopId) payMatch.shopId = shopId;
+
+      payment = await Payment.findOne(payMatch)
         .sort({ createdAt: -1 })
         .lean();
     }
@@ -196,8 +189,7 @@ export const getManagerOrderDetails = async (req, res) => {
 };
 
 /* ==========================================================
-   3) GET ORDER TIMELINE (READ-ONLY)
-   - Manager can inspect status history
+   3) GET ORDER TIMELINE
 ========================================================== */
 export const getManagerOrderTimeline = async (req, res) => {
   try {
@@ -208,20 +200,24 @@ export const getManagerOrderTimeline = async (req, res) => {
         .json({ ok: false, error: "Unable to resolve companyId" });
     }
 
+    const isManager = req.user.role === "manager";
+    const shopId = isManager ? req.user.shopId : null;
+
     const { orderId } = req.params;
 
-    const order = await Order.findOne({
-      _id: orderId,
-      companyId,
-    }).select("timeline status createdAt updatedAt");
+    const match = { _id: orderId, companyId };
+    if (shopId) match.shopId = shopId;
+
+    const order = await Order.findOne(match).select(
+      "timeline status createdAt updatedAt"
+    );
 
     if (!order) {
       return res
         .status(404)
-        .json({ ok: false, error: "Order not found for your company" });
+        .json({ ok: false, error: "Order not found for your scope" });
     }
 
-    // ensure timeline sorted by timestamp asc
     const sortedTimeline = [...(order.timeline || [])].sort(
       (a, b) =>
         new Date(a.timestamp || a.createdAt) -
@@ -246,10 +242,7 @@ export const getManagerOrderTimeline = async (req, res) => {
 };
 
 /* ==========================================================
-   4) (OPTIONAL) MANAGER ORDERS SUMMARY (for dashboard)
-   - total orders
-   - delivered, cancelled
-   - total revenue (sum of total)
+   4) ORDERS SUMMARY
 ========================================================== */
 export const getManagerOrdersSummary = async (req, res) => {
   try {
@@ -260,7 +253,11 @@ export const getManagerOrdersSummary = async (req, res) => {
         .json({ ok: false, error: "Unable to resolve companyId" });
     }
 
+    const isManager = req.user.role === "manager";
+    const shopId = isManager ? req.user.shopId : null;
+
     const match = { companyId };
+    if (shopId) match.shopId = shopId;
 
     const agg = await Order.aggregate([
       { $match: match },

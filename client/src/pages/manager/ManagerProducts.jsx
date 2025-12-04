@@ -5,6 +5,7 @@ import {
   getManagerProductApi,
 } from "../../api/managerProductsApi";
 import ManagerProductDrawer from "../../components/manager/ManagerProductDrawer";
+import ManagerProductCatalogDrawer from "../../components/manager/ManagerProductCatalogDrawer";
 import styles from "../../styles/manager/managerProducts.module.css";
 
 const ManagerProducts = () => {
@@ -18,7 +19,7 @@ const ManagerProducts = () => {
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
 
-  // Pagination (simple)
+  // Pagination
   const [page, setPage] = useState(1);
   const [limit] = useState(20);
 
@@ -26,9 +27,12 @@ const ManagerProducts = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Drawer
+  // Drawer (product details)
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
+
+  // Drawer (company catalog)
+  const [catalogOpen, setCatalogOpen] = useState(false);
 
   const loadProducts = async () => {
     try {
@@ -63,7 +67,6 @@ const ManagerProducts = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, categoryFilter, activeFilter, minPrice, maxPrice]);
 
-  // For search, we avoid reloading on each keypress
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     setPage(1);
@@ -72,7 +75,6 @@ const ManagerProducts = () => {
 
   const openDrawer = async (product) => {
     try {
-      // Optionally re-fetch single product (to ensure fresh data)
       const res = await getManagerProductApi(product._id);
       setSelectedProduct(res.data.product || product);
     } catch (err) {
@@ -95,27 +97,43 @@ const ManagerProducts = () => {
     return styles.stockBadgeOk;
   };
 
+  const formatPrice = (v) => {
+    if (typeof v === "number") return `$${v.toFixed(2)}`;
+    const num = Number(v || 0);
+    return `$${num.toFixed(2)}`;
+  };
+
   return (
     <div className={styles.page}>
       {/* Header */}
       <div className={styles.header}>
         <div>
           <h1>Products</h1>
-          <p>View and monitor your company&apos;s product catalog.</p>
+          <p>View and manage products available in your shop.</p>
         </div>
-        <div className={styles.headerStats}>
-          <span className={styles.headerStat}>
-            Total products: <strong>{total}</strong>
-          </span>
-          <span className={styles.headerStat}>
-            Page: <strong>{page}</strong> / {totalPages}
-          </span>
+        <div className={styles.headerActions}>
+          <button
+            type="button"
+            className={styles.secondaryButton}
+            onClick={() => setCatalogOpen(true)}
+          >
+            + Add from company catalog
+          </button>
         </div>
+      </div>
+
+      {/* Summary */}
+      <div className={styles.headerInfoRow}>
+        <span>
+          Total products: <strong>{total}</strong>
+        </span>
+        <span>
+          Page: <strong>{page}</strong> / {Math.max(totalPages, 1)}
+        </span>
       </div>
 
       {/* Filters */}
       <div className={styles.filtersRow}>
-        {/* Category */}
         <select
           value={categoryFilter}
           onChange={(e) => {
@@ -134,7 +152,6 @@ const ManagerProducts = () => {
           <option value="general">General</option>
         </select>
 
-        {/* Active */}
         <select
           value={activeFilter}
           onChange={(e) => {
@@ -147,7 +164,6 @@ const ManagerProducts = () => {
           <option value="false">Inactive</option>
         </select>
 
-        {/* Price range */}
         <input
           type="number"
           min="0"
@@ -155,6 +171,7 @@ const ManagerProducts = () => {
           value={minPrice}
           onChange={(e) => setMinPrice(e.target.value)}
         />
+
         <input
           type="number"
           min="0"
@@ -163,7 +180,6 @@ const ManagerProducts = () => {
           onChange={(e) => setMaxPrice(e.target.value)}
         />
 
-        {/* Search */}
         <form onSubmit={handleSearchSubmit} className={styles.searchForm}>
           <input
             type="text"
@@ -219,7 +235,7 @@ const ManagerProducts = () => {
                     </td>
                     <td className={styles.nameCell}>{p.name}</td>
                     <td>{p.category || "general"}</td>
-                    <td>${p.price?.toFixed(2) ?? "0.00"}</td>
+                    <td>{formatPrice(p.price)}</td>
                     <td>
                       <span className={getStockBadgeClass(p)}>
                         {p.stock ?? 0}
@@ -283,11 +299,21 @@ const ManagerProducts = () => {
         )}
       </div>
 
-      {/* Drawer */}
+      {/* Product Details Drawer */}
       <ManagerProductDrawer
         open={drawerOpen}
         onClose={closeDrawer}
         product={selectedProduct}
+      />
+
+      {/* Company Catalog Drawer */}
+      <ManagerProductCatalogDrawer
+        open={catalogOpen}
+        onClose={() => setCatalogOpen(false)}
+        onProductAdded={() => {
+          setCatalogOpen(false);
+          loadProducts();
+        }}
       />
     </div>
   );

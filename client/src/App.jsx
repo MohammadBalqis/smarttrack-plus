@@ -24,7 +24,7 @@ import CompanyOrders from "./pages/company/CompanyOrders";
 import CompanyVehicles from "./pages/company/CompanyVehicles";
 import CompanyPayments from "./pages/company/CompanyPayments";
 import CompanyProfile from "./pages/company/CompanyProfile";
-
+import CompanyLiveTracking from "./pages/company/CompanyLiveTracking";
 // Manager Pages
 import ManagerDashboard from "./pages/manager/ManagerDashboard";
 import ManagerTrips from "./pages/manager/ManagerTrips";
@@ -34,6 +34,7 @@ import ManagerProducts from "./pages/manager/ManagerProducts";
 import ManagerVehicles from "./pages/manager/ManagerVehicles";
 import ManagerOrders from "./pages/manager/ManagerOrders";
 import ManagerPayments from "./pages/manager/ManagerPayments";
+import ManagerLiveTracking from "./pages/manager/ManagerLiveTracking"; // ⬅ NEW
 
 // Customer Pages
 import CustomerDashboard from "./pages/customer/CustomerDashboard";
@@ -77,6 +78,7 @@ function App() {
             <Route path="drivers" element={<CompanyDrivers />} />
             <Route path="customers" element={<CompanyCustomers />} />
             <Route path="trips" element={<CompanyTrips />} />
+            <Route path="live-tracking" element={<CompanyLiveTracking />} />
             <Route path="orders" element={<CompanyOrders />} />
             <Route path="vehicles" element={<CompanyVehicles />} />
             <Route path="payments" element={<CompanyPayments />} />
@@ -101,6 +103,7 @@ function App() {
             <Route path="products" element={<ManagerProducts />} />
             <Route path="orders" element={<ManagerOrders />} />
             <Route path="trips" element={<ManagerTrips />} />
+             <Route path="live-tracking" element={<ManagerLiveTracking />} /> {/* ⬅ NEW */}
             <Route path="payments" element={<ManagerPayments />} />
           </Route>
 
@@ -123,6 +126,7 @@ function App() {
             <Route path="trips/track/:tripId" element={<CustomerTrackTrip />} />
             <Route path="payments" element={<CustomerPayments />} />
             <Route path="profile" element={<CustomerProfile />} />
+            <Route path="shops" element={<CompanyShops />} /> {/* 🏬 NEW */}
             <Route path="edit-profile" element={<CustomerEditProfile />} />
             <Route path="sessions" element={<CustomerSessions />} /> 
             <Route path="select-company" element={<SelectCompany />} />

@@ -1,4 +1,3 @@
-// server/src/controllers/managerCustomerController.js
 import Trip from "../models/Trip.js";
 import User from "../models/User.js";
 
@@ -11,8 +10,9 @@ const resolveCompanyId = (user) => {
 };
 
 /* ==========================================================
-   📋 MANAGER — LIST CUSTOMERS (FOR THIS COMPANY ONLY)
+   📋 MANAGER / COMPANY — LIST CUSTOMERS
    - Based on Trip collection
+   - For manager: only customers from his shop (shopId)
    - Filters: search, minTrips, page, limit
 ========================================================== */
 export const getManagerCustomers = async (req, res) => {
@@ -38,6 +38,11 @@ export const getManagerCustomers = async (req, res) => {
       customerId: { $ne: null },
     };
 
+    // 🏬 Manager: restrict to his shop's trips
+    if (req.user.role === "manager" && req.user.shopId) {
+      baseMatch.shopId = req.user.shopId;
+    }
+
     // Aggregation pipeline on Trip
     const pipeline = [
       { $match: baseMatch },
@@ -55,7 +60,6 @@ export const getManagerCustomers = async (req, res) => {
               $cond: [{ $eq: ["$status", "cancelled"] }, 1, 0],
             },
           },
-          // estimate customer "spent" = totalAmount + deliveryFee (if totalAmount not filled yet)
           totalAmount: {
             $sum: {
               $add: [
@@ -77,7 +81,6 @@ export const getManagerCustomers = async (req, res) => {
         },
       },
       { $unwind: "$customer" },
-      // Filter by name / email / phone after lookup
     ];
 
     const filters = [];
@@ -104,7 +107,6 @@ export const getManagerCustomers = async (req, res) => {
       pipeline.push({ $match: { $and: filters } });
     }
 
-    // Facet for pagination + total count
     pipeline.push({
       $facet: {
         data: [
@@ -121,7 +123,6 @@ export const getManagerCustomers = async (req, res) => {
     const customers = agg.data;
     const total = agg.totalCount[0]?.count || 0;
 
-    // Map to clean response shape
     const mapped = customers.map((c) => ({
       customerId: c.customer._id,
       name: c.customer.name,
@@ -155,10 +156,10 @@ export const getManagerCustomers = async (req, res) => {
 };
 
 /* ==========================================================
-   📌 MANAGER — SINGLE CUSTOMER DETAILS
+   📌 MANAGER / COMPANY — SINGLE CUSTOMER DETAILS
    - Basic profile
    - Aggregated stats (trips)
-   - Recent trips list
+   - Recent trips list (shop-aware)
 ========================================================== */
 export const getManagerCustomerDetails = async (req, res) => {
   try {
@@ -181,14 +182,18 @@ export const getManagerCustomerDetails = async (req, res) => {
       return res.status(404).json({ error: "Customer not found" });
     }
 
-    // Stats for this customer with THIS company
+    const baseMatch = {
+      companyId,
+      customerId: customer._id,
+    };
+
+    // Manager: only his shop
+    if (req.user.role === "manager" && req.user.shopId) {
+      baseMatch.shopId = req.user.shopId;
+    }
+
     const statsAgg = await Trip.aggregate([
-      {
-        $match: {
-          companyId,
-          customerId: customer._id,
-        },
-      },
+      { $match: baseMatch },
       {
         $group: {
           _id: "$customerId",
@@ -237,11 +242,7 @@ export const getManagerCustomerDetails = async (req, res) => {
           firstTripAt: null,
         };
 
-    // Recent trips
-    const recentTrips = await Trip.find({
-      companyId,
-      customerId: customer._id,
-    })
+    const recentTrips = await Trip.find(baseMatch)
       .sort({ createdAt: -1 })
       .limit(10)
       .populate("driverId", "name profileImage")

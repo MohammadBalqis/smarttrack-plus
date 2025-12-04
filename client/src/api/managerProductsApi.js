@@ -1,12 +1,18 @@
 // client/src/api/managerProductsApi.js
-import apiClient from "./clientApi";
+import apiClient from "./apiClient";
 
-// 📦 Get list of products for the manager (view-only)
-export const getManagerProductsApi = (params = {}) => {
-  return apiClient.get("/manager/products", { params });
-};
+// 🔹 List products for this manager's shop
+export const getManagerProductsApi = (params = {}) =>
+  apiClient.get("/manager/products", { params });
 
-// 🔍 Get a single product by id
-export const getManagerProductApi = (id) => {
-  return apiClient.get(`/manager/product/${id}`);
-};
+// 🔹 Single product (details drawer)
+export const getManagerProductApi = (productId) =>
+  apiClient.get(`/manager/products/${productId}`);
+
+// 🔹 Company catalog (global products)
+export const getManagerGlobalProductsApi = (params = {}) =>
+  apiClient.get("/manager/products/global", { params });
+
+// 🔹 Add product from company catalog into this manager's shop
+export const addManagerProductFromCompanyApi = (productId, payload = {}) =>
+  apiClient.post(`/manager/products/add-from-company/${productId}`, payload);

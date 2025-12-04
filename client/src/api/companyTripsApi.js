@@ -1,26 +1,55 @@
-// client/src/api/companyProductsApi.js
-import apiClient from "./apiClient";
+// client/src/api/companyTripsApi.js
+import api from "./apiClient";
 
-// List products
-export const getCompanyProductsApi = (params = {}) =>
-  apiClient.get("/company/products", { params });
+/* ==========================================================
+   🚚 GET ALL COMPANY TRIPS (filters, pagination)
+========================================================== */
+export const getCompanyTripsApi = (params = {}) => {
+  return api.get("/company/trips", { params });
+};
 
-// Single product
-export const getSingleCompanyProductApi = (id) =>
-  apiClient.get(`/company/products/${id}`);
+/* ==========================================================
+   🔍 GET TRIP DETAILS
+========================================================== */
+export const getCompanyTripDetailsApi = (tripId) => {
+  return api.get(`/company/trips/${tripId}`);
+};
 
-// Create
-export const createCompanyProductApi = (payload) =>
-  apiClient.post("/company/products", payload);
+/* ==========================================================
+   📊 GET TRIP STATS (counts, revenue, durations...)
+========================================================== */
+export const getCompanyTripStatsApi = (params = {}) => {
+  return api.get("/company/trips/stats", { params });
+};
 
-// Update
-export const updateCompanyProductApi = (id, payload) =>
-  apiClient.put(`/company/products/${id}`, payload);
+/* ==========================================================
+   🔄 UPDATE TRIP STATUS (assigned → in_progress → delivered)
+========================================================== */
+export const updateCompanyTripStatusApi = (tripId, status) => {
+  return api.patch(`/company/trips/${tripId}/status`, { status });
+};
 
-// Toggle active
-export const toggleCompanyProductActiveApi = (id) =>
-  apiClient.put(`/company/products/${id}/toggle`);
+/* ==========================================================
+   👤 ASSIGN DRIVER TO TRIP
+========================================================== */
+export const assignDriverToTripApi = (tripId, driverId) => {
+  return api.patch(`/company/trips/${tripId}/assign-driver`, {
+    driverId,
+  });
+};
 
-// Adjust stock
-export const adjustCompanyProductStockApi = (id, change, reason) =>
-  apiClient.post(`/company/products/${id}/stock`, { change, reason });
+/* ==========================================================
+   🕒 GET TIMELINE / HISTORY OF A TRIP
+========================================================== */
+export const getCompanyTripTimelineApi = (tripId) => {
+  return api.get(`/company/trips/${tripId}/timeline`);
+};
+
+/* ==========================================================
+   🎯 COMPATIBILITY ALIASES
+   (older components use these names)
+========================================================== */
+export const getTripDetailsApi = getCompanyTripDetailsApi;
+export const getTripStatsApi = getCompanyTripStatsApi;
+export const updateTripStatusApi = updateCompanyTripStatusApi;
+export const assignTripDriverApi = assignDriverToTripApi;

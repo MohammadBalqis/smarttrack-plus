@@ -1,138 +1,149 @@
-import React from "react";
-import { useBranding } from "../../context/BrandingContext";
-import styles from "../../styles/manager/managerProducts.module.css";
+// client/src/components/manager/ManagerProductDrawer.jsx
+import React, { useState, useEffect } from "react";
+import {
+  updateShopProductPriceApi,
+  updateShopProductStockApi,
+  toggleShopProductApi,
+} from "../../api/managerShopProductsApi";
 
-const ManagerProductDrawer = ({ open, onClose, product }) => {
-  const { branding } = useBranding();
-  const primary = branding?.primaryColor || "#2563EB";
-  const accent = branding?.accentColor || "#10B981";
+import styles from "../../styles/manager/managerProductDrawer.module.css";
 
-  if (!open) return null;
+const ManagerProductDrawer = ({ open, onClose, item, reload }) => {
+  const [price, setPrice] = useState("");
+  const [discount, setDiscount] = useState("");
+  const [stock, setStock] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const stopPropagation = (e) => e.stopPropagation();
+  // Load initial values when drawer opens
+  useEffect(() => {
+    if (item) {
+      setPrice(item.price ?? "");
+      setDiscount(item.discount ?? 0);
+      setStock(item.stock ?? "");
+    }
+  }, [item]);
+
+  if (!open || !item) return null;
+
+  const handleUpdatePrice = async () => {
+    try {
+      setLoading(true);
+      await updateShopProductPriceApi(item.id, Number(price), Number(discount));
+      reload();
+      onClose();
+    } catch (err) {
+      console.error("Update price failed:", err);
+      alert("Failed to update price");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdateStock = async () => {
+    try {
+      setLoading(true);
+      await updateShopProductStockApi(item.id, Number(stock));
+      reload();
+      onClose();
+    } catch (err) {
+      console.error("Update stock failed:", err);
+      alert("Failed to update stock");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleToggleActive = async () => {
+    try {
+      setLoading(true);
+      await toggleShopProductApi(item.id);
+      reload();
+      onClose();
+    } catch (err) {
+      console.error("Toggle failed:", err);
+      alert("Failed to toggle product");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <div className={styles.drawerOverlay} onClick={onClose}>
-      <div className={styles.drawer} onClick={stopPropagation}>
+    <div className={styles.drawer}>
+      <div className={styles.content}>
         {/* HEADER */}
-        <div className={styles.drawerHeader}>
-          <h2 style={{ color: primary }}>Product Details</h2>
-          <button type="button" className={styles.closeButton} onClick={onClose}>
-            ✕
-          </button>
+        <div className={styles.header}>
+          <h2>Manage Product</h2>
+          <button className={styles.closeBtn} onClick={onClose}>✕</button>
         </div>
 
-        {!product ? (
-          <p className={styles.empty}>No product selected.</p>
-        ) : (
-          <div className={styles.drawerContent}>
-            
-            {/* MAIN INFO */}
-            <div className={styles.drawerMainInfo}>
-              <h3 className={styles.drawerTitle}>{product.name}</h3>
+        {/* PRODUCT INFO */}
+        <div className={styles.productInfo}>
+          {item.product?.image ? (
+            <img src={item.product.image} alt={item.product.name} />
+          ) : (
+            <div className={styles.noImage}>No Image</div>
+          )}
 
-              <p className={styles.drawerCategory}>
-                Category: <span>{product.category || "general"}</span>
-              </p>
-
-              <p className={styles.drawerPrice}>
-                Price:{" "}
-                <span style={{ color: primary, fontWeight: "600" }}>
-                  ${product.price?.toFixed(2) ?? "0.00"}
-                </span>
-              </p>
-
-              <p className={styles.drawerStock}>
-                Stock:{" "}
-                <span
-                  className={
-                    product.stock === 0
-                      ? styles.stockBadgeZero
-                      : product.stock <= 5
-                      ? styles.stockBadgeLow
-                      : styles.stockBadgeOk
-                  }
-                  style={{
-                    border: `1px solid ${accent}`,
-                  }}
-                >
-                  {product.stock ?? 0}
-                </span>
-              </p>
-
-              <p className={styles.drawerStatus}>
-                Status:{" "}
-                <span
-                  className={
-                    product.isActive
-                      ? styles.statusBadgeActive
-                      : styles.statusBadgeInactive
-                  }
-                  style={{
-                    backgroundColor: product.isActive ? accent : "#d1d5db",
-                    color: "#fff",
-                  }}
-                >
-                  {product.isActive ? "Active" : "Inactive"}
-                </span>
-              </p>
-            </div>
-
-            {/* DESCRIPTION */}
-            {product.description && (
-              <div className={styles.drawerSection}>
-                <h4>Description</h4>
-                <p className={styles.drawerDescription}>{product.description}</p>
-              </div>
-            )}
-
-            {/* ATTRIBUTES */}
-            {product.attributes && Object.keys(product.attributes).length > 0 && (
-              <div className={styles.drawerSection}>
-                <h4>Attributes</h4>
-                <ul className={styles.attributesList}>
-                  {Object.entries(product.attributes).map(([key, value]) => (
-                    <li key={key}>
-                      <span className={styles.attrKey}>{key}:</span>{" "}
-                      <span className={styles.attrValue}>{String(value)}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {/* IMAGES */}
-            {Array.isArray(product.images) && product.images.length > 0 && (
-              <div className={styles.drawerSection}>
-                <h4>Images</h4>
-                <div className={styles.drawerImagesGrid}>
-                  {product.images.map((img, index) => (
-                    <div key={index} className={styles.drawerImageWrapper}>
-                      <img src={img} alt={`${product.name}-${index}`} />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* META */}
-            <div className={styles.drawerSection}>
-              <h4>Meta</h4>
-              <p className={styles.metaLine}>
-                Created:{" "}
-                {product.createdAt
-                  ? new Date(product.createdAt).toLocaleString()
-                  : "—"}
-              </p>
-              <p className={styles.metaLine}>
-                Last updated:{" "}
-                {product.updatedAt
-                  ? new Date(product.updatedAt).toLocaleString()
-                  : "—"}
-              </p>
-            </div>
+          <div>
+            <h3>{item.product?.name}</h3>
+            <p>Category: {item.product?.category}</p>
+            <p>Status: {item.isActive ? "Active" : "Inactive"}</p>
           </div>
-        )}
+        </div>
+
+        {/* PRICE */}
+        <div className={styles.section}>
+          <label>Shop Price ($)</label>
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            value={price}
+            onChange={(e) => setPrice(e.target.value)}
+          />
+        </div>
+
+        {/* DISCOUNT */}
+        <div className={styles.section}>
+          <label>Discount (%)</label>
+          <input
+            type="number"
+            min="0"
+            max="100"
+            value={discount}
+            onChange={(e) => setDiscount(e.target.value)}
+          />
+        </div>
+
+        {/* STOCK */}
+        <div className={styles.section}>
+          <label>Stock</label>
+          <input
+            type="number"
+            min="0"
+            value={stock}
+            onChange={(e) => setStock(e.target.value)}
+          />
+        </div>
+
+        {/* ACTION BUTTONS */}
+        <div className={styles.actions}>
+          <button onClick={handleUpdatePrice} disabled={loading}>
+            Update Price
+          </button>
+
+          <button onClick={handleUpdateStock} disabled={loading}>
+            Update Stock
+          </button>
+
+          <button
+            className={item.isActive ? styles.deactivate : styles.activate}
+            onClick={handleToggleActive}
+            disabled={loading}
+          >
+            {item.isActive ? "Deactivate" : "Activate"}
+          </button>
+        </div>
       </div>
     </div>
   );

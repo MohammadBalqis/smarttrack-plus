@@ -12,3 +12,7 @@ export const getCompanyPaymentDetailsApi = (id) =>
 // Stats (dashboard)
 export const getCompanyPaymentsStatsApi = () =>
   api.get("/company/payments/stats");
+// Alias for compatibility with ManagerPayments.jsx
+export const getCompanyPaymentSummaryApi = getCompanyPaymentsStatsApi;
+export const getCompanyPaymentsSummaryApi = getCompanyPaymentsStatsApi;
+export const getPaymentDetailsApi = getCompanyPaymentDetailsApi;

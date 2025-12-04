@@ -76,7 +76,7 @@ import companyDriverRoutes from "./src/routes/companyDriverRoutes.js";
 import companyOrdersRoutes from "./src/routes/companyOrderRoutes.js";
 import companyBrandingRoutes from "./src/routes/companyBrandingRoutes.js";
 import customerNotificationRoutes from "./src/routes/customerNotificationRoutes.js";
-
+import managerLiveRoutes from "./src/routes/managerLiveRoutes.js";
 import managerDashboardRoutes from "./src/routes/managerDashboardRoutes.js";
 import managerDriverRoutes from "./src/routes/managerDriverRoutes.js";
 import managerVehicleRoutes from "./src/routes/managerVehicleRoutes.js";
@@ -100,6 +100,9 @@ import adminStatsRoutes from "./src/routes/adminStatsRoutes.js";
 import globalSettingsRoutes from "./src/routes/globalSettingsRoutes.js";
 import brandingRoutes from "./src/routes/brandingRoutes.js";
 import billingSettingsRoutes from "./src/routes/billingSettingsRoutes.js";
+
+import managerShopProductsRoutes from "./managerShopProductsRoutes.js";
+import companyShopRoutes from "./src/routes/companyShopRoutes.js";
 
 import publicApiRoutes from "./src/routes/publicApiRoutes.js";
 import sessionRoutes from "./src/routes/sessionRoutes.js";
@@ -132,7 +135,7 @@ app.use("/api/company/payments", companyPaymentRoutes);
 app.use("/api/company/branding", brandingRoutes);
 app.use("/api/company/settings", companySettingsRoutes);
 app.use("/api/company/branding", companyBrandingRoutes);
-
+app.use("/api/company/shops", companyShopRoutes);
 // Manager
 app.use("/api/manager/dashboard", managerDashboardRoutes);
 app.use("/api/manager/drivers", managerDriverRoutes);
@@ -143,7 +146,8 @@ app.use("/api/manager/orders", managerOrderRoutes);
 app.use("/api/manager/notifications", managerNotificationRoutes);
 app.use("/api/manager/profile", managerProfileRoutes);
 app.use("/api/manager", managerPaymentsRoutes);
-
+app.use("/api/manager", managerLiveRoutes);
+app.use("/api/manager/shop-products", managerShopProductsRoutes);
 // Driver
 app.use("/api/driver", driverRoutes);
 

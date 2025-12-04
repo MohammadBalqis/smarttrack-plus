@@ -1,4 +1,3 @@
-// server/src/routes/vehicleRoutes.js
 import { Router } from "express";
 import Vehicle from "../models/Vehicle.js";
 import User from "../models/User.js";
@@ -14,69 +13,87 @@ const resolveCompanyIdFromUser = (user) =>
    🚗 CREATE VEHICLE (Company / Manager)
 ========================================================== */
 router.post(
-  "/create",
+  "/vehicle/create",
   protect,
-  authorizeRoles("company", "manager"),
+  authorizeRoles("manager", "company"),
   async (req, res) => {
     try {
-      const { type, brand, model, plateNumber, notes, vehicleImage } = req.body;
+      const { type, brand, model, plateNumber, notes, vehicleImage, shopId } =
+        req.body;
 
-      if (!type || !brand || !model || !plateNumber) {
-        return res.status(400).json({ error: "Missing fields" });
-      }
+      if (!type || !brand || !model || !plateNumber)
+        return res.status(400).json({ error: "Missing required fields" });
 
-      const companyId = resolveCompanyIdFromUser(req.user);
+      const companyId =
+        req.user.role === "company" ? req.user._id : req.user.companyId;
+
+      const exists = await Vehicle.findOne({ plateNumber, companyId });
+      if (exists)
+        return res.status(400).json({ error: "Plate number already exists" });
+
+      const finalShopId =
+        req.user.role === "manager" ? req.user.shopId : shopId || null;
 
       const vehicle = await Vehicle.create({
         type,
         brand,
         model,
         plateNumber,
-        companyId,
-        notes,
+        notes: notes || "",
         vehicleImage: vehicleImage || null,
+        companyId,
+        shopId: finalShopId,
       });
 
       res.status(201).json({
         ok: true,
-        message: "Vehicle added successfully",
+        message: "Vehicle created successfully",
         vehicle,
       });
     } catch (err) {
-      console.error("❌ Create Vehicle Error:", err.message);
-      res.status(500).json({ error: "Server error creating vehicle" });
+      console.error("❌ Vehicle creation error:", err.message);
+      res.status(500).json({ error: "Error creating vehicle" });
     }
   }
 );
 
 /* ==========================================================
-   🧾 GET ALL VEHICLES FOR COMPANY
+   🧾 GET ALL VEHICLES FOR COMPANY / MANAGER
 ========================================================== */
 router.get(
-  "/get-all",
+  "/vehicles",
   protect,
-  authorizeRoles("company", "manager"),
+  authorizeRoles("manager", "company"),
   async (req, res) => {
     try {
-      const companyId = resolveCompanyIdFromUser(req.user);
+      const companyId =
+        req.user.role === "company" ? req.user._id : req.user.companyId;
 
-      const vehicles = await Vehicle.find({ companyId }).populate(
-        "driverId",
-        "name email profileImage"
-      );
+      const filter = { companyId };
 
-      res.json({ ok: true, count: vehicles.length, vehicles });
+      // Manager only sees vehicles in his shop
+      if (req.user.role === "manager" && req.user.shopId) {
+        filter.shopId = req.user.shopId;
+      }
+
+      const vehicles = await Vehicle.find(filter)
+        .populate("driverId", "name email phone profileImage role")
+        .sort({ createdAt: -1 });
+
+      res.json({
+        ok: true,
+        count: vehicles.length,
+        vehicles,
+      });
     } catch (err) {
-      console.error("❌ Get Vehicles Error:", err.message);
-      res.status(500).json({ error: "Server error fetching vehicles" });
+      console.error("❌ Error fetching vehicles:", err.message);
+      res.status(500).json({ error: "Error fetching vehicles" });
     }
   }
 );
 
 /* ==========================================================
-   🔄 ASSIGN / REMOVE DRIVER FROM VEHICLE
-   - Ensures vehicle belongs to this company
-   - Ensures driver belongs to this company (if provided)
+   🔄 ASSIGN / REMOVE DRIVER — Shop-aware
 ========================================================== */
 router.put(
   "/assign-driver/:vehicleId",
@@ -89,10 +106,13 @@ router.put(
 
       const companyId = resolveCompanyIdFromUser(req.user);
 
-      const vehicle = await Vehicle.findOne({ _id: vehicleId, companyId });
-      if (!vehicle) {
+      // Shop filter
+      const filter = { _id: vehicleId, companyId };
+      if (req.user.role === "manager") filter.shopId = req.user.shopId;
+
+      const vehicle = await Vehicle.findOne(filter);
+      if (!vehicle)
         return res.status(404).json({ error: "Vehicle not found" });
-      }
 
       if (vehicle.status === "maintenance") {
         return res.status(400).json({
@@ -106,12 +126,10 @@ router.put(
           role: "driver",
           companyId,
         });
-
-        if (!driver) {
-          return res.status(400).json({
-            error: "Driver not found or not part of this company",
-          });
-        }
+        if (!driver)
+          return res
+            .status(400)
+            .json({ error: "Driver not found or not part of this company" });
 
         vehicle.driverId = driverId;
         vehicle.status = "in_use";
@@ -137,8 +155,7 @@ router.put(
 );
 
 /* ==========================================================
-   🧰 UPDATE VEHICLE STATUS (manual)
-   - Ensures vehicle belongs to this company
+   🧰 UPDATE STATUS — Shop-aware
 ========================================================== */
 router.put(
   "/update-status/:vehicleId",
@@ -149,24 +166,24 @@ router.put(
       const { vehicleId } = req.params;
       const { status } = req.body;
 
-      const allowedStatuses = ["available", "in_use", "maintenance"];
-      if (!allowedStatuses.includes(status)) {
+      const allowed = ["available", "in_use", "maintenance"];
+      if (!allowed.includes(status))
         return res.status(400).json({
-          error: "Invalid status. Must be: available, in_use, or maintenance.",
+          error: "Invalid status",
         });
-      }
 
       const companyId = resolveCompanyIdFromUser(req.user);
 
-      const vehicle = await Vehicle.findOne({ _id: vehicleId, companyId });
-      if (!vehicle) {
+      const filter = { _id: vehicleId, companyId };
+      if (req.user.role === "manager") filter.shopId = req.user.shopId;
+
+      const vehicle = await Vehicle.findOne(filter);
+      if (!vehicle)
         return res.status(404).json({ error: "Vehicle not found" });
-      }
 
       if (vehicle.driverId && status === "available") {
         return res.status(400).json({
-          error:
-            "Vehicle cannot be 'available' while assigned to a driver. Remove driver first.",
+          error: "Remove driver before setting vehicle to 'available'",
         });
       }
 
@@ -175,11 +192,11 @@ router.put(
 
       res.json({
         ok: true,
-        message: `Vehicle status updated to ${status}`,
+        message: `Status updated to ${status}`,
         vehicle,
       });
     } catch (err) {
-      console.error("❌ Update Vehicle Status Error:", err.message);
+      console.error("❌ Update Status Error:", err.message);
       res.status(500).json({ error: "Server error updating vehicle status" });
     }
   }

@@ -68,6 +68,12 @@ const userSchema = new mongoose.Schema(
       default: null,
       index: true,
     },
+     shopId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Shop",
+      default: null,
+      index: true,
+      },
 
     // NEW — Multi-company support (customers)
     companyIds: [

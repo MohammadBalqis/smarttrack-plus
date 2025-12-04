@@ -1,4 +1,4 @@
-import axios from "./axiosInstance";
+import axios from "./axiosConfig";
 
 export const getBrandingApi = () => {
   return axios.get("/company/branding");

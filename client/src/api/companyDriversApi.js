@@ -1,30 +1,49 @@
 // client/src/api/companyDriversApi.js
 import api from "./apiClient";
 
-/* ==========================================================
-   🚚 COMPANY DRIVERS API (Owner + Manager View/Edit/Create)
-   ========================================================== */
+/* ------------------ GET ALL DRIVERS ------------------ */
+export const getCompanyDriversApi = (params = {}) => {
+  return api.get("/company/drivers", { params });
+};
 
-// GET all drivers (optionally filter: ?status=active / inactive)
-export const getCompanyDriversApi = (params = {}) =>
-  api.get("/company/drivers", { params });
+/* ------------------ DRIVER STATS --------------------- */
+export const getCompanyDriverStatsApi = (driverId) => {
+  return api.get(`/company/drivers/${driverId}/stats`);
+};
 
-// CREATE driver
-export const createCompanyDriverApi = (payload) =>
-  api.post("/company/drivers", payload);
+// Alias for compatibility
+export const getDriverStatsApi = getCompanyDriverStatsApi;
 
-// UPDATE driver info
-export const updateCompanyDriverApi = (id, payload) =>
-  api.put(`/company/drivers/${id}`, payload);
+/* ------------------ RECENT TRIPS ------------------ */
+export const getDriverRecentTripsApi = (driverId, limit = 10) => {
+  return api.get(`/company/drivers/${driverId}/recent-trips`, {
+    params: { limit },
+  });
+};
 
-// TOGGLE active / inactive
-export const toggleCompanyDriverStatusApi = (id) =>
-  api.patch(`/company/drivers/${id}/toggle-active`);
+// Alias for compatibility with your frontend
+export const getCompanyDriverRecentTripsApi = getDriverRecentTripsApi;
 
-// GET stats for single driver
-export const getCompanyDriverStatsApi = (id) =>
-  api.get(`/company/drivers/${id}/stats`);
+/* ------------------ SINGLE DRIVER ------------------ */
+export const getSingleDriverApi = (driverId) => {
+  return api.get(`/company/drivers/${driverId}`);
+};
 
-// GET recent delivered trips for driver
-export const getCompanyDriverRecentTripsApi = (id) =>
-  api.get(`/company/drivers/${id}/recent-trips`);
+/* ------------------ CREATE DRIVER ------------------ */
+export const createCompanyDriverApi = (data) => {
+  return api.post("/company/drivers", data);
+};
+
+/* ------------------ UPDATE DRIVER ------------------ */
+export const updateCompanyDriverApi = (driverId, data) => {
+  return api.put(`/company/drivers/${driverId}`, data);
+};
+
+/* ------------------ TOGGLE DRIVER ACTIVE/INACTIVE ------------------ */
+export const toggleCompanyDriverActiveApi = (driverId) => {
+  return api.patch(`/company/drivers/${driverId}/toggle`);
+};
+
+// Alias for compatibility with older code
+export const toggleCompanyDriverStatusApi =
+  toggleCompanyDriverActiveApi;

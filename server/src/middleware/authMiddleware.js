@@ -9,8 +9,8 @@ import { getClientInfo } from "../utils/clientInfo.js";
  * 🔐 protect
  * - Verifies JWT
  * - Loads user from DB
- * - (If present) validates the session (sid) is still active & not revoked
- * - Attaches req.user and req.session
+ * - Validates the session (sid) is still active & not revoked
+ * - Attaches req.user, req.session, req.sessionId, req.companyId, req.shopId
  */
 export const protect = async (req, res, next) => {
   let token;
@@ -67,7 +67,12 @@ export const protect = async (req, res, next) => {
       return res.status(403).json({ error: "Account suspended" });
     }
 
+    // attach user
     req.user = user;
+
+    // convenience fields for company/manager scoping
+    req.companyId = user.companyId || (user.role === "company" ? user._id : null);
+    req.shopId = user.shopId || null;
 
     // 5) If token has a session id (sid), validate session
     if (decoded.sid) {
@@ -92,6 +97,7 @@ export const protect = async (req, res, next) => {
       }
 
       req.session = session;
+      req.sessionId = session._id.toString(); // ✅ used by /sessions/logout-all
     }
 
     return next();

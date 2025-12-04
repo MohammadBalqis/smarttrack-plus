@@ -20,6 +20,7 @@ export const companyMenu = [
   { label: "Trips", icon: "🛣️", path: "/company/trips" },
   { label: "Vehicles", icon: "🚘", path: "/company/vehicles" },
   { label: "Payments", icon: "💳", path: "/company/payments" },
+  { label: "Shops / Branches", icon: "🏬", path: "/company/shops" },
 ];
 
 // 🚀 CUSTOMER MENU (GLOBAL CUSTOMER)

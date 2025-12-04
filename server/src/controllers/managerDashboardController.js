@@ -6,11 +6,10 @@ import Vehicle from "../models/Vehicle.js";
 
 import { resolveCompanyId } from "../utils/resolveCompanyId.js";
 
-
 /* ==========================================================
-   📊 MANAGER DASHBOARD OVERVIEW
-   scope: companyId of manager
-   roles: manager, company
+   📊 MANAGER / COMPANY DASHBOARD OVERVIEW
+   - company: sees all company data
+   - manager: restricted to their shopId
 ========================================================== */
 export const getManagerDashboardOverview = async (req, res) => {
   try {
@@ -23,11 +22,19 @@ export const getManagerDashboardOverview = async (req, res) => {
       });
     }
 
+    const isManager = req.user.role === "manager";
+    const shopId = isManager ? req.user.shopId : null;
+
     // Date range filters
     const { startDate, endDate } = req.query;
 
     const tripMatch = { companyId };
     const payMatch = { companyId, status: "paid" };
+
+    if (shopId) {
+      tripMatch.shopId = shopId;
+      payMatch.shopId = shopId;
+    }
 
     if (startDate || endDate) {
       const dateFilter = {};
@@ -39,8 +46,20 @@ export const getManagerDashboardOverview = async (req, res) => {
 
     // Today range
     const now = new Date();
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
-    const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+    const startOfToday = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+      0,
+      0,
+      0
+    );
+    const endOfToday = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+      23, 59, 59
+    );
 
     const todayTripMatch = {
       companyId,
@@ -53,7 +72,11 @@ export const getManagerDashboardOverview = async (req, res) => {
       createdAt: { $gte: startOfToday, $lte: endOfToday },
     };
 
-    // parallel queries
+    if (shopId) {
+      todayTripMatch.shopId = shopId;
+      todayPayMatch.shopId = shopId;
+    }
+
     const [
       totalTrips,
       activeTrips,
@@ -67,11 +90,13 @@ export const getManagerDashboardOverview = async (req, res) => {
       recentTrips,
     ] = await Promise.all([
       Trip.countDocuments(tripMatch),
-      Trip.countDocuments({ ...tripMatch, status: { $in: ["assigned", "in_progress"] } }),
+      Trip.countDocuments({
+        ...tripMatch,
+        status: { $in: ["assigned", "in_progress"] },
+      }),
       Trip.countDocuments({ ...tripMatch, status: "delivered" }),
       Trip.countDocuments({ ...tripMatch, status: "cancelled" }),
 
-      // payments summary
       Payment.aggregate([
         { $match: payMatch },
         {
@@ -96,8 +121,18 @@ export const getManagerDashboardOverview = async (req, res) => {
         },
       ]),
 
-      User.countDocuments({ role: "driver", companyId }),
-      Vehicle.countDocuments({ companyId }),
+      // drivers only for this company (+shop if manager)
+      User.countDocuments({
+        role: "driver",
+        companyId,
+        ...(shopId ? { shopId } : {}),
+      }),
+
+      // vehicles — if later you add shopId on Vehicle, this filter will work too
+      Vehicle.countDocuments({
+        companyId,
+        ...(shopId ? { shopId } : {}),
+      }),
 
       Trip.find(tripMatch)
         .sort({ createdAt: -1 })
@@ -147,6 +182,9 @@ export const getManagerDashboardOverview = async (req, res) => {
     });
   } catch (err) {
     console.error("❌ getManagerDashboardOverview error:", err);
-    res.status(500).json({ ok: false, error: "Server error loading manager dashboard" });
+    res.status(500).json({
+      ok: false,
+      error: "Server error loading manager dashboard",
+    });
   }
 };

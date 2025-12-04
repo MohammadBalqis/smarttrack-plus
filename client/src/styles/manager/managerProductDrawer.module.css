@@ -1,0 +1,175 @@
+/* ================================
+   DRAWER OVERLAY
+================================ */
+.drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 420px;
+  height: 100vh;
+  background: #ffffff;
+  box-shadow: -4px 0px 20px rgba(0, 0, 0, 0.12);
+  z-index: 9999;
+  animation: slideIn 0.3s ease forwards;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+/* ================================
+   HEADER
+================================ */
+.header {
+  padding: 20px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #efefef;
+}
+
+.header h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.closeBtn {
+  background: none;
+  border: none;
+  font-size: 22px;
+  cursor: pointer;
+  color: #444;
+}
+
+.closeBtn:hover {
+  color: #000;
+}
+
+/* ================================
+   PRODUCT INFO SECTION
+================================ */
+.productInfo {
+  display: flex;
+  gap: 16px;
+  padding: 20px 24px;
+  border-bottom: 1px solid #efefef;
+}
+
+.productInfo img {
+  width: 80px;
+  height: 80px;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
+.noImage {
+  width: 80px;
+  height: 80px;
+  background: #e5e7eb;
+  border-radius: 6px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #555;
+  font-size: 14px;
+}
+
+.productInfo h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.productInfo p {
+  margin: 4px 0;
+  font-size: 14px;
+  color: #666;
+}
+
+/* ================================
+   INPUT SECTIONS
+================================ */
+.section {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+}
+
+.section label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #555;
+  margin-bottom: 6px;
+}
+
+.section input {
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-size: 14px;
+  outline: none;
+}
+
+.section input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+}
+
+/* ================================
+   ACTION BUTTONS
+================================ */
+.actions {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.actions button {
+  padding: 12px;
+  border-radius: 6px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: 0.2s ease;
+}
+
+/* Update buttons */
+.actions button:hover {
+  opacity: 0.9;
+}
+
+/* Price + Stock buttons use default primary style */
+.actions button {
+  background: #2563eb;
+  color: white;
+}
+
+/* Active / Inactive button styles */
+.activate {
+  background: #10b981 !important;
+  color: white;
+}
+
+.activate:hover {
+  background: #0a9168 !important;
+}
+
+.deactivate {
+  background: #ef4444 !important;
+  color: white;
+}
+
+.deactivate:hover {
+  background: #d12d2d !important;
+}

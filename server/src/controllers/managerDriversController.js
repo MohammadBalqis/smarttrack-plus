@@ -1,11 +1,9 @@
 // server/src/controllers/managerDriversController.js
 import User from "../models/User.js";
-
 import { resolveCompanyId } from "../utils/resolveCompanyId.js";
 
-
 /* ==========================================================
-   📌 GET ALL DRIVERS FOR MANAGER
+   📌 GET ALL DRIVERS FOR MANAGER / COMPANY
 ========================================================== */
 export const getManagerDrivers = async (req, res) => {
   try {
@@ -13,9 +11,13 @@ export const getManagerDrivers = async (req, res) => {
     if (!companyId)
       return res.status(400).json({ error: "Unable to resolve companyId" });
 
+    const isManager = req.user.role === "manager";
+    const shopId = isManager ? req.user.shopId : null;
+
     const { status } = req.query; // active|inactive
 
     const filters = { role: "driver", companyId };
+    if (shopId) filters.shopId = shopId;
 
     if (status === "active") filters.isActive = true;
     if (status === "inactive") filters.isActive = false;
@@ -36,18 +38,24 @@ export const getManagerDrivers = async (req, res) => {
 };
 
 /* ==========================================================
-   ✏️ UPDATE DRIVER (Manager)
+   ✏️ UPDATE DRIVER (Manager / Company)
 ========================================================== */
 export const updateManagerDriver = async (req, res) => {
   try {
     const companyId = resolveCompanyId(req.user);
-    const { id } = req.params;
-    const { name, email, phoneNumber } = req.body;
-
     if (!companyId)
       return res.status(400).json({ error: "Unable to resolve companyId" });
 
-    const driver = await User.findOne({ _id: id, role: "driver", companyId });
+    const isManager = req.user.role === "manager";
+    const shopId = isManager ? req.user.shopId : null;
+
+    const { id } = req.params;
+    const { name, email, phone } = req.body;
+
+    const query = { _id: id, role: "driver", companyId };
+    if (shopId) query.shopId = shopId;
+
+    const driver = await User.findOne(query);
 
     if (!driver)
       return res.status(404).json({ error: "Driver not found" });
@@ -61,7 +69,7 @@ export const updateManagerDriver = async (req, res) => {
     }
 
     if (name) driver.name = name;
-    if (phoneNumber) driver.phoneNumber = phoneNumber;
+    if (phone) driver.phone = phone;
 
     await driver.save();
 
@@ -85,13 +93,22 @@ export const updateManagerDriver = async (req, res) => {
 export const toggleManagerDriverStatus = async (req, res) => {
   try {
     const companyId = resolveCompanyId(req.user);
+    if (!companyId)
+      return res.status(400).json({ error: "Unable to resolve companyId" });
+
+    const isManager = req.user.role === "manager";
+    const shopId = isManager ? req.user.shopId : null;
+
     const { id } = req.params;
 
-    const driver = await User.findOne({
+    const query = {
       _id: id,
       role: "driver",
       companyId,
-    });
+    };
+    if (shopId) query.shopId = shopId;
+
+    const driver = await User.findOne(query);
 
     if (!driver)
       return res.status(404).json({ error: "Driver not found" });

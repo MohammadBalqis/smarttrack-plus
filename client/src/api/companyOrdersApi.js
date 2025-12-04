@@ -9,10 +9,13 @@ export const getCompanyOrdersApi = (params = {}) =>
 export const getCompanyOrderDetailsApi = (orderId) =>
   api.get(`/company/orders/${orderId}`);
 
-// 3️⃣ Update order status (manual — company)
+// 3️⃣ Update order status
 export const updateCompanyOrderStatusApi = (orderId, newStatus) =>
   api.patch(`/company/orders/${orderId}/status`, { newStatus });
 
 // 4️⃣ Get order stats for dashboard
 export const getCompanyOrderStatsApi = () =>
   api.get(`/company/orders/stats`);
+
+// 🔥 Compatibility alias for old frontend code
+export const getCompanyOrdersStatsApi = getCompanyOrderStatsApi;

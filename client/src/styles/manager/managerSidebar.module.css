@@ -37,3 +37,7 @@
 .link.active {
   background: rgba(255,255,255,0.15);
 }
+.activeLink {
+  background: rgba(0,0,0,0.1);
+  font-weight: 600;
+}
