@@ -4,26 +4,61 @@ import { protect } from "../middleware/authMiddleware.js";
 import { authorizeRoles } from "../middleware/roleMiddleware.js";
 
 import {
-  getCompanyProducts,
-  getSingleProduct,
-} from "../controllers/managerProductController.js";
+  getManagerProducts,
+  getManagerProduct,
+  getManagerGlobalProducts,
+  addManagerProductFromCompany,
+} from "../controllers/managerProductsController.js";
 
 const router = Router();
 
-// 📦 LIST ALL PRODUCTS (View-only)
+/* ==========================================================
+   📦 MANAGER SHOP PRODUCTS (LIST + DETAILS)
+========================================================== */
+
+// List products in this manager's shop
 router.get(
   "/products",
   protect,
   authorizeRoles("manager", "company"),
-  getCompanyProducts
+  getManagerProducts
 );
 
-// 🔍 GET SINGLE PRODUCT (View-only)
+// Single product in this manager's shop
 router.get(
-  "/product/:id",
+  "/products/:productId",
   protect,
   authorizeRoles("manager", "company"),
-  getSingleProduct
+  getManagerProduct
 );
+
+/* ==========================================================
+   🏬 COMPANY GLOBAL CATALOG
+========================================================== */
+router.get(
+  "/products/global",
+  protect,
+  authorizeRoles("manager", "company"),
+  getManagerGlobalProducts
+);
+
+/* ==========================================================
+   ➕ ADD PRODUCT FROM COMPANY CATALOG TO MANAGER SHOP
+========================================================== */
+router.post(
+  "/products/add-from-company/:productId",
+  protect,
+  authorizeRoles("manager"),
+  addManagerProductFromCompany
+);
+
+// UPDATE shop product
+router.patch(
+  "/products/:productId",
+  protect,
+  authorizeRoles("manager"),
+  updateManagerProduct
+);
+
 
 export default router;

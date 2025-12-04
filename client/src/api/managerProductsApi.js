@@ -16,3 +16,6 @@ export const getManagerGlobalProductsApi = (params = {}) =>
 // 🔹 Add product from company catalog into this manager's shop
 export const addManagerProductFromCompanyApi = (productId, payload = {}) =>
   apiClient.post(`/manager/products/add-from-company/${productId}`, payload);
+
+export const updateManagerProductApi = (productId, data) =>
+  apiClient.patch(`/manager/products/${productId}`, data);

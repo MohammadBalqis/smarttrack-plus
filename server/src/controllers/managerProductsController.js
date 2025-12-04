@@ -250,3 +250,47 @@ export const addManagerProductFromCompany = async (req, res) => {
     });
   }
 };
+// UPDATE Shop Product (manager)
+export const updateManagerProduct = async (req, res) => {
+  try {
+    const manager = req.user;
+
+    if (!manager.shopId) {
+      return res.status(400).json({
+        ok: false,
+        error: "Manager has no assigned shop",
+      });
+    }
+
+    const { productId } = req.params;
+    const { price, stock, isActive, notes } = req.body;
+
+    const shopProduct = await ShopProduct.findOne({
+      _id: productId,
+      shopId: manager.shopId,
+    });
+
+    if (!shopProduct)
+      return res.status(404).json({
+        ok: false,
+        error: "Product not found in your shop",
+      });
+
+    // Update fields
+    if (price !== undefined) shopProduct.price = Number(price);
+    if (stock !== undefined) shopProduct.stock = Number(stock);
+    if (isActive !== undefined) shopProduct.isActive = isActive;
+    if (notes !== undefined) shopProduct.notes = notes;
+
+    await shopProduct.save();
+
+    res.json({
+      ok: true,
+      message: "Product updated successfully",
+      product: shopProduct,
+    });
+  } catch (err) {
+    console.error("❌ updateManagerProduct error:", err.message);
+    res.status(500).json({ ok: false, error: "Server error updating product" });
+  }
+};
