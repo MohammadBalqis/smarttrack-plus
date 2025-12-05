@@ -1,125 +1,185 @@
 // client/src/components/manager/ManagerDriverDrawer.jsx
 import React, { useEffect, useState } from "react";
-import {
-  getCompanyDriverStatsApi,
-  getCompanyDriverRecentTripsApi,
-} from "../../api/companyDriversApi";
+import { updateManagerDriverApi } from "../../api/managerDriversApi";
+import styles from "../../styles/manager/managerDrivers.module.css";
 
-import styles from "../../styles/manager/managerDriverDrawer.module.css";
-
-const ManagerDriverDrawer = ({ open, onClose, driver }) => {
-  const [stats, setStats] = useState(null);
-  const [recentTrips, setRecentTrips] = useState([]);
-  const [loading, setLoading] = useState(false);
+const ManagerDriverDrawer = ({ open, onClose, driver, onUpdated }) => {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (open && driver?._id) loadDetails(driver._id);
-  }, [open, driver]);
-
-  const loadDetails = async (driverId) => {
-    try {
-      setLoading(true);
-      const [statsRes, tripsRes] = await Promise.all([
-        getCompanyDriverStatsApi(driverId),
-        getCompanyDriverRecentTripsApi(driverId),
-      ]);
-
-      setStats(statsRes.data.stats || null);
-      setRecentTrips(tripsRes.data.recentTrips || []);
-    } catch (err) {
-      console.error("Drawer load error:", err);
-    } finally {
-      setLoading(false);
+    if (driver) {
+      setName(driver.name || "");
+      setEmail(driver.email || "");
+      setPhoneNumber(driver.phoneNumber || driver.phone || "");
     }
-  };
+  }, [driver]);
 
   if (!open || !driver) return null;
 
-  const joined = driver.createdAt
-    ? new Date(driver.createdAt).toLocaleDateString()
+  const handleSave = async () => {
+    try {
+      setSaving(true);
+      await updateManagerDriverApi(driver._id, {
+        name,
+        email,
+        phoneNumber,
+      });
+      if (onUpdated) onUpdated();
+      onClose();
+    } catch (err) {
+      console.error("Failed to update driver:", err);
+      alert("Failed to update driver. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const statusBadgeClass =
+    driver.isActive !== false
+      ? styles.badgeActive
+      : styles.badgeInactive;
+
+  const driverStatusLabel = driver.driverStatus
+    ? driver.driverStatus.replace("_", " ")
     : "—";
 
   return (
-    <div className={styles.overlay}>
+    <div className={styles.drawerOverlay}>
       <div className={styles.drawer}>
-        <button className={styles.closeBtn} onClick={onClose}>
-          ✕
-        </button>
+        {/* Header */}
+        <div className={styles.drawerHeader}>
+          <h2>Driver Details</h2>
+          <button className={styles.closeBtn} onClick={onClose}>
+            ✕
+          </button>
+        </div>
 
-        <h2 className={styles.title}>Driver Details</h2>
+        {/* Top info */}
+        <div className={styles.driverTop}>
+          {driver.profileImage ? (
+            <img
+              src={driver.profileImage}
+              alt={driver.name}
+              className={styles.avatarLarge}
+            />
+          ) : (
+            <div className={styles.avatarLargeFallback}>
+              {driver.name?.charAt(0) || "D"}
+            </div>
+          )}
 
-        {/* PROFILE */}
-        <div className={styles.profileCard}>
-          <div className={styles.avatar}>
-            {driver.name?.charAt(0).toUpperCase()}
-          </div>
+          <div className={styles.driverMainInfo}>
+            <div className={styles.driverNameRow}>
+              <h3>{driver.name || "Unnamed driver"}</h3>
+              <span className={statusBadgeClass}>
+                {driver.isActive !== false ? "Active" : "Inactive"}
+              </span>
+            </div>
+            <p className={styles.driverRole}>Driver</p>
 
-          <div className={styles.info}>
-            <h3>{driver.name}</h3>
-            <p>{driver.email}</p>
-            <p>{driver.phoneNumber || "No phone"}</p>
+            <div className={styles.driverMetaRow}>
+              <span className={styles.metaLabel}>Status:</span>
+              <span className={styles.metaValue}>
+                {driverStatusLabel}
+              </span>
+            </div>
 
-            <span
-              className={
-                driver.isActive ? styles.activeBadge : styles.inactiveBadge
-              }
-            >
-              {driver.isActive ? "Active" : "Inactive"}
-            </span>
-
-            <p>Joined: {joined}</p>
+            {driver.shop && (
+              <div className={styles.driverMetaRow}>
+                <span className={styles.metaLabel}>Shop:</span>
+                <span className={styles.metaValue}>
+                  {driver.shop.name} {driver.shop.city && `(${driver.shop.city})`}
+                </span>
+              </div>
+            )}
           </div>
         </div>
 
-        {loading && <p className={styles.loading}>Loading...</p>}
+        {/* Editable fields */}
+        <div className={styles.section}>
+          <h4 className={styles.sectionTitle}>Contact Info</h4>
+          <div className={styles.formGroup}>
+            <label>Name</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </div>
 
-        {/* KPI */}
-        {stats && (
-          <div className={styles.kpiGrid}>
-            <div className={styles.kpiCard}>
-              <h4>Total Trips</h4>
-              <p>{stats.totalTrips}</p>
+          <div className={styles.formGroup}>
+            <label>Email</label>
+            <input
+              type="email"
+              value={email || ""}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </div>
+
+          <div className={styles.formGroup}>
+            <label>Phone</label>
+            <input
+              type="text"
+              value={phoneNumber}
+              onChange={(e) => setPhoneNumber(e.target.value)}
+            />
+          </div>
+        </div>
+
+        {/* Performance */}
+        <div className={styles.section}>
+          <h4 className={styles.sectionTitle}>Performance</h4>
+          <div className={styles.statsRow}>
+            <div className={styles.statBox}>
+              <span className={styles.statLabel}>Trips Completed</span>
+              <span className={styles.statValue}>
+                {driver.totalTripsCompleted ?? 0}
+              </span>
             </div>
-
-            <div className={styles.kpiCard}>
-              <h4>Total Revenue</h4>
-              <p>${stats.totalRevenue?.toFixed(2)}</p>
-            </div>
-
-            <div className={styles.kpiCard}>
-              <h4>Avg Delivery Time</h4>
-              <p>{stats.avgDeliveryTimeMin} min</p>
+            <div className={styles.statBox}>
+              <span className={styles.statLabel}>Score</span>
+              <span className={styles.statValue}>
+                {driver.performanceScore != null
+                  ? driver.performanceScore.toFixed(1)
+                  : "—"}
+              </span>
             </div>
           </div>
-        )}
+        </div>
 
-        {/* RECENT TRIPS */}
+        {/* Location */}
         <div className={styles.section}>
-          <h3>Recent Trips</h3>
-
-          {recentTrips.length === 0 ? (
-            <p>No recent trips.</p>
+          <h4 className={styles.sectionTitle}>Last Known Location</h4>
+          {driver.currentLat != null && driver.currentLng != null ? (
+            <p className={styles.locationText}>
+              Lat: <strong>{driver.currentLat.toFixed(5)}</strong> &nbsp;|&nbsp;
+              Lng: <strong>{driver.currentLng.toFixed(5)}</strong>
+            </p>
           ) : (
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Status</th>
-                  <th>Amount</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {recentTrips.map((t) => (
-                  <tr key={t._id}>
-                    <td>{new Date(t.createdAt).toLocaleString()}</td>
-                    <td>{t.status}</td>
-                    <td>${t.totalAmount?.toFixed(2) || "0"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <p className={styles.empty}>No location data yet.</p>
           )}
+        </div>
+
+        {/* Actions */}
+        <div className={styles.drawerActions}>
+          <button
+            type="button"
+            className={styles.secondaryBtn}
+            onClick={onClose}
+          >
+            Close
+          </button>
+          <button
+            type="button"
+            className={styles.primaryBtn}
+            onClick={handleSave}
+            disabled={saving}
+          >
+            {saving ? "Saving…" : "Save Changes"}
+          </button>
         </div>
       </div>
     </div>

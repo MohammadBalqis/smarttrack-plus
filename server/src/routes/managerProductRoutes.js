@@ -8,6 +8,7 @@ import {
   getManagerProduct,
   getManagerGlobalProducts,
   addManagerProductFromCompany,
+  updateManagerProduct,        // ✅ make sure this import exists
 } from "../controllers/managerProductsController.js";
 
 const router = Router();
@@ -52,13 +53,14 @@ router.post(
   addManagerProductFromCompany
 );
 
-// UPDATE shop product
+/* ==========================================================
+   ✏️ UPDATE SHOP PRODUCT
+========================================================== */
 router.patch(
   "/products/:productId",
   protect,
   authorizeRoles("manager"),
   updateManagerProduct
 );
-
 
 export default router;

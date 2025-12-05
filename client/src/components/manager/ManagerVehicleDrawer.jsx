@@ -1,208 +1,156 @@
-// src/components/manager/ManagerVehicleDrawer.jsx
-import React from "react";
-import styles from "../../styles/manager/managerVehicles.module.css";
+import React, { useEffect, useState } from "react";
+import {
+  assignDriverApi,
+  removeDriverApi,
+  updateVehicleStatusApi,
+  getVehicleTripsApi,
+} from "../../api/managerVehiclesApi";
 
-const ManagerVehicleDrawer = ({ open, onClose, vehicle }) => {
-  if (!open || !vehicle) return null;
+import { getShopDriversApi } from "../../api/managerDriversApi";
 
-  const driver = vehicle.driverId;
-  const lastTrip = vehicle.lastTripId;
+import styles from "../../styles/manager/managerVehicleDrawer.module.css";
 
-  const renderLastService = () => {
-    if (!vehicle.lastServiceDate) return "—";
-    return new Date(vehicle.lastServiceDate).toLocaleDateString();
+const ManagerVehicleDrawer = ({ open, onClose, vehicle, reload }) => {
+  const [drivers, setDrivers] = useState([]);
+  const [status, setStatus] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [tripHistory, setTripHistory] = useState([]);
+
+  useEffect(() => {
+    if (vehicle) {
+      setStatus(vehicle.status);
+      loadDrivers();
+      loadTripHistory();
+    }
+  }, [vehicle]);
+
+  const loadDrivers = async () => {
+    try {
+      const res = await getShopDriversApi(); // Only drivers from this shop
+      setDrivers(res.data.drivers || []);
+    } catch (err) {
+      console.error("Error loading drivers:", err);
+    }
   };
 
-  const renderNextService = () => {
-    if (!vehicle.nextServiceDue) return "—";
+  const loadTripHistory = async () => {
+    try {
+      const res = await getVehicleTripsApi(vehicle._id);
+      setTripHistory(res.data.trips || []);
+    } catch (err) {
+      console.error("Error loading trips:", err);
+    }
+  };
 
-    const due = new Date(vehicle.nextServiceDue);
-    const now = new Date();
+  if (!open || !vehicle) return null;
 
-    const overdue = due < now;
+  const handleAssignDriver = async (driverId) => {
+    setLoading(true);
+    try {
+      await assignDriverApi(vehicle._id, driverId);
+      reload();
+      onClose();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to assign driver");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    return (
-      <span
-        className={overdue ? styles.dangerText : ""}
-      >
-        {due.toLocaleDateString()}
-        {overdue && " (Overdue)"}
-      </span>
-    );
+  const handleRemoveDriver = async () => {
+    setLoading(true);
+    try {
+      await removeDriverApi(vehicle._id);
+      reload();
+      onClose();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to remove driver");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleStatusChange = async () => {
+    setLoading(true);
+    try {
+      await updateVehicleStatusApi(vehicle._id, status);
+      reload();
+      onClose();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to update status");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className={styles.drawerOverlay}>
-      <div className={styles.drawer}>
-        {/* Close button */}
-        <button className={styles.closeBtn} onClick={onClose}>
-          ✕
-        </button>
-
-        <h2 className={styles.drawerTitle}>Vehicle Details</h2>
-
-        {/* Vehicle Image */}
-        <div className={styles.imageContainer}>
-          {vehicle.vehicleImage ? (
-            <img
-              src={vehicle.vehicleImage}
-              alt={vehicle.plateNumber}
-              className={styles.vehicleImage}
-            />
-          ) : (
-            <div className={styles.noImageLarge}>No Image</div>
-          )}
+    <div className={styles.drawer}>
+      <div className={styles.content}>
+        <div className={styles.header}>
+          <h2>Vehicle Details</h2>
+          <button className={styles.closeBtn} onClick={onClose}>✕</button>
         </div>
 
-        {/* Section: Basic Info */}
+        <div className={styles.vehicleInfo}>
+          <h3>{vehicle.brand} {vehicle.model}</h3>
+          <p>Plate: {vehicle.plateNumber}</p>
+        </div>
+
         <div className={styles.section}>
-          <h3 className={styles.sectionTitle}>Basic Info</h3>
+          <label>Assign Driver</label>
+          <select
+            onChange={(e) => handleAssignDriver(e.target.value)}
+            defaultValue=""
+          >
+            <option value="">Select driver</option>
+            {drivers.map((d) => (
+              <option key={d._id} value={d._id}>
+                {d.name}
+              </option>
+            ))}
+          </select>
 
-          <div className={styles.infoRow}>
-            <span>Type:</span>
-            <strong>{vehicle.type}</strong>
-          </div>
-
-          <div className={styles.infoRow}>
-            <span>Brand / Model:</span>
-            <strong>{vehicle.brand} {vehicle.model}</strong>
-          </div>
-
-          <div className={styles.infoRow}>
-            <span>Plate Number:</span>
-            <strong>{vehicle.plateNumber}</strong>
-          </div>
-
-          <div className={styles.infoRow}>
-            <span>Status:</span>
-            <span
-              className={
-                vehicle.status === "available"
-                  ? styles.badgeAvailable
-                  : vehicle.status === "in_use"
-                  ? styles.badgeInUse
-                  : styles.badgeMaintenance
-              }
+          {vehicle.driverId && (
+            <button
+              className={styles.removeBtn}
+              onClick={handleRemoveDriver}
+              disabled={loading}
             >
-              {vehicle.status === "in_use" ? "In Use" : vehicle.status}
-            </span>
-          </div>
-        </div>
-
-        {/* Section: Vehicle Specs */}
-        <div className={styles.section}>
-          <h3 className={styles.sectionTitle}>Specifications</h3>
-
-          <div className={styles.infoRow}>
-            <span>Mileage:</span>
-            <strong>{vehicle.mileage || 0} km</strong>
-          </div>
-
-          <div className={styles.infoRow}>
-            <span>Fuel Type:</span>
-            <strong>{vehicle.fuelType}</strong>
-          </div>
-
-          <div className={styles.infoRow}>
-            <span>Engine Capacity:</span>
-            <strong>{vehicle.engineCapacity || "—"}</strong>
-          </div>
-
-          {vehicle.notes && (
-            <div className={styles.notesBox}>
-              <p>{vehicle.notes}</p>
-            </div>
+              Remove Driver
+            </button>
           )}
         </div>
 
-        {/* Section: Maintenance */}
         <div className={styles.section}>
-          <h3 className={styles.sectionTitle}>Maintenance</h3>
-
-          <div className={styles.infoRow}>
-            <span>Last Service:</span>
-            <strong>{renderLastService()}</strong>
-          </div>
-
-          <div className={styles.infoRow}>
-            <span>Next Service Due:</span>
-            <strong>{renderNextService()}</strong>
-          </div>
+          <label>Status</label>
+          <select
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+          >
+            <option value="available">Available</option>
+            <option value="in_use">In Use</option>
+            <option value="maintenance">Maintenance</option>
+          </select>
+          <button onClick={handleStatusChange} disabled={loading}>
+            Update Status
+          </button>
         </div>
 
-        {/* Section: Assigned Driver */}
         <div className={styles.section}>
-          <h3 className={styles.sectionTitle}>Assigned Driver</h3>
-
-          {!driver ? (
-            <p className={styles.unassigned}>No driver assigned</p>
-          ) : (
-            <>
-              <div className={styles.driverRow}>
-                <span>Name:</span>
-                <strong>{driver.name}</strong>
-              </div>
-
-              <div className={styles.driverRow}>
-                <span>Email:</span>
-                <strong>{driver.email}</strong>
-              </div>
-
-              <div className={styles.driverRow}>
-                <span>Phone:</span>
-                <strong>{driver.phoneNumber || "—"}</strong>
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* Section: Last Trip */}
-        <div className={styles.section}>
-          <h3 className={styles.sectionTitle}>Last Trip</h3>
-
-          {!lastTrip ? (
-            <p className={styles.empty}>No trips yet for this vehicle.</p>
-          ) : (
-            <>
-              <div className={styles.infoRow}>
-                <span>Date:</span>
-                <strong>{new Date(lastTrip.createdAt).toLocaleString()}</strong>
-              </div>
-
-              <div className={styles.routeRow}>
-                <span>Route:</span>
-                <div className={styles.routeText}>
-                  {lastTrip.pickupLocation?.address || "—"}
-                  <span className={styles.arrow}>→</span>
-                  {lastTrip.dropoffLocation?.address || "—"}
-                </div>
-              </div>
-
-              <div className={styles.infoRow}>
-                <span>Status:</span>
-                <span
-                  className={
-                    styles[`badge_${lastTrip.status}`] ||
-                    styles.badge_default
-                  }
-                >
-                  {lastTrip.status}
-                </span>
-              </div>
-
-              <div className={styles.infoRow}>
-                <span>Total:</span>
-                <strong>${lastTrip.totalAmount?.toFixed(2) || "0.00"}</strong>
-              </div>
-
-              <div className={styles.infoRow}>
-                <span>Customer:</span>
-                <strong>
-                  {lastTrip.customerId?.name || "—"}
-                </strong>
-              </div>
-            </>
-          )}
+          <h3>Trip History</h3>
+          <ul className={styles.tripList}>
+            {tripHistory.map((t) => (
+              <li key={t._id}>
+                <strong>{t.customerId?.name}</strong> — {t.status}  
+                <br />
+                <small>{new Date(t.createdAt).toLocaleString()}</small>
+              </li>
+            ))}
+            {tripHistory.length === 0 && <p>No trips.</p>}
+          </ul>
         </div>
 
       </div>

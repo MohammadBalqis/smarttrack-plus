@@ -304,6 +304,7 @@ const ManagerProducts = () => {
         open={drawerOpen}
         onClose={closeDrawer}
         product={selectedProduct}
+        onUpdated={loadProducts}
       />
 
       {/* Company Catalog Drawer */}

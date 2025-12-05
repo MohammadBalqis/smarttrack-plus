@@ -101,7 +101,7 @@ import globalSettingsRoutes from "./src/routes/globalSettingsRoutes.js";
 import brandingRoutes from "./src/routes/brandingRoutes.js";
 import billingSettingsRoutes from "./src/routes/billingSettingsRoutes.js";
 
-import managerShopProductsRoutes from "./managerShopProductsRoutes.js";
+import managerShopProductsRoutes from "./src/routes/managerShopProductsRoutes.js";
 import companyShopRoutes from "./src/routes/companyShopRoutes.js";
 
 import publicApiRoutes from "./src/routes/publicApiRoutes.js";

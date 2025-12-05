@@ -1,4 +1,3 @@
-// server/src/routes/managerVehicleRoutes.js
 import { Router } from "express";
 import Vehicle from "../models/Vehicle.js";
 import User from "../models/User.js";
@@ -9,8 +8,8 @@ import { authorizeRoles } from "../middleware/roleMiddleware.js";
 const router = Router();
 
 /* ==========================================================
-   🚗 GET ALL VEHICLES WITH DRIVER + STATUS
-   ========================================================== */
+   🚗 GET ALL VEHICLES (SHOP FILTER FOR MANAGERS)
+========================================================== */
 router.get(
   "/vehicles",
   protect,
@@ -20,8 +19,15 @@ router.get(
       const companyId =
         req.user.role === "company" ? req.user._id : req.user.companyId;
 
-      const vehicles = await Vehicle.find({ companyId })
-        .populate("driverId", "name email phone profileImage role")
+      // Managers must only see their shop
+      const shopFilter =
+        req.user.role === "manager" ? { shopId: req.user.shopId } : {};
+
+      const vehicles = await Vehicle.find({
+        companyId,
+        ...shopFilter,
+      })
+        .populate("driverId", "name phone email driverStatus currentLat currentLng")
         .sort({ createdAt: -1 });
 
       res.json({
@@ -35,9 +41,10 @@ router.get(
     }
   }
 );
+
 /* ==========================================================
-   ➕ CREATE VEHICLE
-   ========================================================== */
+   ➕ CREATE VEHICLE (Manager's shop automatically assigned)
+========================================================== */
 router.post(
   "/vehicle/create",
   protect,
@@ -52,7 +59,10 @@ router.post(
       const companyId =
         req.user.role === "company" ? req.user._id : req.user.companyId;
 
-      const exists = await Vehicle.findOne({ plateNumber });
+      const shopId =
+        req.user.role === "manager" ? req.user.shopId : req.body.shopId || null;
+
+      const exists = await Vehicle.findOne({ plateNumber, companyId });
       if (exists)
         return res.status(400).json({ error: "Plate number already exists" });
 
@@ -64,6 +74,7 @@ router.post(
         notes: notes || "",
         vehicleImage: vehicleImage || null,
         companyId,
+        shopId,
       });
 
       res.status(201).json({
@@ -77,9 +88,10 @@ router.post(
     }
   }
 );
+
 /* ==========================================================
-   👨‍🔧 ASSIGN / REMOVE DRIVER
-   ========================================================== */
+   👨‍🔧 ASSIGN / REMOVE DRIVER (Same Shop Only)
+========================================================== */
 router.put(
   "/vehicle/:vehicleId/assign-driver",
   protect,
@@ -92,34 +104,42 @@ router.put(
       const companyId =
         req.user.role === "company" ? req.user._id : req.user.companyId;
 
-      const vehicle = await Vehicle.findOne({ _id: vehicleId, companyId });
+      const shopFilter =
+        req.user.role === "manager" ? { shopId: req.user.shopId } : {};
+
+      const vehicle = await Vehicle.findOne({
+        _id: vehicleId,
+        companyId,
+        ...shopFilter,
+      });
 
       if (!vehicle)
         return res.status(404).json({ error: "Vehicle not found" });
 
-      // Removing a driver
+      // Removing driver
       if (!driverId) {
         vehicle.driverId = null;
         vehicle.status = "available";
         await vehicle.save();
         return res.json({
           ok: true,
-          message: "Driver removed from vehicle",
+          message: "Driver removed",
           vehicle,
         });
       }
 
-      // Assign new driver
+      // Assign driver (must be from same shop)
       const driver = await User.findOne({
         _id: driverId,
-        companyId,
         role: "driver",
+        companyId,
+        ...shopFilter,
       });
 
       if (!driver)
-        return res
-          .status(400)
-          .json({ error: "Driver not found or not part of your company" });
+        return res.status(400).json({
+          error: "Driver not found in your shop",
+        });
 
       vehicle.driverId = driverId;
       vehicle.status = "in_use";
@@ -127,7 +147,7 @@ router.put(
 
       res.json({
         ok: true,
-        message: "Driver assigned successfully",
+        message: "Driver assigned",
         vehicle,
       });
     } catch (err) {
@@ -136,9 +156,10 @@ router.put(
     }
   }
 );
+
 /* ==========================================================
    🔄 UPDATE VEHICLE STATUS
-   ========================================================== */
+========================================================== */
 router.put(
   "/vehicle/:vehicleId/status",
   protect,
@@ -155,15 +176,21 @@ router.put(
       const companyId =
         req.user.role === "company" ? req.user._id : req.user.companyId;
 
-      const vehicle = await Vehicle.findOne({ _id: vehicleId, companyId });
+      const shopFilter =
+        req.user.role === "manager" ? { shopId: req.user.shopId } : {};
+
+      const vehicle = await Vehicle.findOne({
+        _id: vehicleId,
+        companyId,
+        ...shopFilter,
+      });
 
       if (!vehicle)
         return res.status(404).json({ error: "Vehicle not found" });
 
-      // business rule
       if (vehicle.driverId && status === "available")
         return res.status(400).json({
-          error: "Cannot mark available while assigned to driver",
+          error: "Cannot set available while driver assigned",
         });
 
       vehicle.status = status;
@@ -175,14 +202,15 @@ router.put(
         vehicle,
       });
     } catch (err) {
-      console.error("❌ Update vehicle status error:", err.message);
+      console.error("❌ Update status error:", err.message);
       res.status(500).json({ error: "Error updating vehicle status" });
     }
   }
 );
+
 /* ==========================================================
-   📜 VEHICLE TRIP HISTORY
-   ========================================================== */
+   📜 VEHICLE TRIP HISTORY (Same shop only)
+========================================================== */
 router.get(
   "/vehicle/:vehicleId/trips",
   protect,
@@ -194,7 +222,14 @@ router.get(
       const companyId =
         req.user.role === "company" ? req.user._id : req.user.companyId;
 
-      const vehicle = await Vehicle.findOne({ _id: vehicleId, companyId });
+      const shopFilter =
+        req.user.role === "manager" ? { shopId: req.user.shopId } : {};
+
+      const vehicle = await Vehicle.findOne({
+        _id: vehicleId,
+        companyId,
+        ...shopFilter,
+      });
 
       if (!vehicle)
         return res.status(404).json({ error: "Vehicle not found" });
@@ -218,8 +253,9 @@ router.get(
       });
     } catch (err) {
       console.error("❌ Trip history error:", err.message);
-      res.status(500).json({ error: "Error fetching vehicle trip history" });
+      res.status(500).json({ error: "Error fetching trip history" });
     }
   }
 );
+
 export default router;

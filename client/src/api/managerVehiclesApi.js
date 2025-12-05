@@ -1,29 +1,21 @@
-// client/src/api/managerVehiclesApi.js
 import apiClient from "./apiClient";
 
-/**
- * Update vehicle status (available | in_use | maintenance)
- * Uses backend route: PUT /api/manager/vehicle/:vehicleId/status
- */
-export const updateVehicleStatusApi = (vehicleId, status) => {
-  return apiClient.put(`/manager/vehicle/${vehicleId}/status`, { status });
-};
+// List all vehicles for this manager
+export const getManagerVehiclesApi = () =>
+  apiClient.get("/manager/vehicles");
 
-/**
- * (Optional – for later) Get vehicle trip history
- * Backend: GET /api/manager/vehicle/:vehicleId/trips
- */
-export const getVehicleTripsApi = (vehicleId) => {
-  return apiClient.get(`/manager/vehicle/${vehicleId}/trips`);
-};
+// Assign a driver
+export const assignDriverApi = (vehicleId, driverId) =>
+  apiClient.put(`/manager/vehicle/${vehicleId}/assign-driver`, { driverId });
 
-/**
- * (Optional – for later) Assign/remove driver to vehicle
- * Backend: PUT /api/manager/vehicle/:vehicleId/assign-driver
- * - pass driverId = null to remove driver
- */
-export const assignVehicleDriverApi = (vehicleId, driverId) => {
-  return apiClient.put(`/manager/vehicle/${vehicleId}/assign-driver`, {
-    driverId: driverId || null,
-  });
-};
+// Remove driver
+export const removeDriverApi = (vehicleId) =>
+  apiClient.put(`/manager/vehicle/${vehicleId}/assign-driver`, { driverId: null });
+
+// Update vehicle status
+export const updateVehicleStatusApi = (vehicleId, status) =>
+  apiClient.put(`/manager/vehicle/${vehicleId}/status`, { status });
+
+// Fetch trip history
+export const getVehicleTripsApi = (vehicleId) =>
+  apiClient.get(`/manager/vehicle/${vehicleId}/trips`);

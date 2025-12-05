@@ -1,58 +1,60 @@
+// server/src/models/Notification.js
 import mongoose from "mongoose";
-
-/* ==========================================================
-   🔔 NOTIFICATION MODEL
-   Recipient can be: manager, company, driver, customer, superadmin
-========================================================== */
 
 const notificationSchema = new mongoose.Schema(
   {
-    // Who receives this notification
-    recipientId: {
+    userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
       index: true,
     },
 
-    // Optional: link to company (useful for filtering later)
     companyId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User", // company owner user
+      ref: "User",
       default: null,
-      index: true,
     },
 
-    // Trip / order / driver / vehicle / system
+    title: { type: String, required: true },
+    message: { type: String, required: true },
+
+    // success | warning | danger | info
     type: {
       type: String,
-      enum: ["trip", "order", "driver", "vehicle", "system"],
+      enum: ["info", "success", "warning", "danger"],
+      default: "info",
+    },
+
+    // trip | driver | order | payment | system
+    category: {
+      type: String,
       default: "system",
       index: true,
     },
 
-    // Short title or label if needed later
-    title: { type: String, trim: true, default: "" },
+    isRead: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
 
-    // Main message shown in UI
-    message: { type: String, required: true },
+    actionUrl: { type: String, default: null },
 
-    // Whether notification is read
-    isRead: { type: Boolean, default: false, index: true },
+    icon: { type: String, default: "Bell" },
 
-    // Optional link target (for frontend to navigate)
-    // Example: "/manager/trips/123"
-    link: { type: String, default: null },
+    priority: {
+      type: String,
+      enum: ["low", "normal", "high"],
+      default: "normal",
+    },
 
-    // Extra flexible meta info (IDs, status, etc.)
-    meta: {
-      type: Map,
-      of: mongoose.Schema.Types.Mixed,
+    extraData: {
+      type: Object,
       default: {},
     },
   },
   { timestamps: true }
 );
 
-const Notification = mongoose.model("Notification", notificationSchema);
-export default Notification;
+export default mongoose.model("Notification", notificationSchema);
