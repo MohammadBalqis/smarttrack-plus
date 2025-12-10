@@ -3,6 +3,7 @@ import { Router } from "express";
 import Trip from "../models/Trip.js";
 import { protect } from "../middleware/authMiddleware.js";
 import { authorizeRoles } from "../middleware/roleMiddleware.js";
+import { getCustomerTripQrInfo } from "../controllers/trip/tripQrController.js";
 
 const router = Router();
 
@@ -221,5 +222,8 @@ router.post(
     }
   }
 );
+// Customer gets QR + driver info for a specific trip
+// GET /api/customer/trips/:tripId/qr
+router.get("/:tripId/qr", protect, authorizeRoles("customer"), getCustomerTripQrInfo);
 
 export default router;

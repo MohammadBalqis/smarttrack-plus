@@ -1,0 +1,154 @@
+.wrapper {
+  position: relative;
+  display: inline-block;
+  margin-right: 12px;
+}
+
+.bellButton {
+  position: relative;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bellIcon {
+  font-size: 20px;
+}
+
+.badge {
+  position: absolute;
+  top: -2px;
+  right: -4px;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: #ef4444;
+  color: #ffffff;
+  font-size: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  font-weight: 600;
+}
+
+/* Dropdown panel */
+.panel {
+  position: absolute;
+  right: 0;
+  margin-top: 8px;
+  width: 320px;
+  max-height: 380px;
+  background: #0f172a;
+  color: #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.7);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 40;
+}
+
+.panelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.3);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.panelSubheader {
+  display: flex;
+  justify-content: flex-end;
+  padding: 6px 12px;
+  border-bottom: 1px solid rgba(30, 64, 175, 0.6);
+}
+
+.refreshBtn {
+  background: transparent;
+  border: none;
+  color: #9ca3af;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.refreshBtn:hover {
+  color: #e5e7eb;
+}
+
+.markReadBtn {
+  background: transparent;
+  border: none;
+  color: #60a5fa;
+  cursor: pointer;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.markReadBtn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px 0;
+}
+
+.emptyText {
+  font-size: 13px;
+  color: #9ca3af;
+  padding: 10px 12px 14px;
+}
+
+.item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 8px 12px;
+  gap: 8px;
+  border-bottom: 1px solid rgba(30, 64, 175, 0.3);
+}
+
+.item:last-child {
+  border-bottom: none;
+}
+
+.itemUnread {
+  background: rgba(37, 99, 235, 0.12);
+}
+
+.itemRead {
+  background: transparent;
+  opacity: 0.85;
+}
+
+.itemMain {
+  flex: 1;
+}
+
+.itemTitle {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.itemMessage {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.itemTime {
+  font-size: 10px;
+  color: #6b7280;
+  white-space: nowrap;
+  margin-left: 4px;
+}

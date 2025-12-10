@@ -40,6 +40,15 @@ app.use(
   })
 );
 
+// CORS (allow your frontend)
+app.use(
+  cors({
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    credentials: true,
+  })
+);
+
 // Global limiter
 app.use(globalLimiter);
 
@@ -88,6 +97,7 @@ import managerProfileRoutes from "./src/routes/managerProfileRoutes.js";
 import managerPaymentsRoutes from "./src/routes/managerPaymentsRoutes.js";
 import notificationRoutes from "./src/routes/notificationRoutes.js";
 import driverRoutes from "./src/routes/driverRoutes.js";
+import chatRoutes from "./src/routes/chatRoutes.js";
 import customerRoutes from "./src/routes/customerRoutes.js";
 import customerTripRoutes from "./src/routes/customerTripRoutes.js";
 import customerPaymentRoutes from "./src/routes/customerPaymentRoutes.js";
@@ -100,28 +110,31 @@ import adminStatsRoutes from "./src/routes/adminStatsRoutes.js";
 import globalSettingsRoutes from "./src/routes/globalSettingsRoutes.js";
 import brandingRoutes from "./src/routes/brandingRoutes.js";
 import billingSettingsRoutes from "./src/routes/billingSettingsRoutes.js";
-
+import supportRoutes from "./src/routes/supportRoutes.js";
 import managerShopProductsRoutes from "./src/routes/managerShopProductsRoutes.js";
 import companyShopRoutes from "./src/routes/companyShopRoutes.js";
-
+import qrRoutes from "./src/routes/qrRoutes.js";
 import publicApiRoutes from "./src/routes/publicApiRoutes.js";
 import sessionRoutes from "./src/routes/sessionRoutes.js";
-
+import driverTripRoutes from "./src/routes/driverTripRoutes.js";
+import driverNotificationRoutes from "./src/routes/driverNotificationRoutes.js";
+import systemOwnerRoutes from "./src/routes/systemOwnerRoutes.js";
+import systemOwnerCompanyRoutes from "./src/routes/systemOwnerCompanyRoutes.js";
 /* ==========================================================
    🌐 PUBLIC ROUTES
 ========================================================== */
 app.use("/api/public", apiLimiter);
 app.use("/api/public/company", publicApiRoutes);
 app.use("/api/notifications", notificationRoutes);
+
 /* ==========================================================
    📌 MAIN ROUTES
 ========================================================== */
 app.use("/api/auth", authRoutes);
 
 // SuperAdmin
-app.use("/api/superadmin", superAdminRoutes);
-app.use("/api/admin", adminStatsRoutes);
-
+app.use("/api/owner", systemOwnerRoutes);
+app.use("/api/owner/companies", systemOwnerCompanyRoutes);
 // Company
 app.use("/api/company", companyRoutes);
 app.use("/api/company/dashboard", companyDashboardRoutes);
@@ -136,6 +149,7 @@ app.use("/api/company/branding", brandingRoutes);
 app.use("/api/company/settings", companySettingsRoutes);
 app.use("/api/company/branding", companyBrandingRoutes);
 app.use("/api/company/shops", companyShopRoutes);
+
 // Manager
 app.use("/api/manager/dashboard", managerDashboardRoutes);
 app.use("/api/manager/drivers", managerDriverRoutes);
@@ -148,9 +162,12 @@ app.use("/api/manager/profile", managerProfileRoutes);
 app.use("/api/manager", managerPaymentsRoutes);
 app.use("/api/manager", managerLiveRoutes);
 app.use("/api/manager/shop-products", managerShopProductsRoutes);
+
 // Driver
 app.use("/api/driver", driverRoutes);
-
+app.use("/api/qr", qrRoutes);
+app.use("/api/driver/trips", driverTripRoutes);
+app.use("/api/driver/notifications", driverNotificationRoutes);
 // Customer
 app.use("/api/customer/profile", customerRoutes);
 app.use("/api/customer/trips", customerTripRoutes);
@@ -165,6 +182,10 @@ app.use("/api/invoices", invoiceRoutes);
 app.use("/api/settings", globalSettingsRoutes);
 app.use("/api/billing-settings", billingSettingsRoutes);
 app.use("/api/sessions", sessionRoutes);
+
+// Support + Chat
+app.use("/api", supportRoutes);
+app.use("/api", chatRoutes);
 
 /* ==========================================================
    🌡️ HEALTH CHECK
@@ -204,9 +225,46 @@ app.set("io", io);
 io.on("connection", (socket) => {
   console.log("🔵 Socket connected:", socket.id);
 
-  /* USER REGISTRATION */
-  socket.on("register", (userId) => {
-    if (userId) socket.join(String(userId));
+  /* ========================================================
+     USER REGISTRATION
+     - Backwards compatible:
+       🔹 if payload is string  -> join that room (old style)
+       🔹 if payload is object  -> { userId, role, companyId }
+  ========================================================= */
+  socket.on("register", (payload) => {
+    if (!payload) return;
+
+    // Old: register(userId)
+    if (typeof payload === "string") {
+      socket.join(String(payload));
+      return;
+    }
+
+    // New: register({ userId, role, companyId })
+    const { userId, role, companyId } = payload;
+    if (!userId) return;
+
+    socket.join(String(userId)); // personal room
+
+    switch (role) {
+      case "company":
+        socket.join(`company_${userId}`);
+        break;
+      case "manager":
+        socket.join(`manager_${userId}`);
+        if (companyId) socket.join(`company_${companyId}`);
+        break;
+      case "driver":
+        socket.join(`driver_${userId}`);
+        if (companyId) socket.join(`company_${companyId}`);
+        break;
+      case "customer":
+        socket.join(`customer_${userId}`);
+        if (companyId) socket.join(`company_${companyId}`);
+        break;
+      default:
+        break;
+    }
   });
 
   /* JOIN TRIP ROOM */
@@ -223,7 +281,7 @@ io.on("connection", (socket) => {
 
   /* DRIVER LOCATION UPDATE */
   socket.on("driver_location_update", ({ tripId, lat, lng }) => {
-    if (!tripId || !lat || !lng) return;
+    if (!tripId || lat == null || lng == null) return;
 
     io.to(`trip:${tripId}`).emit("trip:location_update", {
       tripId,
@@ -248,6 +306,7 @@ io.on("connection", (socket) => {
     console.log("🔴 Socket disconnected:", socket.id);
   });
 });
+
 
 /* ==========================================================
    🚀 START SERVER

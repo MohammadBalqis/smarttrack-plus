@@ -1,17 +1,18 @@
 // server/src/controllers/companyTripsController.js
 import Trip from "../models/Trip.js";
 import User from "../models/User.js";
+import { createDriverNotification } from "../controllers/driverNotificationController.js";
 
 import { resolveCompanyId } from "../utils/resolveCompanyId.js";
 
-
 /* ==========================================================
    📌 GET PAGINATED TRIPS (with filters)
-   ========================================================== */
+========================================================== */
 export const getCompanyTrips = async (req, res) => {
   try {
     const companyId = resolveCompanyId(req.user);
-    if (!companyId) return res.status(400).json({ error: "Company not found" });
+    if (!companyId)
+      return res.status(400).json({ error: "Company not found" });
 
     const { page = 1, limit = 20, status, driverId, from, to } = req.query;
 
@@ -49,7 +50,7 @@ export const getCompanyTrips = async (req, res) => {
 
 /* ==========================================================
    📌 GET SINGLE TRIP DETAILS
-   ========================================================== */
+========================================================== */
 export const getCompanyTripDetails = async (req, res) => {
   try {
     const companyId = resolveCompanyId(req.user);
@@ -75,7 +76,7 @@ export const getCompanyTripDetails = async (req, res) => {
 /* ==========================================================
    🧭 ASSIGN / REASSIGN DRIVER TO TRIP
    (Manager / Company can call this)
-   ========================================================== */
+========================================================== */
 export const assignTripDriver = async (req, res) => {
   try {
     const companyId = resolveCompanyId(req.user);
@@ -98,10 +99,14 @@ export const assignTripDriver = async (req, res) => {
 
     // Optional: prevent changing driver after delivery
     if (trip.status === "delivered" || trip.status === "cancelled") {
-      return res
-        .status(400)
-        .json({ error: "Cannot change driver for delivered/cancelled trips" });
+      return res.status(400).json({
+        error: "Cannot change driver for delivered/cancelled trips",
+      });
     }
+
+    const previousDriverId = trip.driverId
+      ? String(trip.driverId)
+      : null;
 
     // Check driver belongs to same company and is active
     const driver = await User.findOne({
@@ -112,9 +117,9 @@ export const assignTripDriver = async (req, res) => {
     });
 
     if (!driver) {
-      return res
-        .status(400)
-        .json({ error: "Driver not found or not active in this company" });
+      return res.status(400).json({
+        error: "Driver not found or not active in this company",
+      });
     }
 
     trip.driverId = driver._id;
@@ -129,6 +134,36 @@ export const assignTripDriver = async (req, res) => {
     const updatedTrip = await Trip.findById(trip._id)
       .populate("driverId", "name")
       .populate("customerId", "name");
+
+    // 🔔 NEW DRIVER NOTIFICATIONS
+    try {
+      const isReassign =
+        !!previousDriverId &&
+        previousDriverId !== String(driver._id);
+
+      // Notify the new driver
+      await createDriverNotification(driver._id, {
+        type: isReassign ? "trip_reassigned" : "trip_assigned",
+        message: isReassign
+          ? `Trip ${trip._id} has been reassigned to you.`
+          : `You have been assigned a new trip (${trip._id}).`,
+        tripId: trip._id,
+      });
+
+      // Optionally notify the previous driver if changed
+      if (isReassign) {
+        await createDriverNotification(previousDriverId, {
+          type: "trip_reassigned_away",
+          message: `Trip ${trip._id} has been reassigned to another driver.`,
+          tripId: trip._id,
+        });
+      }
+    } catch (notifErr) {
+      console.error(
+        "assignTripDriver notification error:",
+        notifErr.message
+      );
+    }
 
     res.json({
       ok: true,

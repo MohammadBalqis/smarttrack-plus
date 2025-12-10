@@ -1,0 +1,122 @@
+.page {
+  padding: 32px;
+  max-width: 1280px;
+  margin: auto;
+}
+
+.title {
+  font-size: 32px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.subtitle {
+  color: #475569;
+  margin-bottom: 24px;
+}
+
+.kpiGrid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  margin-bottom: 28px;
+}
+
+.card {
+  padding: 20px;
+  border-radius: 12px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.card span {
+  display: block;
+  margin-top: 8px;
+  font-size: 26px;
+  color: #0284c7;
+}
+
+.activityGrid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(4, 1fr);
+  margin-bottom: 32px;
+}
+
+.activityCard {
+  background: #f8fafc;
+  padding: 18px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  font-weight: 600;
+}
+
+.activityCard span {
+  display: block;
+  font-size: 22px;
+  color: #0ea5e9;
+  margin-top: 6px;
+}
+
+.tableWrapper {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  margin-bottom: 32px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+}
+
+.table th {
+  text-align: left;
+  padding: 12px 8px;
+  background: #f1f5f9;
+}
+
+.table td {
+  padding: 10px 8px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.status {
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.active {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.suspended {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.liveFeed {
+  background: white;
+  padding: 18px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.liveFeed ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.liveFeed li {
+  padding: 6px 0;
+  font-size: 14px;
+  border-bottom: 1px solid #e2e8f0;
+}

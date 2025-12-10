@@ -1,135 +1,145 @@
-// server/src/controllers/trip/tripQrController.js
 import Trip from "../../models/Trip.js";
-import Vehicle from "../../models/Vehicle.js";
-import QRCode from "qrcode";
-import jwt from "jsonwebtoken";
-import { getPopulatedTripForNotify, createNotification, broadcastTripStatus } from "./tripHelpers.js";
 import { logActivity } from "../../utils/activityLogger.js";
 
+/* Helper: generate secure 8-char code (A-Z, 0-9) */
+const generateConfirmationCode = () => {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no O/0 or I/1 to avoid confusion
+  let code = "";
+  for (let i = 0; i < 8; i++) {
+    code += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return code;
+};
+
 /* ==========================================================
-   🟢 7. Generate Secure QR Code for Customer Delivery Confirm
-   ========================================================== */
-export const generateTripQr = async (req, res) => {
+   1) CUSTOMER — GET TRIP QR + DRIVER INFO
+   GET /api/customer/trips/:tripId/qr
+========================================================== */
+export const getCustomerTripQrInfo = async (req, res) => {
   try {
     const { tripId } = req.params;
 
-    const trip = await Trip.findById(tripId);
-    if (!trip)
-      return res.status(404).json({ error: "Trip not found" });
+    const trip = await Trip.findOne({
+      _id: tripId,
+      customerId: req.user._id,
+    })
+      .populate("driverId", "name phone profileImage")
+      .populate("companyId", "name");
 
-    const qrToken = jwt.sign(
-      {
-        tripId,
-        customerId: trip.customerId,
-        driverId: trip.driverId,
-      },
-      process.env.QR_SECRET,
-      { expiresIn: "10m" }
-    );
+    if (!trip) {
+      return res.status(404).json({ error: "Trip not found." });
+    }
 
-    const confirmUrl = `${process.env.FRONTEND_URL}/confirm-delivery?token=${qrToken}`;
+    // Only generate code if not already generated
+    if (!trip.confirmationCode) {
+      trip.confirmationCode = generateConfirmationCode();
+      await trip.save();
+    }
 
-    const qrImage = await QRCode.toDataURL(confirmUrl);
+    // Payload that will be encoded inside QR
+    const qrPayload = {
+      type: "DELIVERY_CONFIRMATION",
+      code: trip.confirmationCode,
+      tripId: String(trip._id),
+      companyId: String(trip.companyId?._id || trip.companyId),
+    };
 
-    res.json({
+    return res.json({
       ok: true,
-      confirmUrl,
-      qrImage,
-      expiresIn: "10m",
+      data: {
+        trip: {
+          id: trip._id,
+          status: trip.status,
+          totalAmount: trip.totalAmount,
+          deliveryFee: trip.deliveryFee,
+          customerConfirmed: trip.customerConfirmed,
+          confirmationTime: trip.confirmationTime,
+        },
+        driver: trip.driverId
+          ? {
+              id: trip.driverId._id,
+              name: trip.driverId.name,
+              phone: trip.driverId.phone,
+              profileImage: trip.driverId.profileImage,
+            }
+          : null,
+        company: {
+          id: trip.companyId?._id || trip.companyId,
+          name: trip.companyId?.name,
+        },
+        qrPayload,              // to be turned into QR on frontend
+        confirmationCode: trip.confirmationCode, // also show as text
+      },
     });
   } catch (err) {
-    console.error("❌ QR generation error:", err.message);
-    res.status(500).json({
-      error: "Server error generating QR",
-    });
+    console.error("getCustomerTripQrInfo error:", err);
+    return res.status(500).json({ error: "Failed to load QR info." });
   }
 };
 
 /* ==========================================================
-   🟣 8. Confirm Delivery (Customer scan) — Critical Event
-   ========================================================== */
-export const confirmDelivery = async (req, res) => {
+   2) DRIVER — CONFIRM DELIVERY BY CODE / QR
+   POST /api/driver/trips/confirm-delivery
+   body: { code }
+========================================================== */
+export const driverConfirmDeliveryByCode = async (req, res) => {
   try {
-    const { token } = req.body;
+    const { code } = req.body;
 
-    if (!token)
-      return res.status(400).json({ error: "Missing QR token" });
-
-    let decoded;
-    try {
-      decoded = jwt.verify(token, process.env.QR_SECRET);
-    } catch (err) {
-      return res.status(401).json({ error: "Invalid or expired QR" });
+    if (!code || !code.trim()) {
+      return res.status(400).json({ error: "Confirmation code is required." });
     }
 
-    const { tripId } = decoded;
-    const trip = await Trip.findById(tripId);
+    // Driver can only confirm THEIR own trips
+    const trip = await Trip.findOne({
+      confirmationCode: code.trim().toUpperCase(),
+      driverId: req.user._id,
+    });
 
-    if (!trip)
-      return res.status(404).json({ error: "Trip not found" });
-
-    if (trip.status !== "delivered")
-      return res.status(400).json({
-        error: "Trip must be marked delivered by driver first.",
+    if (!trip) {
+      return res.status(404).json({
+        error: "No trip found for this code, or it is not assigned to you.",
       });
+    }
+
+    if (trip.customerConfirmed) {
+      return res.status(400).json({
+        error: "This delivery was already confirmed.",
+      });
+    }
 
     trip.customerConfirmed = true;
     trip.confirmationTime = new Date();
+    trip.status = "delivered";
+    trip.paymentStatus = trip.paymentStatus === "unpaid" ? "pending" : trip.paymentStatus;
+
     await trip.save();
 
-    await Vehicle.findByIdAndUpdate(trip.vehicleId, {
-      status: "available",
-    });
-
-    // 🔔 Notify company/manager that customer confirmed
-    const populatedTrip = await getPopulatedTripForNotify(trip._id);
-    const payloadCommon = {
-      trip: populatedTrip,
-      driver: populatedTrip.driverId,
-      vehicle: populatedTrip.vehicleId,
-      customer: populatedTrip.customerId,
-    };
-
-    if (populatedTrip.companyId?._id) {
-      await createNotification(req, {
-        userId: populatedTrip.companyId._id,
-        title: "Customer Confirmed Delivery",
-        message: "The customer has confirmed the delivery via QR scan.",
-        type: "status",
-        category: "company",
-        relatedTripId: populatedTrip._id,
-        actionUrl: `/company/trips/${populatedTrip._id}`,
-        extraData: payloadCommon,
-      });
-    }
-
-    // 🔁 Realtime broadcast
-    await broadcastTripStatus(req, trip._id);
-
-    // 🧾 Activity log — critical event
+    // Optional: log activity for company dashboard / audits
     await logActivity({
-      userId: null, // customer is anonymous here (no auth)
-      action: "TRIP_CONFIRM_DELIVERY",
-      description: `Customer confirmed delivery for trip ${trip._id} via QR scan`,
-      ipAddress: req.ip,
-      deviceInfo: req.headers["user-agent"],
+      userId: req.user._id,
+      action: "TRIP_DELIVERY_CONFIRMED",
+      description: `Driver confirmed delivery for trip ${trip._id}`,
       meta: {
         tripId: trip._id,
         companyId: trip.companyId,
-        driverId: trip.driverId,
-        customerId: trip.customerId,
       },
+      ipAddress: req.ip,
+      deviceInfo: req.headers["user-agent"],
     });
 
-    res.json({
+    return res.json({
       ok: true,
-      message: "Customer confirmed delivery successfully!",
-      trip,
+      message: "Delivery confirmed successfully.",
+      data: {
+        id: trip._id,
+        status: trip.status,
+        customerConfirmed: trip.customerConfirmed,
+        confirmationTime: trip.confirmationTime,
+      },
     });
   } catch (err) {
-    console.error("❌ Delivery confirm error:", err.message);
-    res.status(500).json({
-      error: "Server error confirming delivery",
-    });
+    console.error("driverConfirmDeliveryByCode error:", err);
+    return res.status(500).json({ error: "Failed to confirm delivery." });
   }
 };

@@ -5,7 +5,11 @@ const api = axios.create({
   withCredentials: true,
 });
 
-// GET /api/manager/drivers
+/* ==========================================================
+   MANAGER → DRIVERS (ALL DRIVERS)
+========================================================== */
+
+// GET /api/manager/drivers   (all drivers under this manager)
 export const getManagerDriversApi = (params = {}) => {
   return api.get("/manager/drivers", { params });
 };
@@ -28,4 +32,14 @@ export const getManagerDriverStatsApi = (driverId) => {
 // GET /api/manager/driver/:driverId/recent-trips
 export const getManagerDriverRecentTripsApi = (driverId) => {
   return api.get(`/manager/driver/${driverId}/recent-trips`);
+};
+
+/* ==========================================================
+   🔥 MISSING API — REQUIRED BY ManagerVehicleDrawer.jsx
+   Returns drivers for a SINGLE SHOP
+========================================================== */
+
+// GET /api/manager/shops/:shopId/drivers
+export const getShopDriversApi = (shopId) => {
+  return api.get(`/manager/shops/${shopId}/drivers`);
 };

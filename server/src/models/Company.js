@@ -14,7 +14,7 @@ const companySchema = new mongoose.Schema(
     /* ==========================================================
        🖼️ COMPANY PROFILE
     ========================================================== */
-    logo: { type: String, default: null }, // URL path
+    logo: { type: String, default: null }, // URL / path
 
     businessCategory: {
       type: String,
@@ -54,12 +54,12 @@ const companySchema = new mongoose.Schema(
     },
 
     /* ==========================================================
-       🎨 BRANDING & WHITE-LABELING (10H)
+       🎨 BRANDING & WHITE-LABELING
     ========================================================== */
     branding: {
       logoUrl: { type: String, default: null },
 
-      primaryColor: { type: String, default: "#3b82f6" },   // blue
+      primaryColor: { type: String, default: "#3b82f6" }, // blue
       secondaryColor: { type: String, default: "#1e293b" }, // slate
       sidebarColor: { type: String, default: "#0f172a" },
       accentColor: { type: String, default: "#3b82f6" },
@@ -105,25 +105,70 @@ const companySchema = new mongoose.Schema(
     ],
 
     /* ==========================================================
-       ⭐ PLAN & BILLING (for future)
+       ⭐ PLAN & BILLING (Subscription based on drivers)
+       Pricing today:
+         ▸ 0–10  drivers → $50
+         ▸ 11–30 drivers → $80
+         ▸ 31–50 drivers → $100
+         ▸ 51+   drivers → $150
     ========================================================== */
+
+    // Legacy simple plan (you can still use it for some old logic)
     plan: {
       type: String,
       enum: ["free", "basic", "pro", "enterprise"],
       default: "free",
     },
+
+    // Short overall billing status (for quick filters)
     billingStatus: {
       type: String,
       enum: ["active", "unpaid", "suspended"],
       default: "active",
     },
-/* ==========================================================
-   🔑 API ACCESS (Public Integration)
-========================================================== */
-apiKey: { type: String, default: null, unique: true },
-apiEnabled: { type: Boolean, default: true },
-apiRateLimitPerMinute: { type: Number, default: 30 },  // protect your server
-apiWebhookUrl: { type: String, default: null },        // to send updates
+
+    // 🔄 Recurring subscription snapshot used by System Owner
+    subscription: {
+      // key to use in code, e.g. "tier_0_10", "tier_11_30"
+      tierKey: { type: String, default: null },
+
+      // Human readable label: "0–10 drivers", "11–30 drivers", etc.
+      label: { type: String, default: null },
+
+      maxDrivers: { type: Number, default: 0 },
+
+      // Price per billing period (monthly) in USD
+      priceUsd: { type: Number, default: 0 },
+
+      // Last counted drivers (for that tier snapshot)
+      lastDriverCount: { type: Number, default: 0 },
+
+      // Billing meta
+      billingPeriod: { type: String, default: "monthly" },
+      nextBillingDate: { type: Date, default: null },
+      lastBilledAt: { type: Date, default: null },
+
+      // Late payment flags
+      isPastDue: { type: Boolean, default: false },
+
+      // Link to the last invoice if you want
+      lastInvoiceId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "SubscriptionInvoice",
+        default: null,
+      },
+    },
+
+    /* ==========================================================
+       🔑 API ACCESS (Public Integration)
+    ========================================================== */
+    apiKey: { type: String, default: null, unique: true },
+    apiEnabled: { type: Boolean, default: true },
+    apiRateLimitPerMinute: {
+      type: Number,
+      default: 30, // protect your server
+    },
+    apiWebhookUrl: { type: String, default: null }, // to send updates
 
     /* ==========================================================
        ⚙️ STATUS

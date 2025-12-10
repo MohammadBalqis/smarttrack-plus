@@ -1,0 +1,70 @@
+.dropdown {
+  position: absolute;
+  top: 50px;
+  right: 20px;
+  width: 330px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+  z-index: 1000;
+  overflow: hidden;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.header {
+  padding: 12px;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.list {
+  max-height: 350px;
+  overflow-y: auto;
+}
+
+.item {
+  padding: 12px;
+  border-bottom: 1px solid #f1f1f1;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.item:hover {
+  background: #f9f9f9;
+}
+
+.unread {
+  background: #e8f1ff;
+}
+
+.message {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.time {
+  font-size: 12px;
+  color: #777;
+  margin-top: 4px;
+}
+
+.empty {
+  padding: 20px;
+  text-align: center;
+  color: #888;
+}
+
+.markAllBtn {
+  background: none;
+  border: none;
+  color: #0a74da;
+  font-size: 13px;
+  cursor: pointer;
+}

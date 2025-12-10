@@ -2,6 +2,7 @@
 import Trip from "../models/Trip.js";
 import Payment from "../models/Payment.js";
 import User from "../models/User.js";
+import { createDriverNotification } from "../controllers/driverNotificationController.js";
 
 /* Resolve companyId */
 const resolveCompanyId = (user) => {
@@ -74,7 +75,9 @@ export const getManagerTrips = async (req, res) => {
     });
   } catch (err) {
     console.error("❌ getManagerTrips error:", err.message);
-    res.status(500).json({ ok: false, error: "Server error fetching trips" });
+    res
+      .status(500)
+      .json({ ok: false, error: "Server error fetching trips" });
   }
 };
 
@@ -96,9 +99,10 @@ export const getManagerTripDetails = async (req, res) => {
       .populate("vehicleId", "plateNumber brand model");
 
     if (!trip) {
-      return res
-        .status(404)
-        .json({ ok: false, error: "Trip not found or unauthorized" });
+      return res.status(404).json({
+        ok: false,
+        error: "Trip not found or unauthorized",
+      });
     }
 
     const payment = await Payment.findOne({ tripId: trip._id });
@@ -110,7 +114,9 @@ export const getManagerTripDetails = async (req, res) => {
     });
   } catch (err) {
     console.error("❌ getManagerTripDetails error:", err.message);
-    res.status(500).json({ ok: false, error: "Server error loading trip" });
+    res
+      .status(500)
+      .json({ ok: false, error: "Server error loading trip" });
   }
 };
 
@@ -131,9 +137,10 @@ export const getManagerTripTimeline = async (req, res) => {
     );
 
     if (!trip) {
-      return res
-        .status(404)
-        .json({ ok: false, error: "Trip not found for your shop/company" });
+      return res.status(404).json({
+        ok: false,
+        error: "Trip not found for your shop/company",
+      });
     }
 
     const timeline = [...(trip.timeline || [])].sort(
@@ -150,7 +157,9 @@ export const getManagerTripTimeline = async (req, res) => {
     });
   } catch (err) {
     console.error("❌ getManagerTripTimeline error:", err.message);
-    res.status(500).json({ ok: false, error: "Server error fetching timeline" });
+    res
+      .status(500)
+      .json({ ok: false, error: "Server error fetching timeline" });
   }
 };
 
@@ -192,6 +201,8 @@ export const getManagerTripSummary = async (req, res) => {
     res.json({ ok: true, summary });
   } catch (err) {
     console.error("❌ getManagerTripSummary error:", err.message);
-    res.status(500).json({ ok: false, error: "Server error summarizing trips" });
+    res
+      .status(500)
+      .json({ ok: false, error: "Server error summarizing trips" });
   }
 };

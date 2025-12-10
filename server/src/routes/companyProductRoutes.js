@@ -14,7 +14,9 @@ import {
 
 const router = Router();
 
-/* List products (company + manager) */
+/* ==========================================================
+   LIST PRODUCTS (company + manager)
+========================================================== */
 router.get(
   "/products",
   protect,
@@ -22,7 +24,9 @@ router.get(
   getCompanyProducts
 );
 
-/* Get single product (company + manager) */
+/* ==========================================================
+   SINGLE PRODUCT (company + manager)
+========================================================== */
 router.get(
   "/products/:id",
   protect,
@@ -30,7 +34,9 @@ router.get(
   getCompanyProduct
 );
 
-/* Create product (company only) */
+/* ==========================================================
+   CREATE PRODUCT (company only)
+========================================================== */
 router.post(
   "/products",
   protect,
@@ -38,7 +44,9 @@ router.post(
   createCompanyProduct
 );
 
-/* Update product (company only) */
+/* ==========================================================
+   UPDATE PRODUCT (company only)
+========================================================== */
 router.put(
   "/products/:id",
   protect,
@@ -46,7 +54,9 @@ router.put(
   updateCompanyProduct
 );
 
-/* Toggle active (company only) */
+/* ==========================================================
+   TOGGLE ACTIVE (company only)
+========================================================== */
 router.put(
   "/products/:id/toggle",
   protect,
@@ -54,7 +64,9 @@ router.put(
   toggleCompanyProductActive
 );
 
-/* Adjust stock (company only) */
+/* ==========================================================
+   STOCK ADJUSTMENT (company only)
+========================================================== */
 router.post(
   "/products/:id/stock",
   protect,

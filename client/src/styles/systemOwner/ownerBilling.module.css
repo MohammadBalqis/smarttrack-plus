@@ -1,0 +1,333 @@
+/* ==========================================================
+   SYSTEM OWNER — BILLING PAGE
+========================================================== */
+
+.page {
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* ================= HEADER ================= */
+
+.headerRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.title {
+  font-size: 26px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 4px;
+}
+
+.subtitle {
+  font-size: 14px;
+  color: #64748b;
+}
+
+.refreshBtn {
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: none;
+  background: #0ea5e9;
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  box-shadow: 0 8px 16px rgba(14, 165, 233, 0.25);
+  transition: transform 0.15s ease, box-shadow 0.15s ease,
+    background 0.15s ease;
+}
+
+.refreshBtn:hover {
+  background: #0284c7;
+  transform: translateY(-1px);
+  box-shadow: 0 12px 24px rgba(14, 165, 233, 0.3);
+}
+
+.refreshBtn:disabled {
+  opacity: 0.7;
+  cursor: default;
+  transform: none;
+  box-shadow: none;
+}
+
+/* ================= ALERT / ERROR ================= */
+
+.errorBox {
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 14px;
+}
+
+/* ================= KPI CARDS ================= */
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.statCard {
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 14px 16px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.04);
+}
+
+.statLabel {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #94a3b8;
+  margin-bottom: 6px;
+}
+
+.statValue {
+  font-size: 22px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 2px;
+}
+
+.statHint {
+  font-size: 12px;
+  color: #64748b;
+}
+
+/* ================= FILTERS ================= */
+
+.filtersRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+  margin-bottom: 14px;
+}
+
+.filterGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.filterLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.select,
+.input {
+  min-width: 180px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  font-size: 14px;
+  outline: none;
+}
+
+.select:focus,
+.input:focus {
+  border-color: #0ea5e9;
+  box-shadow: 0 0 0 1px rgba(14, 165, 233, 0.35);
+}
+
+.filterActions {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+}
+
+.resetBtn {
+  padding: 7px 12px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.resetBtn:hover {
+  background: #e2e8f0;
+}
+
+/* ================= TABLE ================= */
+
+.card {
+  background: #ffffff;
+  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.04);
+  padding: 0;
+}
+
+.cardHeader {
+  padding: 14px 18px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.cardTitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: #0f172a;
+  margin-bottom: 2px;
+}
+
+.cardSub {
+  font-size: 13px;
+  color: #64748b;
+}
+
+.tableWrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.table thead {
+  background: #f8fafc;
+}
+
+.table th,
+.table td {
+  padding: 10px 14px;
+  text-align: left;
+  border-bottom: 1px solid #e2e8f0;
+  white-space: nowrap;
+}
+
+.table th {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.invoiceId {
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo,
+    Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 12px;
+  color: #0f172a;
+}
+
+.companyName {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.companyMeta {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.amount {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.periodText {
+  font-size: 12px;
+  color: #475569;
+}
+
+/* ================= STATUS BADGES ================= */
+
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.statusPending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.statusPaid {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.statusOverdue {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.statusCancelled {
+  background: #e2e8f0;
+  color: #475569;
+}
+
+/* Past due label in company column (optional) */
+.pastDueChip {
+  margin-left: 6px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: #fee2e2;
+  color: #b91c1c;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+/* ================= EMPTY STATE ================= */
+
+.emptyBox {
+  padding: 32px;
+  text-align: center;
+  font-size: 14px;
+  color: #64748b;
+}
+
+/* ================= RESPONSIVE ================= */
+
+@media (max-width: 900px) {
+  .statsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .page {
+    padding: 16px;
+  }
+
+  .statsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .filtersRow {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filterActions {
+    margin-left: 0;
+    justify-content: flex-start;
+  }
+
+  .table th,
+  .table td {
+    padding: 8px 10px;
+  }
+}

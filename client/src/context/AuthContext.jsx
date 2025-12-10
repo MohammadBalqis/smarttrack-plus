@@ -1,14 +1,17 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
+import { useBranding } from "./BrandingContext";  // ✅ FIX
 
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null); // { id, role, name }
+  const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // ✅ Use branding from BrandingContext
+  const { branding } = useBranding();
+
   useEffect(() => {
-    // Load from localStorage on first render
     const storedToken = localStorage.getItem("st_token");
     const storedUser = localStorage.getItem("st_user");
 
@@ -37,20 +40,20 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem("st_user");
   };
 
- return (
-  <AuthContext.Provider
-    value={{
-      user,
-      login,
-      logout,
-      branding,
-      primaryColor: branding?.primaryColor || "#0A74DA",
-      secondaryColor: branding?.secondaryColor || "#005BBB",
-    }}
-  >
-    {children}
-  </AuthContext.Provider>
-);
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        login,
+        logout,
+        branding,                          // now defined!
+        primaryColor: branding.primaryColor,
+        secondaryColor: branding.secondaryColor,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
 };
 
 export const useAuth = () => useContext(AuthContext);

@@ -1,13 +1,35 @@
-import React from "react";
+// client/src/layout/CompanyLayout.jsx
+import React, { useEffect, useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { companyMenu } from "../components/sidebar/SidebarItems";
+import { io } from "socket.io-client";
 
 import styles from "../styles/layouts/dashboardLayout.module.css";
 
 const CompanyLayout = () => {
   const { user, branding, logout } = useAuth();
   const navigate = useNavigate();
+
+  const [supportCount, setSupportCount] = useState(0);
+
+  // Register socket
+  useEffect(() => {
+    if (!user) return;
+
+    const socket = io(import.meta.env.VITE_API_URL);
+
+    socket.emit("register", {
+      userId: user._id,
+      role: "company",
+    });
+
+    socket.on("support:new", () => {
+      setSupportCount((prev) => prev + 1);
+    });
+
+    return () => socket.disconnect();
+  }, [user]);
 
   const primary = branding?.primaryColor || "#0A74DA";
   const secondary = branding?.secondaryColor || "#005BBB";
@@ -50,6 +72,22 @@ const CompanyLayout = () => {
             >
               <span className={styles.icon}>{item.icon}</span>
               {item.label}
+
+              {/* Support badge */}
+              {item.path === "/company/support" && supportCount > 0 && (
+                <span
+                  style={{
+                    background: "red",
+                    color: "white",
+                    padding: "2px 7px",
+                    borderRadius: "10px",
+                    marginLeft: "8px",
+                    fontSize: "12px",
+                  }}
+                >
+                  {supportCount}
+                </span>
+              )}
             </NavLink>
           ))}
         </nav>
@@ -66,9 +104,11 @@ const CompanyLayout = () => {
             <span className={styles.roleChip}>{user?.role}</span>
           </div>
 
-          <button onClick={handleLogout} className={styles.logoutBtn}>
-            Logout
-          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <button onClick={handleLogout} className={styles.logoutBtn}>
+              Logout
+            </button>
+          </div>
         </header>
 
         <main className={styles.content}>

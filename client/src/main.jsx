@@ -5,6 +5,7 @@ import App from "./App.jsx";
 import "./index.css";
 import "leaflet/dist/leaflet.css";
 
+
 import { BrandingProvider } from "./context/BrandingContext";
 
 ReactDOM.createRoot(document.getElementById("root")).render(

@@ -1,0 +1,235 @@
+/* ==========================================================
+   SYSTEM OWNER — SETTINGS PAGE
+========================================================== */
+
+.page {
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.headerRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 4px;
+}
+
+.subtitle {
+  font-size: 14px;
+  color: #64748b;
+}
+
+.refreshBtn {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: none;
+  background-color: #0ea5e9;
+  color: white;
+  font-size: 14px;
+  cursor: pointer;
+}
+.refreshBtn:hover {
+  background-color: #0284c7;
+}
+
+/* Alerts */
+.errorBox {
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+  font-size: 14px;
+}
+
+.successBox {
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: #ecfdf5;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+  font-size: 14px;
+}
+
+/* Form layout */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.card {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 18px 18px 16px;
+  border: 1px solid #e2e8f0;
+}
+
+.cardTitle {
+  font-size: 18px;
+  font-weight: 600;
+  color: #0f172a;
+  margin-bottom: 4px;
+}
+
+.cardHint {
+  font-size: 13px;
+  color: #64748b;
+  margin-bottom: 16px;
+}
+
+/* Fields */
+
+.formRow {
+  margin-bottom: 12px;
+}
+
+.label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
+  margin-bottom: 4px;
+}
+
+.input,
+.select,
+.textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  background: #f8fafc;
+}
+
+.input:focus,
+.select:focus,
+.textarea:focus {
+  border-color: #0ea5e9;
+  box-shadow: 0 0 0 1px rgba(14, 165, 233, 0.2);
+  background: #ffffff;
+}
+
+.textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.helpText {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-top: 4px;
+}
+
+/* Switches */
+
+.switchRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.switchRow input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+}
+
+.switchLabel {
+  font-size: 14px;
+  font-weight: 500;
+  color: #0f172a;
+}
+
+/* Tiers */
+
+.tiersGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 8px;
+  margin-bottom: 8px;
+}
+
+.tierCard {
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  padding: 10px;
+  background: #f8fafc;
+}
+
+.tierTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+  margin-bottom: 4px;
+}
+
+.tierPrice {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0ea5e9;
+  margin-bottom: 2px;
+}
+
+.tierMeta {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.notice {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-top: 6px;
+}
+
+/* Footer */
+.footerBar {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+
+.saveBtn {
+  padding: 10px 18px;
+  border-radius: 999px;
+  border: none;
+  background: #0ea5e9;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 14px;
+}
+.saveBtn:hover {
+  background: #0284c7;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .page {
+    padding: 16px;
+  }
+}

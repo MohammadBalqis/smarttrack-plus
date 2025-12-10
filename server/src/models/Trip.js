@@ -1,9 +1,8 @@
-// server/src/models/Trip.js
 import mongoose from "mongoose";
 
 /* ==========================================================
-   🛍️ ORDER ITEM (for cart system)
-   ========================================================== */
+   🛍️ ORDER ITEM (for multi-product cart)
+========================================================== */
 const orderItemSchema = new mongoose.Schema(
   {
     productId: {
@@ -20,7 +19,7 @@ const orderItemSchema = new mongoose.Schema(
 
 /* ==========================================================
    🛰 ROUTE POINT (for live tracking)
-   ========================================================== */
+========================================================== */
 const routePointSchema = new mongoose.Schema(
   {
     lat: { type: Number, required: true },
@@ -32,7 +31,7 @@ const routePointSchema = new mongoose.Schema(
 
 /* ==========================================================
    📍 LOCATION (pickup / dropoff)
-   ========================================================== */
+========================================================== */
 const locationSchema = new mongoose.Schema(
   {
     address: { type: String, required: true },
@@ -43,8 +42,8 @@ const locationSchema = new mongoose.Schema(
 );
 
 /* ==========================================================
-   🚚 TRIP MODEL — Company ▸ Driver ▸ Customer
-   ========================================================== */
+   🚚 TRIP MODEL
+========================================================== */
 const tripSchema = new mongoose.Schema(
   {
     // 🔗 Relations
@@ -76,8 +75,8 @@ const tripSchema = new mongoose.Schema(
     },
 
     /* ==========================================================
-       🛒 MULTI-PRODUCT CART (ADDED for 12D)
-       ========================================================== */
+       🛒 MULTI-PRODUCT CART (Step 12D)
+    ========================================================== */
     orderItems: [orderItemSchema],
     totalAmount: { type: Number, default: 0 },
 
@@ -88,10 +87,16 @@ const tripSchema = new mongoose.Schema(
     // 💰 Delivery fee
     deliveryFee: { type: Number, default: 0, min: 0 },
 
-    // 📌 Status lifecycle
+    // 📌 Trip status flow
     status: {
       type: String,
-      enum: ["pending", "assigned", "in_progress", "delivered", "cancelled"],
+      enum: [
+        "pending",
+        "assigned",
+        "in_progress",
+        "delivered",
+        "cancelled",
+      ],
       default: "pending",
       index: true,
     },
@@ -103,7 +108,7 @@ const tripSchema = new mongoose.Schema(
       default: "unpaid",
     },
 
-    // 🙋‍♂️ Customer metadata
+    // 🙋 Customer fields
     createdByCustomer: { type: Boolean, default: false },
     customerAddress: { type: String },
     customerPhone: { type: String },
@@ -122,11 +127,20 @@ const tripSchema = new mongoose.Schema(
     confirmationTime: { type: Date, default: null },
 
     /* ==========================================================
-       🔴 NEW — LIVE STATUS (7E)
-       ========================================================== */
+       🔴 Live Status (D7E)
+    ========================================================== */
     liveStatus: {
       type: String,
       default: "Driver Assigned",
+    },
+
+    /* ==========================================================
+       🔐 Secure Confirmation Code (QR / Manual)
+    ========================================================== */
+    confirmationCode: {
+      type: String,       // 6–8 digit random code
+      default: null,
+      index: true,
     },
   },
   { timestamps: true }

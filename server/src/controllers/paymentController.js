@@ -1,15 +1,16 @@
-// server/src/controllers/paymentController.js
 import mongoose from "mongoose";
 import Joi from "joi";
 import sanitize from "sanitize-html";
 import { resolveCompanyId } from "../utils/resolveCompanyId.js";
+
+import { createDriverNotification } from "../controllers/driverNotificationController.js";
 
 import Payment from "../models/Payment.js";
 import Trip from "../models/Trip.js";
 import User from "../models/User.js";
 import Webhook from "../models/Webhook.js";
 
-// 🔔 Notifications helpers (already used in trip controllers)
+// General notifications system (company/manager/customer)
 import {
   createNotification,
   getPopulatedTripForNotify,
@@ -52,10 +53,9 @@ const paginationQuerySchema = Joi.object({
   page: Joi.number().integer().min(1).default(1),
   limit: Joi.number().integer().min(1).max(100).default(20),
 
-  // for company / owner / superadmin views
   companyId: Joi.string().optional(),
   driverId: Joi.string().optional(),
-}).unknown(true); // allow extra query params if needed
+}).unknown(true);
 
 /* ==========================================================
    Helper: resolve companyId from user
@@ -69,7 +69,7 @@ const resolveCompanyIdFromUser = (user) => {
 };
 
 /* ==========================================================
-   Helper: load company billing config from User
+   Helper: load company billing config
 ========================================================== */
 const getCompanyBillingConfig = async (companyUserId) => {
   if (!companyUserId) return {};
@@ -101,16 +101,20 @@ const getCompanyBillingConfig = async (companyUserId) => {
 };
 
 /* ==========================================================
-   Helper: compute advanced earnings (Option B)
+   Helper: compute advanced earnings
 ========================================================== */
-const computeAdvancedEarnings = async ({ trip, overrides = {}, companyUserId }) => {
+const computeAdvancedEarnings = async ({
+  trip,
+  overrides = {},
+  companyUserId,
+}) => {
   const deliveryFee =
     overrides.deliveryFee !== undefined
       ? overrides.deliveryFee
       : trip.deliveryFee || 0;
 
   const productTotalFromTrip = Array.isArray(trip.orderItems)
-    ? trip.orderItems.reduce((sum, item) => sum + (item.subtotal || 0), 0)
+    ? trip.orderItems.reduce((sum, i) => sum + (i.subtotal || 0), 0)
     : 0;
 
   const productTotal =
@@ -125,7 +129,6 @@ const computeAdvancedEarnings = async ({ trip, overrides = {}, companyUserId }) 
 
   const billing = await getCompanyBillingConfig(companyUserId);
 
-  // Base the customer pays (before discount/tax)
   const rawBase =
     (billing.enableProductSales ? productTotal : 0) + deliveryFee;
 
@@ -136,50 +139,45 @@ const computeAdvancedEarnings = async ({ trip, overrides = {}, companyUserId }) 
 
   const deliveryRate = billing.deliveryRate ?? 20;
   const productRate = billing.productRate ?? 10;
-  const enableProductCommission = billing.enableProductCommission ?? false;
 
   const companyDeliveryCommissionAmount = (deliveryFee * deliveryRate) / 100;
-
-  const companyProductCommissionAmount = enableProductCommission
+  const companyProductCommissionAmount = billing.enableProductCommission
     ? (productTotal * productRate) / 100
     : 0;
 
   const companyEarning =
     companyDeliveryCommissionAmount + companyProductCommissionAmount;
 
-  // For now, platformEarning is 0 (can be extended later)
   const platformEarning = 0;
 
-  // Driver gets the rest after company + platform + gateway fee
   const driverEarning =
     totalAmount - companyEarning - platformEarning - gatewayFee;
 
-  const paymentBreakdown = {
+  return {
+    totalAmount,
     deliveryFee,
     productTotal,
     discountAmount,
     taxAmount,
     gatewayFee,
-  };
-
-  return {
-    totalAmount: Math.max(totalAmount, 0),
-    deliveryFee: Math.max(deliveryFee, 0),
-    productTotal: Math.max(productTotal, 0),
-    discountAmount: Math.max(discountAmount, 0),
-    taxAmount: Math.max(taxAmount, 0),
-    gatewayFee: Math.max(gatewayFee, 0),
     driverEarning: Math.max(driverEarning, 0),
-    companyEarning: Math.max(companyEarning, 0),
-    platformEarning: Math.max(platformEarning, 0),
+    companyEarning,
+    platformEarning,
     currency,
-    paymentBreakdown,
+    paymentBreakdown: {
+      deliveryFee,
+      productTotal,
+      discountAmount,
+      taxAmount,
+      gatewayFee,
+    },
   };
 };
 
 /* ==========================================================
-   Helper: trigger webhooks for payment events
+   Webhooks + Notification Helpers
 ========================================================== */
+
 const triggerPaymentWebhooks = async (companyId, event, payload) => {
   try {
     if (!companyId) return;
@@ -189,30 +187,27 @@ const triggerPaymentWebhooks = async (companyId, event, payload) => {
       isActive: true,
       events: event,
     });
-
     if (!webhooks.length) return;
 
-    const doPost = async (url, body) => {
+    const postToWebhook = async (url, body) => {
       try {
-        if (typeof fetch === "function") {
-          await fetch(url, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              event,
-              data: body,
-              sentAt: new Date().toISOString(),
-            }),
-          });
-        } else {
-          console.log("Webhook not sent (no fetch available):", url);
-        }
+        if (typeof fetch !== "function") return;
+
+        await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            event,
+            data: body,
+            sentAt: new Date().toISOString(),
+          }),
+        });
       } catch (err) {
-        console.error("⚠ Webhook POST error:", err.message);
+        console.error("Webhook POST error:", err.message);
       }
     };
 
-    const cleanPayload = {
+    const clean = {
       event,
       paymentId: payload._id,
       status: payload.status,
@@ -226,20 +221,16 @@ const triggerPaymentWebhooks = async (companyId, event, payload) => {
       paidAt: payload.paidAt,
     };
 
-    await Promise.all(webhooks.map((wh) => doPost(wh.url, cleanPayload)));
+    await Promise.all(webhooks.map((wh) => postToWebhook(wh.url, clean)));
   } catch (err) {
-    console.error("⚠ triggerPaymentWebhooks error:", err.message);
+    console.error("triggerPaymentWebhooks error:", err.message);
   }
 };
 
-/* ==========================================================
-   Helper: notify related users about payment status
-========================================================== */
 const notifyPaymentStatus = async ({ req, payment, trip, status }) => {
   try {
-    const populatedTrip = trip
-      ? trip
-      : await getPopulatedTripForNotify(payment.tripId);
+    const populated =
+      trip || (await getPopulatedTripForNotify(payment.tripId));
 
     const payloadCommon = {
       paymentId: payment._id,
@@ -247,9 +238,9 @@ const notifyPaymentStatus = async ({ req, payment, trip, status }) => {
       status: payment.status,
       totalAmount: payment.totalAmount,
       method: payment.method,
-      driver: populatedTrip?.driverId,
-      customer: populatedTrip?.customerId,
-      company: populatedTrip?.companyId,
+      driver: populated?.driverId,
+      customer: populated?.customerId,
+      company: populated?.companyId,
     };
 
     const titleBase =
@@ -263,7 +254,7 @@ const notifyPaymentStatus = async ({ req, payment, trip, status }) => {
         ? "Payment Refunded"
         : "Payment Updated";
 
-    const messageBase =
+    const msgBase =
       status === "paid"
         ? "Your payment has been completed."
         : status === "pending"
@@ -274,12 +265,14 @@ const notifyPaymentStatus = async ({ req, payment, trip, status }) => {
         ? "Your payment has been refunded."
         : "Your payment status has been updated.";
 
-    // Customer notification
+    /* =============================
+        CUSTOMER NOTIFICATION
+    ============================== */
     if (payment.customerId) {
       await createNotification(req, {
         userId: payment.customerId,
         title: titleBase,
-        message: messageBase,
+        message: msgBase,
         type: "payment",
         category: "customer",
         relatedTripId: payment.tripId,
@@ -288,12 +281,14 @@ const notifyPaymentStatus = async ({ req, payment, trip, status }) => {
       });
     }
 
-    // Driver notification
+    /* =============================
+        DRIVER (general app system)
+    ============================== */
     if (payment.driverId) {
       await createNotification(req, {
         userId: payment.driverId,
         title: titleBase,
-        message: `Payment update for one of your trips: ${status}.`,
+        message: `Payment update for trip: ${status}.`,
         type: "payment",
         category: "driver",
         relatedTripId: payment.tripId,
@@ -302,7 +297,9 @@ const notifyPaymentStatus = async ({ req, payment, trip, status }) => {
       });
     }
 
-    // Company / manager notification
+    /* =============================
+        COMPANY NOTIFICATION
+    ============================== */
     if (payment.companyId) {
       await createNotification(req, {
         userId: payment.companyId,
@@ -316,21 +313,19 @@ const notifyPaymentStatus = async ({ req, payment, trip, status }) => {
       });
     }
   } catch (err) {
-    console.error("⚠ notifyPaymentStatus error:", err.message);
+    console.error("notifyPaymentStatus error:", err.message);
   }
 };
 
 /* ==========================================================
-   💰 CREATE PAYMENT (manual or gateway callback)
+   CREATE PAYMENT
 ========================================================== */
 export const createPayment = async (req, res) => {
   try {
-    // ✅ Validate & clean body
     const { error, value } = createPaymentSchema.validate(req.body, {
       abortEarly: false,
       stripUnknown: true,
     });
-
     if (error) {
       return res.status(400).json({
         error: "Invalid payment data",
@@ -338,15 +333,11 @@ export const createPayment = async (req, res) => {
       });
     }
 
-    // Sanitize string fields
     value.method = sanitize(value.method);
     if (value.status) value.status = sanitize(value.status);
-    if (value.transactionId) {
+    if (value.transactionId)
       value.transactionId = sanitize(value.transactionId);
-    }
-    if (value.currency) {
-      value.currency = sanitize(value.currency);
-    }
+    if (value.currency) value.currency = sanitize(value.currency);
 
     const {
       tripId,
@@ -368,21 +359,16 @@ export const createPayment = async (req, res) => {
     }
 
     const trip = await Trip.findById(tripId);
-    if (!trip) {
-      return res.status(404).json({ error: "Trip not found" });
-    }
+    if (!trip) return res.status(404).json({ error: "Trip not found" });
 
-    // Prevent duplicate "active" payments for same trip
     const existing = await Payment.findOne({
       tripId,
       status: { $in: ["pending", "paid"] },
     });
-
-    if (existing) {
+    if (existing)
       return res.status(400).json({
-        error: "An active payment already exists for this trip.",
+        error: "Active payment already exists for this trip",
       });
-    }
 
     const companyId = trip.companyId;
     const driverId = trip.driverId || null;
@@ -434,7 +420,9 @@ export const createPayment = async (req, res) => {
       meta: {},
     });
 
-    // 🔔 Notifications
+    /* ==========================================================
+         SEND GENERAL NOTIFICATIONS
+    ========================================================== */
     await notifyPaymentStatus({
       req,
       payment,
@@ -442,7 +430,31 @@ export const createPayment = async (req, res) => {
       status: payment.status,
     });
 
-    // 🌐 Webhooks
+    /* ==========================================================
+         SEND DRIVER DASHBOARD NOTIFICATION
+    ========================================================== */
+    if (driverId) {
+      const shortStatus =
+        payment.status === "paid"
+          ? "completed"
+          : payment.status === "pending"
+          ? "pending"
+          : payment.status === "failed"
+          ? "failed"
+          : payment.status === "refunded"
+          ? "refunded"
+          : payment.status;
+
+      await createDriverNotification(driverId, {
+        type: `payment_${payment.status}`,
+        message: `Payment for trip ${trip._id} is ${shortStatus}. Total: ${payment.totalAmount}`,
+        tripId: payment.tripId,
+      });
+    }
+
+    /* ==========================================================
+         WEBHOOKS
+    ========================================================== */
     await triggerPaymentWebhooks(companyId, "payment.created", payment);
     if (payment.status === "paid") {
       await triggerPaymentWebhooks(companyId, "payment.paid", payment);
@@ -458,32 +470,29 @@ export const createPayment = async (req, res) => {
       payment,
     });
   } catch (err) {
-    console.error("❌ createPayment error:", err.message);
+    console.error("createPayment error:", err.message);
     res.status(500).json({ error: "Server error creating payment" });
   }
 };
 
 /* ==========================================================
-   💸 REFUND PAYMENT (Owner / Superadmin)
+   REFUND PAYMENT
 ========================================================== */
 export const refundPayment = async (req, res) => {
   try {
     const { id } = req.params;
 
-    if (!isValidObjectId(id)) {
+    if (!isValidObjectId(id))
       return res.status(400).json({ error: "Invalid payment id" });
-    }
 
     const payment = await Payment.findById(id);
-    if (!payment) {
+    if (!payment)
       return res.status(404).json({ error: "Payment not found" });
-    }
 
-    if (payment.status !== "paid") {
-      return res.status(400).json({
-        error: "Only paid payments can be refunded.",
-      });
-    }
+    if (payment.status !== "paid")
+      return res
+        .status(400)
+        .json({ error: "Only paid payments can be refunded" });
 
     payment.status = "refunded";
     payment.isActive = false;
@@ -491,7 +500,6 @@ export const refundPayment = async (req, res) => {
 
     const trip = await Trip.findById(payment.tripId);
 
-    // 🔔 Notifications
     await notifyPaymentStatus({
       req,
       payment,
@@ -499,8 +507,19 @@ export const refundPayment = async (req, res) => {
       status: "refunded",
     });
 
-    // 🌐 Webhook
-    await triggerPaymentWebhooks(payment.companyId, "payment.refunded", payment);
+    if (payment.driverId) {
+      await createDriverNotification(payment.driverId, {
+        type: "payment_refunded",
+        message: `Payment for trip ${payment.tripId} has been refunded.`,
+        tripId: payment.tripId,
+      });
+    }
+
+    await triggerPaymentWebhooks(
+      payment.companyId,
+      "payment.refunded",
+      payment
+    );
 
     res.json({
       ok: true,
@@ -508,32 +527,28 @@ export const refundPayment = async (req, res) => {
       payment,
     });
   } catch (err) {
-    console.error("❌ refundPayment error:", err.message);
+    console.error("refundPayment error:", err.message);
     res.status(500).json({ error: "Server error refunding payment" });
   }
 };
 
 /* ==========================================================
-   📊 GET COMPANY PAYMENTS
+   GET COMPANY PAYMENTS
 ========================================================== */
 export const getCompanyPayments = async (req, res) => {
   try {
-    const {
-      error,
-      value: validatedQuery,
-    } = paginationQuerySchema.validate(req.query, {
+    const { error, value } = paginationQuerySchema.validate(req.query, {
       abortEarly: false,
       stripUnknown: false,
     });
-
-    if (error) {
+    if (error)
       return res.status(400).json({
-        error: "Invalid query parameters",
+        error: "Invalid query",
         details: error.details.map((d) => d.message),
       });
-    }
 
-    const companyIdFromUser = resolveCompanyIdFromUser(req.user);
+    const companyUserId = resolveCompanyIdFromUser(req.user);
+
     const {
       status,
       method,
@@ -542,28 +557,25 @@ export const getCompanyPayments = async (req, res) => {
       page,
       limit,
       companyId: queryCompanyId,
-    } = validatedQuery;
+    } = value;
 
-    if (
-      !companyIdFromUser &&
-      !["owner", "superadmin"].includes(req.user.role)
-    ) {
+    if (!companyUserId && !["owner", "superadmin"].includes(req.user.role)) {
       return res.status(400).json({
-        error: "Unable to resolve companyId for this user.",
+        error: "Unable to resolve companyId for this user",
       });
     }
 
     const filter = {};
 
     if (req.user.role === "company" || req.user.role === "manager") {
-      filter.companyId = companyIdFromUser;
+      filter.companyId = companyUserId;
     } else if (
       ["owner", "superadmin"].includes(req.user.role) &&
       queryCompanyId
     ) {
-      if (!isValidObjectId(queryCompanyId)) {
+      if (!isValidObjectId(queryCompanyId))
         return res.status(400).json({ error: "Invalid companyId format" });
-      }
+
       filter.companyId = queryCompanyId;
     }
 
@@ -591,49 +603,40 @@ export const getCompanyPayments = async (req, res) => {
 
     res.json({
       ok: true,
-      page: Number(page),
-      limit: Number(limit),
       total,
       totalPages: Math.ceil(total / Number(limit)),
+      page,
+      limit,
       payments,
     });
   } catch (err) {
-    console.error("❌ getCompanyPayments error:", err.message);
-    res.status(500).json({ error: "Server error fetching company payments" });
+    console.error("getCompanyPayments error:", err.message);
+    res.status(500).json({ error: "Server error fetching payments" });
   }
 };
 
 /* ==========================================================
-   👨‍✈️ GET DRIVER PAYMENTS
+   GET DRIVER PAYMENTS
 ========================================================== */
 export const getDriverPayments = async (req, res) => {
   try {
-    const {
-      error,
-      value: validatedQuery,
-    } = paginationQuerySchema.validate(req.query, {
-      abortEarly: false,
-      stripUnknown: false,
-    });
-
-    if (error) {
+    const { error, value } = paginationQuerySchema.validate(req.query);
+    if (error)
       return res.status(400).json({
-        error: "Invalid query parameters",
+        error: "Invalid query",
         details: error.details.map((d) => d.message),
       });
-    }
 
     const { status, startDate, endDate, page, limit, driverId: queryDriverId } =
-      validatedQuery;
+      value;
 
     const driverId =
       req.user.role === "driver" ? req.user._id : queryDriverId;
 
-    if (!driverId || !isValidObjectId(driverId)) {
+    if (!driverId || !isValidObjectId(driverId))
       return res
         .status(400)
         .json({ error: "driverId is required and must be valid" });
-    }
 
     const filter = { driverId };
 
@@ -659,39 +662,32 @@ export const getDriverPayments = async (req, res) => {
 
     res.json({
       ok: true,
-      page: Number(page),
-      limit: Number(limit),
       total,
       totalPages: Math.ceil(total / Number(limit)),
+      page,
+      limit,
       payments,
     });
   } catch (err) {
-    console.error("❌ getDriverPayments error:", err.message);
-    res.status(500).json({ error: "Server error fetching driver payments" });
+    console.error("getDriverPayments error:", err.message);
+    res.status(500).json({ error: "Server error fetching payments" });
   }
 };
 
 /* ==========================================================
-   👤 GET CUSTOMER PAYMENTS
+   GET CUSTOMER PAYMENTS
 ========================================================== */
 export const getCustomerPayments = async (req, res) => {
   try {
-    const {
-      error,
-      value: validatedQuery,
-    } = paginationQuerySchema.validate(req.query, {
-      abortEarly: false,
-      stripUnknown: false,
-    });
-
-    if (error) {
+    const { error, value } = paginationQuerySchema.validate(req.query);
+    if (error)
       return res.status(400).json({
-        error: "Invalid query parameters",
+        error: "Invalid query",
         details: error.details.map((d) => d.message),
       });
-    }
 
-    const { status, startDate, endDate, page, limit } = validatedQuery;
+    const { status, startDate, endDate, page, limit } = value;
+
     const customerId = req.user._id;
 
     const filter = { customerId };
@@ -718,28 +714,27 @@ export const getCustomerPayments = async (req, res) => {
 
     res.json({
       ok: true,
-      page: Number(page),
-      limit: Number(limit),
       total,
       totalPages: Math.ceil(total / Number(limit)),
+      page,
+      limit,
       payments,
     });
   } catch (err) {
-    console.error("❌ getCustomerPayments error:", err.message);
+    console.error("getCustomerPayments error:", err.message);
     res.status(500).json({ error: "Server error fetching customer payments" });
   }
 };
 
 /* ==========================================================
-   🔎 GET SINGLE PAYMENT DETAILS
+   GET SINGLE PAYMENT
 ========================================================== */
 export const getPaymentDetails = async (req, res) => {
   try {
     const { id } = req.params;
 
-    if (!isValidObjectId(id)) {
-      return res.status(400).json({ error: "Invalid payment id" });
-    }
+    if (!isValidObjectId(id))
+      return res.status(400).json({ error: "Invalid ID format" });
 
     const payment = await Payment.findById(id)
       .populate("companyId", "name email")
@@ -747,95 +742,79 @@ export const getPaymentDetails = async (req, res) => {
       .populate("customerId", "name email")
       .populate("tripId");
 
-    if (!payment) {
+    if (!payment)
       return res.status(404).json({ error: "Payment not found" });
-    }
 
     const user = req.user;
 
     if (
       user.role === "driver" &&
-      String(payment.driverId) !== String(user._id)
-    ) {
+      String(payment.driverId?._id || payment.driverId) !==
+        String(user._id)
+    )
       return res
         .status(403)
-        .json({ error: "Not allowed to view this payment" });
-    }
+        .json({ error: "You cannot view this payment" });
 
     if (
       user.role === "customer" &&
-      String(payment.customerId) !== String(user._id)
-    ) {
+      String(payment.customerId?._id || payment.customerId) !==
+        String(user._id)
+    )
       return res
         .status(403)
-        .json({ error: "Not allowed to view this payment" });
-    }
+        .json({ error: "You cannot view this payment" });
 
     if (user.role === "company" || user.role === "manager") {
       const companyId = resolveCompanyIdFromUser(user);
       if (
         String(payment.companyId?._id || payment.companyId) !==
         String(companyId)
-      ) {
+      )
         return res
           .status(403)
-          .json({ error: "Not allowed to view this payment" });
-      }
+          .json({ error: "You cannot view this payment" });
     }
 
-    // owner/superadmin can see everything
-    res.json({
-      ok: true,
-      payment,
-    });
+    res.json({ ok: true, payment });
   } catch (err) {
-    console.error("❌ getPaymentDetails error:", err.message);
-    res.status(500).json({ error: "Server error loading payment details" });
+    console.error("getPaymentDetails error:", err.message);
+    res.status(500).json({ error: "Payment details failed" });
   }
 };
 
 /* ==========================================================
-   📊 COMPANY PAYMENTS SUMMARY (for dashboard)
+   COMPANY PAYMENTS SUMMARY
 ========================================================== */
 export const getCompanyPaymentsSummary = async (req, res) => {
   try {
-    const { error, value } = paginationQuerySchema.validate(req.query, {
-      abortEarly: false,
-      stripUnknown: false,
-    });
-
-    if (error) {
+    const { error, value } = paginationQuerySchema.validate(req.query);
+    if (error)
       return res.status(400).json({
         error: "Invalid query parameters",
         details: error.details.map((d) => d.message),
       });
-    }
 
-    const user = req.user;
-    const { startDate, endDate, companyId: queryCompanyId } = value;
+    const { startDate, endDate, companyId: qId } = value;
 
-    let companyId = resolveCompanyIdFromUser(user);
+    let companyId = resolveCompanyIdFromUser(req.user);
 
     if (
-      ["owner", "superadmin"].includes(user.role) &&
-      queryCompanyId
+      ["owner", "superadmin"].includes(req.user.role) &&
+      qId
     ) {
-      if (!isValidObjectId(queryCompanyId)) {
+      if (!isValidObjectId(qId))
         return res.status(400).json({ error: "Invalid companyId format" });
-      }
-      companyId = queryCompanyId;
+
+      companyId = qId;
     }
 
-    if (!companyId) {
-      return res.status(400).json({
-        error: "Unable to resolve companyId for payments summary",
-      });
-    }
+    if (!companyId)
+      return res
+        .status(400)
+        .json({ error: "Unable to resolve companyId" });
 
-    const match = {
-      companyId,
-      status: "paid",
-    };
+    const match = { companyId, status: "paid" };
 
     if (startDate || endDate) {
       match.createdAt = {};
@@ -873,9 +852,9 @@ export const getCompanyPaymentsSummary = async (req, res) => {
         },
     });
   } catch (err) {
-    console.error("❌ getCompanyPaymentsSummary error:", err.message);
+    console.error("getCompanyPaymentsSummary error:", err.message);
     res.status(500).json({
-      error: "Server error calculating payments summary",
+      error: "Summary calculation failed",
     });
   }
 };

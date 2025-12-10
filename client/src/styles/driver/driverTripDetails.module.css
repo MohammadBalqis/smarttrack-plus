@@ -1,0 +1,119 @@
+/* ==========================================================
+   PAGE LAYOUT
+========================================================== */
+.page {
+  padding: 24px;
+  max-width: 1150px;
+  margin: 0 auto;
+}
+
+.title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 8px;
+}
+
+.backBtn {
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background: white;
+  cursor: pointer;
+  margin-bottom: 14px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: 20px;
+}
+
+/* ==========================================================
+   INFO CARD
+========================================================== */
+.infoCard {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.sectionTitle {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 14px;
+}
+
+/* STATUS PILL */
+.statusPill {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 20px;
+}
+
+.s_pending {
+  background: #fff7ed;
+  color: #d97706;
+}
+.s_assigned {
+  background: #eff6ff;
+  color: #2563eb;
+}
+.s_in_progress {
+  background: #f0fdf4;
+  color: #15803d;
+}
+.s_delivered {
+  background: #d1fae5;
+  color: #047857;
+}
+.s_cancelled {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+/* BUTTONS */
+.actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.primaryBtn {
+  padding: 10px 18px;
+  background: #0ea5e9;
+  color: white;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+}
+.primaryBtn:hover {
+  background: #0284c7;
+}
+
+.secondaryBtn {
+  padding: 10px 18px;
+  background: #e0f2fe;
+  color: #0369a1;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+}
+.secondaryBtn:hover {
+  background: #bae6fd;
+}
+
+/* ==========================================================
+   MAP CARD
+========================================================== */
+.mapCard {
+  height: 500px;
+  background: #f8fafc;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+}

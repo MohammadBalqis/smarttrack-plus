@@ -1,0 +1,231 @@
+/* client/src/styles/common/notificationBell.module.css */
+
+.wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+/* Bell button */
+.bellButton {
+  position: relative;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.bellButton:hover {
+  background: rgba(0, 0, 0, 0.06);
+  transform: translateY(-1px);
+}
+
+.bellSvg {
+  width: 22px;
+  height: 22px;
+  fill: #4b5563; /* neutral gray */
+}
+
+/* Red badge for unread count */
+.badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  transform: translate(40%, -40%);
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: #ef4444; /* red-500 */
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Dropdown container */
+.dropdown {
+  position: absolute;
+  right: 0;
+  margin-top: 8px;
+  width: 320px;
+  max-height: 420px;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow:
+    0 18px 45px rgba(15, 23, 42, 0.17),
+    0 0 0 1px rgba(15, 23, 42, 0.04);
+  overflow: hidden;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header inside dropdown */
+.dropdownHeader {
+  padding: 10px 12px;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.headerTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.headerSubtitle {
+  display: block;
+  font-size: 11px;
+  color: #6b7280;
+  margin-top: 2px;
+}
+
+.markAllBtn {
+  border: none;
+  background: transparent;
+  padding: 4px 6px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #2563eb;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.markAllBtn:hover {
+  background: rgba(37, 99, 235, 0.08);
+}
+
+/* List area */
+.list {
+  padding: 4px 0;
+  overflow-y: auto;
+}
+
+/* States */
+.stateText,
+.stateTextError {
+  padding: 12px 14px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.stateTextError {
+  color: #b91c1c;
+}
+
+/* Each notification item */
+.item {
+  width: 100%;
+  border: none;
+  background: transparent;
+  text-align: left;
+  padding: 8px 12px;
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.item:hover {
+  background: #f3f4f6;
+}
+
+.itemUnread {
+  background: #eff6ff;
+}
+
+.itemMain {
+  flex: 1;
+  min-width: 0;
+}
+
+.itemTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 2px;
+}
+
+.itemTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: #111827;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.typeTag {
+  font-size: 10px;
+  font-weight: 500;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: #f3f4ff;
+  color: #4f46e5;
+  text-transform: uppercase;
+}
+
+.itemMessage {
+  font-size: 12px;
+  color: #4b5563;
+  margin: 0;
+  max-height: 36px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Right side: time + dot */
+.itemMeta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  margin-left: 4px;
+}
+
+.itemTime {
+  font-size: 10px;
+  color: #9ca3af;
+}
+
+.unreadDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #2563eb;
+}
+/* Mobile: turn dropdown into a full-screen drawer */
+@media (max-width: 768px) {
+  .dropdown {
+    position: fixed;
+    top: auto;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    max-height: 70vh;
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -10px 30px rgba(15, 23, 42, 0.35);
+    border: none;
+  }
+
+  .dropdownHeader {
+    padding: 12px 16px;
+  }
+
+  .list {
+    max-height: calc(70vh - 56px);
+  }
+}

@@ -1,34 +1,119 @@
-.page {
-  padding: 24px;
+.wrapper {
+  width: 100%;
+  padding: 20px;
 }
 
 .title {
   font-size: 26px;
   font-weight: 700;
   margin-bottom: 20px;
+  color: #1e293b;
 }
 
-.card {
-  background: white;
-  padding: 18px;
-  border-radius: 12px;
-  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.07);
+.filters {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
 }
 
-/* TABLE */
+.input {
+  padding: 8px 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+
+.filterBtn {
+  padding: 8px 14px;
+  background: #2563eb;
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  cursor: pointer;
+}
+
+.clearBtn {
+  padding: 8px 14px;
+  background: #64748b;
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  cursor: pointer;
+}
+
+.tableBox {
+  width: 100%;
+  overflow-x: auto;
+}
+
 .table {
   width: 100%;
   border-collapse: collapse;
+  margin-bottom: 25px;
 }
 
 .table th {
-  background: #edf2f7;
-  padding: 10px;
-  font-size: 14px;
-  color: #475569;
+  background: #1e293b;
+  color: white;
+  padding: 12px;
+  text-align: left;
 }
 
 .table td {
   padding: 10px;
   border-bottom: 1px solid #e2e8f0;
+}
+
+.status {
+  padding: 5px 10px;
+  border-radius: 5px;
+  color: white;
+  font-weight: 600;
+}
+
+.paid {
+  background: #16a34a;
+}
+
+.pending {
+  background: #ca8a04;
+}
+
+.failed {
+  background: #dc2626;
+}
+
+.refunded {
+  background: #64748b;
+}
+
+.loading,
+.noData {
+  text-align: center;
+  padding: 20px;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+
+.pageBtn {
+  padding: 8px 16px;
+  border: none;
+  background: #1e293b;
+  color: white;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.pageBtn:disabled {
+  background: #94a3b8;
+  cursor: not-allowed;
+}
+
+.pageInfo {
+  font-weight: 600;
 }

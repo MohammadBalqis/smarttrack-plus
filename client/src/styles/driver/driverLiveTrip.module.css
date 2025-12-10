@@ -1,0 +1,279 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: 100%;
+}
+
+.headerBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.subtitle {
+  font-size: 0.9rem;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+.backBtn {
+  border: none;
+  background: #e5e7eb;
+  color: #111827;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.backBtn:hover {
+  background: #d1d5db;
+}
+
+.infoText,
+.errorText,
+.successText {
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.infoText {
+  color: #2563eb;
+}
+
+.errorText {
+  color: #dc2626;
+}
+
+.successText {
+  color: #16a34a;
+}
+
+.emptyCard {
+  margin-top: 12px;
+  padding: 20px;
+  border-radius: 12px;
+  background: #f9fafb;
+  border: 1px dashed #d1d5db;
+}
+
+.muted {
+  font-size: 0.83rem;
+  color: #6b7280;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 360px) minmax(0, 1fr);
+  gap: 16px;
+  margin-top: 8px;
+  height: calc(100% - 120px);
+  min-height: 420px;
+}
+
+.leftPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+}
+
+.mapPanel {
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.18);
+  background: #020617;
+}
+
+.mapLoading {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #9ca3af;
+  font-size: 0.9rem;
+}
+
+/* Sections + cards */
+
+.section {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 12px 14px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+  border: 1px solid #e5e7eb;
+}
+
+.section h2 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 8px;
+  color: #0f172a;
+}
+
+.card {
+  background: #f9fafb;
+  border-radius: 10px;
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.label {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: #6b7280;
+}
+
+.value {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #111827;
+}
+
+/* Chips & status */
+
+.chipRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.tripChip {
+  font-size: 0.75rem;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #e5e7eb;
+  color: #111827;
+}
+
+.statusPill {
+  font-size: 0.75rem;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.status_pending {
+  background: #fef9c3;
+  color: #92400e;
+}
+
+.status_assigned {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.status_in_progress {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.status_delivered {
+  background: #e5e7eb;
+  color: #111827;
+}
+
+.status_cancelled {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+/* Buttons */
+
+.actionsRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.primaryBtn,
+.secondaryBtn,
+.outlineBtn,
+.dangerBtn {
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.primaryBtn {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: #f9fafb;
+  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.4);
+}
+
+.primaryBtn:disabled {
+  opacity: 0.6;
+  cursor: default;
+  box-shadow: none;
+}
+
+.primaryBtn:not(:disabled):hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.55);
+}
+
+.secondaryBtn {
+  background: #0f172a;
+  color: #f9fafb;
+}
+
+.secondaryBtn:hover {
+  background: #020617;
+}
+
+.outlineBtn {
+  border: 1px solid #cbd5f5;
+  background: #ffffff;
+  color: #1d4ed8;
+}
+
+.outlineBtn:hover {
+  background: #eff6ff;
+}
+
+.dangerBtn {
+  background: #ef4444;
+  color: #f9fafb;
+}
+
+.dangerBtn:hover {
+  background: #b91c1c;
+}
+
+/* Responsive */
+
+@media (max-width: 960px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+    grid-auto-rows: auto;
+    height: auto;
+  }
+
+  .mapPanel {
+    min-height: 320px;
+  }
+}

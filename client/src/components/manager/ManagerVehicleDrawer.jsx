@@ -8,7 +8,7 @@ import {
 
 import { getShopDriversApi } from "../../api/managerDriversApi";
 
-import styles from "../../styles/manager/managerVehicleDrawer.module.css";
+import styles from "../../styles/manager/managerVehicles.module.css";
 
 const ManagerVehicleDrawer = ({ open, onClose, vehicle, reload }) => {
   const [drivers, setDrivers] = useState([]);
@@ -24,15 +24,23 @@ const ManagerVehicleDrawer = ({ open, onClose, vehicle, reload }) => {
     }
   }, [vehicle]);
 
+  /* ==========================================================
+      LOAD DRIVERS FOR THIS SHOP
+  ========================================================== */
   const loadDrivers = async () => {
+    if (!vehicle?.shopId) return;
+
     try {
-      const res = await getShopDriversApi(); // Only drivers from this shop
+      const res = await getShopDriversApi(vehicle.shopId);
       setDrivers(res.data.drivers || []);
     } catch (err) {
       console.error("Error loading drivers:", err);
     }
   };
 
+  /* ==========================================================
+      LOAD VEHICLE TRIP HISTORY
+  ========================================================== */
   const loadTripHistory = async () => {
     try {
       const res = await getVehicleTripsApi(vehicle._id);
@@ -44,7 +52,12 @@ const ManagerVehicleDrawer = ({ open, onClose, vehicle, reload }) => {
 
   if (!open || !vehicle) return null;
 
+  /* ==========================================================
+      ASSIGN DRIVER
+  ========================================================== */
   const handleAssignDriver = async (driverId) => {
+    if (!driverId) return;
+
     setLoading(true);
     try {
       await assignDriverApi(vehicle._id, driverId);
@@ -58,6 +71,9 @@ const ManagerVehicleDrawer = ({ open, onClose, vehicle, reload }) => {
     }
   };
 
+  /* ==========================================================
+      REMOVE DRIVER
+  ========================================================== */
   const handleRemoveDriver = async () => {
     setLoading(true);
     try {
@@ -72,6 +88,9 @@ const ManagerVehicleDrawer = ({ open, onClose, vehicle, reload }) => {
     }
   };
 
+  /* ==========================================================
+      UPDATE STATUS
+  ========================================================== */
   const handleStatusChange = async () => {
     setLoading(true);
     try {
@@ -99,6 +118,9 @@ const ManagerVehicleDrawer = ({ open, onClose, vehicle, reload }) => {
           <p>Plate: {vehicle.plateNumber}</p>
         </div>
 
+        {/* =====================================================
+            ASSIGN DRIVER SECTION
+        ===================================================== */}
         <div className={styles.section}>
           <label>Assign Driver</label>
           <select
@@ -124,6 +146,9 @@ const ManagerVehicleDrawer = ({ open, onClose, vehicle, reload }) => {
           )}
         </div>
 
+        {/* =====================================================
+            VEHICLE STATUS
+        ===================================================== */}
         <div className={styles.section}>
           <label>Status</label>
           <select
@@ -139,12 +164,15 @@ const ManagerVehicleDrawer = ({ open, onClose, vehicle, reload }) => {
           </button>
         </div>
 
+        {/* =====================================================
+            TRIP HISTORY
+        ===================================================== */}
         <div className={styles.section}>
           <h3>Trip History</h3>
           <ul className={styles.tripList}>
             {tripHistory.map((t) => (
               <li key={t._id}>
-                <strong>{t.customerId?.name}</strong> — {t.status}  
+                <strong>{t.customerId?.name}</strong> — {t.status}
                 <br />
                 <small>{new Date(t.createdAt).toLocaleString()}</small>
               </li>

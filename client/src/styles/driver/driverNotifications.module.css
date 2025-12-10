@@ -1,0 +1,146 @@
+/* ==========================================================
+   DRIVER NOTIFICATIONS — GLOBAL LAYOUT
+========================================================== */
+.page {
+  padding: 24px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 4px;
+}
+
+.subtitle {
+  font-size: 15px;
+  color: #475569;
+  margin-bottom: 24px;
+}
+
+/* Refresh button */
+.refreshBtn {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: none;
+  background-color: #0284c7;
+  color: white;
+  font-size: 14px;
+  cursor: pointer;
+}
+.refreshBtn:hover {
+  background-color: #0369a1;
+}
+
+/* ==========================================================
+   NOTIFICATIONS LIST
+========================================================== */
+.listContainer {
+  background: white;
+  border-radius: 12px;
+  padding: 0;
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+}
+
+.notificationItem {
+  padding: 16px 18px;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.notificationItem:hover {
+  background: #f8fafc;
+}
+
+.notificationUnread {
+  background: #eef6ff;
+}
+
+.notificationLeft {
+  flex: 1;
+}
+
+.notificationTitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: #0f172a;
+  margin-bottom: 4px;
+}
+
+.notificationMessage {
+  font-size: 14px;
+  color: #475569;
+  margin-bottom: 6px;
+}
+
+.notificationDate {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.notificationBadge {
+  background: #0ea5e9;
+  color: white;
+  padding: 3px 8px;
+  font-size: 11px;
+  border-radius: 6px;
+  margin-left: 10px;
+}
+
+.rightArrow {
+  font-size: 18px;
+  color: #94a3b8;
+}
+
+/* ==========================================================
+   EMPTY STATE
+========================================================== */
+.emptyBox {
+  padding: 40px;
+  text-align: center;
+  color: #64748b;
+  font-size: 15px;
+}
+
+/* ==========================================================
+   MARK ALL READ BUTTON
+========================================================== */
+.markAllBtn {
+  margin-top: 16px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.markAllBtn:hover {
+  background: #e2e8f0;
+}
+
+/* ==========================================================
+   RESPONSIVE
+========================================================== */
+@media (max-width: 600px) {
+  .page {
+    padding: 16px;
+  }
+
+  .notificationItem {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .rightArrow {
+    display: none;
+  }
+}

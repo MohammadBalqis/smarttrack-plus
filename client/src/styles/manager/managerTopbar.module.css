@@ -25,3 +25,24 @@
   border-radius: 5px;
   font-size: 14px;
 }
+.bellWrapper {
+  position: relative;
+  cursor: pointer;
+  margin-right: 18px;
+}
+
+.bellIcon {
+  font-size: 22px;
+}
+
+.unreadBadge {
+  position: absolute;
+  top: -4px;
+  right: -6px;
+  background: red;
+  color: white;
+  font-size: 11px;
+  padding: 2px 5px;
+  border-radius: 50%;
+  font-weight: bold;
+}

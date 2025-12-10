@@ -1,0 +1,262 @@
+/* ==========================================================
+   🌐 LIVE TRACKING — PROFESSIONAL DASHBOARD STYLES
+   Premium CSS for SmartTrack+ Company Panel
+========================================================== */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 24px;
+  background: #f9fafb;
+  min-height: 100vh;
+  color: #1f2937;
+}
+
+/* ---------------- HEADER ---------------- */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.title {
+  font-size: 1.9rem;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 4px;
+}
+
+.subtitle {
+  font-size: 0.95rem;
+  color: #6b7280;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.refreshBtn {
+  background: #2563eb;
+  color: #fff;
+  font-size: 0.9rem;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.refreshBtn:hover {
+  background: #1d4ed8;
+}
+
+.loadingText {
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+/* ---------------- MAIN LAYOUT ---------------- */
+.layout {
+  display: grid;
+  grid-template-columns: 330px 1fr;
+  gap: 20px;
+  height: calc(100vh - 150px);
+}
+
+.leftPanel {
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: rgba(0, 0, 0, 0.06) 0 4px 12px;
+}
+
+/* ---------------- TABS ---------------- */
+.tabs {
+  display: flex;
+  margin-bottom: 18px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.tabBtn {
+  flex: 1;
+  padding: 10px 0;
+  font-size: 0.95rem;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  color: #6b7280;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.tabBtn:hover {
+  color: #111827;
+}
+
+.tabActive {
+  color: #2563eb !important;
+  font-weight: 700;
+  border-bottom: 3px solid #2563eb;
+}
+
+/* ---------------- FILTERS ---------------- */
+.filters {
+  margin-bottom: 14px;
+  display: flex;
+  flex-direction: column;
+}
+
+.filterLabel {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: #374151;
+}
+
+.filters select {
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  outline: none;
+  font-size: 0.9rem;
+}
+
+.error {
+  color: #ef4444;
+  font-size: 0.9rem;
+  margin-bottom: 10px;
+}
+
+/* ---------------- LIST ---------------- */
+.list {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.empty {
+  font-size: 0.9rem;
+  text-align: center;
+  padding: 20px 0;
+  color: #6b7280;
+}
+
+.listItem {
+  width: 100%;
+  text-align: left;
+  background: #f3f4f6;
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  border: 1px solid transparent;
+  transition: all 0.15s;
+  cursor: pointer;
+}
+
+.listItem:hover {
+  background: #e5e7eb;
+}
+
+.listItemActive {
+  background: #dbeafe;
+  border-color: #3b82f6;
+}
+
+/* LIST ITEM CONTENT */
+.listItemTop {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.driverName,
+.tripId {
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.statusDot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.statusPill {
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  color: #fff;
+  text-transform: capitalize;
+}
+
+.listItemMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.shopTag {
+  background: #eef2ff;
+  color: #4f46e5;
+  font-size: 0.75rem;
+  padding: 2px 6px;
+  border-radius: 6px;
+  margin-top: 4px;
+  display: inline-block;
+}
+
+/* ---------------- MAP PANEL ---------------- */
+.mapPanel {
+  background: #fff;
+  border-radius: 14px;
+  padding: 12px;
+  box-shadow: rgba(0, 0, 0, 0.06) 0 4px 12px;
+  position: relative;
+}
+
+.map {
+  width: 100%;
+  height: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.popup {
+  font-size: 0.85rem;
+  color: #111827;
+}
+
+.small {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+/* ---------------- RESPONSIVE ---------------- */
+@media (max-width: 1024px) {
+  .layout {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+
+  .leftPanel {
+    max-height: 350px;
+    overflow-y: auto;
+  }
+
+  .mapPanel {
+    height: 500px;
+  }
+}
+
+@media (max-width: 640px) {
+  .title {
+    font-size: 1.6rem;
+  }
+}

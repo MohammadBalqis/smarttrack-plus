@@ -7,11 +7,17 @@ import GlobalSettings from "../../models/GlobalSettings.js";
 import { logActivity } from "../../utils/activityLogger.js";
 import {
   getPopulatedTripForNotify,
-  createNotification,
   broadcastTripStatus,
 } from "./tripHelpers.js";
 import { resolveCompanyId } from "../../utils/resolveCompanyId.js";
 
+// 🔔 NEW notification helpers
+import {
+  notifyDriver,
+  notifyCustomer,
+  notifyShopManagers,
+  notifyAllManagersInCompany,
+} from "../../utils/notify.js";
 /* ==========================================================
    Helper — Maintenance Mode (superadmin bypass)
 ========================================================== */
@@ -25,33 +31,6 @@ const ensureNotInMaintenance = async (req, res) => {
     return false;
   }
   return true;
-};
-
-/* ==========================================================
-   Helper — Notify Managers / Company Owner
-========================================================== */
-const notifyCompanyManagers = async (
-  req,
-  companyId,
-  notificationProps,
-  extraData = {}
-) => {
-  if (!companyId) return;
-
-  const managers = await User.find({ role: "manager", companyId }).select("_id");
-
-  const targets = managers.length ? managers : [{ _id: companyId }];
-
-  await Promise.all(
-    targets.map((m) =>
-      createNotification(req, {
-        userId: m._id,
-        category: notificationProps.category || "company",
-        ...notificationProps,
-        extraData: notificationProps.extraData || extraData,
-      })
-    )
-  );
 };
 
 /* ==========================================================
@@ -69,6 +48,7 @@ export const createTrip = async (req, res) => {
       dropoffLocation,
       deliveryFee,
       companyId: bodyCompanyId,
+      shopId: bodyShopId, // optional, if you already pass shopId
     } = req.body;
 
     if (!driverId || !vehicleId || !customerId) {
@@ -107,11 +87,15 @@ export const createTrip = async (req, res) => {
       });
     }
 
+    // Optional: if trip belongs to a shop
+    const tripShopId = bodyShopId || driver.shopId || null;
+
     const trip = await Trip.create({
       driverId,
       vehicleId,
       customerId,
       companyId,
+      shopId: tripShopId || undefined,
       pickupLocation,
       dropoffLocation,
       deliveryFee,
@@ -130,61 +114,91 @@ export const createTrip = async (req, res) => {
       driver: populatedTrip.driverId,
       vehicle: populatedTrip.vehicleId,
       customer: populatedTrip.customerId,
+      shopId: populatedTrip.shopId || tripShopId || null,
     };
 
-    // Driver notification
-    await createNotification(req, {
-      userId: populatedTrip.driverId?._id,
-      title: "New Trip Assigned",
-      message: "A new delivery has been assigned to you.",
-      type: "assignment",
-      category: "driver",
-      relatedTripId: populatedTrip._id,
-      image: populatedTrip.customerId?.profileImage || null,
-      actionUrl: `/driver/trips/${populatedTrip._id}`,
-      priority: "high",
-      extraData: payloadCommon,
-    });
+    /* --------------------------------------------------
+       🔔 Driver notification
+    -------------------------------------------------- */
+    if (populatedTrip.driverId?._id) {
+      await notifyDriver(req, populatedTrip.driverId._id, {
+        title: "New Trip Assigned",
+        message: "A new delivery has been assigned to you.",
+        type: "trip",
+        priority: "high",
+        actionUrl: `/driver/trips/${populatedTrip._id}`,
+        relatedTripId: populatedTrip._id,
+        meta: payloadCommon,
+      });
+    }
 
-    // Customer notification
-    await createNotification(req, {
-      userId: populatedTrip.customerId?._id,
-      title: "Your Delivery Is On The Way",
-      message: "Your order has been confirmed and a driver was assigned.",
-      type: "status",
-      category: "customer",
-      relatedTripId: populatedTrip._id,
-      image: populatedTrip.driverId?.profileImage || null,
-      actionUrl: `/customer/tracking/${populatedTrip._id}`,
-      extraData: payloadCommon,
-    });
+    /* --------------------------------------------------
+       🔔 Customer notification
+    -------------------------------------------------- */
+    if (populatedTrip.customerId?._id) {
+      await notifyCustomer(req, populatedTrip.customerId._id, {
+        title: "Your delivery is on the way",
+        message: "Your order has been confirmed and a driver was assigned.",
+        type: "trip",
+        priority: "normal",
+        actionUrl: `/customer/tracking/${populatedTrip._id}`,
+        relatedTripId: populatedTrip._id,
+        meta: payloadCommon,
+      });
+    }
 
-    // Company notifications
-    await notifyCompanyManagers(
-      req,
-      companyId,
-      {
+    /* --------------------------------------------------
+       🔔 Managers / Company notifications
+       - If we know shopId → only that shop's managers
+       - Else → all managers in the company
+    -------------------------------------------------- */
+    const finalShopId =
+      populatedTrip.shopId?._id || populatedTrip.shopId || tripShopId || null;
+
+    if (finalShopId) {
+      await notifyShopManagers(req, companyId, finalShopId, {
+        title: "New Trip in Your Shop",
+        message: `New trip created for customer ${
+          populatedTrip.customerId?.name || ""
+        }.`,
+        type: "trip",
+        priority: "normal",
+        actionUrl: `/manager/trips/${populatedTrip._id}`,
+        relatedTripId: populatedTrip._id,
+        meta: payloadCommon,
+      });
+    } else {
+      await notifyAllManagersInCompany(req, companyId, {
         title: "New Trip Created",
         message: `A new trip was created for customer ${
           populatedTrip.customerId?.name || ""
-        }`,
-        category: "company",
-        type: "status",
-        relatedTripId: populatedTrip._id,
+        }.`,
+        type: "trip",
+        priority: "normal",
         actionUrl: `/company/trips/${populatedTrip._id}`,
-      },
-      payloadCommon
-    );
+        relatedTripId: populatedTrip._id,
+        meta: payloadCommon,
+      });
+    }
 
+    // 🔄 Broadcast for live map / sockets
     await broadcastTripStatus(req, trip._id);
 
+    // 📝 Activity log
     await logActivity({
       userId: req.user._id,
       action: "TRIP_CREATE",
       description: `Created trip ${trip._id}`,
       ipAddress: req.ip,
       deviceInfo: req.headers["user-agent"],
-      meta: { tripId: trip._id, driverId, vehicleId, customerId, companyId },
+      meta: {
+        tripId: trip._id,
+        driverId,
+        vehicleId,
+        customerId,
+        companyId,
+        shopId: finalShopId || null,
+      },
     });
 
     res.status(201).json({
@@ -200,7 +214,7 @@ export const createTrip = async (req, res) => {
 
 /* ==========================================================
    REQUIRED EXPORTS FOR ROUTER
-   (Empty placeholders for now)
+   (You can fill these later)
 ========================================================== */
 
 export const assignTrip = async () => {};

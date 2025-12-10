@@ -8,7 +8,7 @@ import {
   toggleManagerDriverStatus,
   getManagerDriverStats,
   getManagerDriverRecentTrips,
-} from "../controllers/managerDriverController.js";
+} from "../controllers/managerDriversController.js";
 
 const router = Router();
 

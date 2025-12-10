@@ -1,0 +1,218 @@
+/* ================================
+   DRIVER PAYMENTS SUMMARY PAGE
+================================ */
+
+.page {
+  padding: 1.5rem;
+  background: #0f172a;
+  min-height: 100%;
+  color: #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* Header */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.titleBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.pageTitle {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #f9fafb;
+}
+
+.pageSubtitle {
+  font-size: 0.85rem;
+  color: #9ca3af;
+}
+
+.headerMeta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.chip {
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+  background: #020617;
+  border: 1px solid #1f2937;
+  font-size: 0.8rem;
+  color: #e5e7eb;
+}
+
+/* Filter card */
+.filterCard {
+  background: #020617;
+  border-radius: 0.9rem;
+  border: 1px solid #1f2937;
+  padding: 1rem 1.1rem;
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.5);
+}
+
+.filterRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.9rem;
+}
+
+.filterItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 140px;
+}
+
+.filterLabel {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #6b7280;
+}
+
+.select,
+.input {
+  height: 2.2rem;
+  border-radius: 0.5rem;
+  border: 1px solid #1f2937;
+  background: #020617;
+  color: #e5e7eb;
+  padding: 0 0.6rem;
+  font-size: 0.85rem;
+}
+
+.select:focus,
+.input:focus {
+  outline: none;
+  border-color: #3b82f6;
+}
+
+.refreshBtn {
+  margin-top: auto;
+  height: 2.2rem;
+  border-radius: 0.6rem;
+  border: none;
+  background: #2563eb;
+  color: #f9fafb;
+  font-size: 0.85rem;
+  font-weight: 500;
+  padding: 0 1rem;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.08s ease;
+}
+
+.refreshBtn:hover {
+  background: #1d4ed8;
+}
+
+.refreshBtn:active {
+  transform: scale(0.98);
+}
+
+.refreshBtn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.filterHint {
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+/* Cards */
+.cardsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1rem;
+}
+
+.card {
+  background: #020617;
+  border-radius: 0.9rem;
+  border: 1px solid #1f2937;
+  padding: 0.9rem 1rem;
+}
+
+.cardLabel {
+  font-size: 0.8rem;
+  color: #9ca3af;
+}
+
+.cardValue {
+  margin-top: 0.3rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #f9fafb;
+}
+
+.cardHint {
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+/* Error box */
+.errorBox {
+  padding: 0.7rem 0.9rem;
+  border-radius: 0.7rem;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  background: rgba(127, 29, 29, 0.4);
+  font-size: 0.8rem;
+  color: #fecaca;
+}
+
+/* Chart card */
+.chartCard {
+  background: #020617;
+  border-radius: 0.9rem;
+  border: 1px solid #1f2937;
+  padding: 1rem 1.1rem;
+}
+
+.chartHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin-bottom: 0.6rem;
+}
+
+.chartTitle {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #f9fafb;
+}
+
+.chartHint {
+  font-size: 0.78rem;
+  color: #6b7280;
+}
+
+.chartWrapper {
+  width: 100%;
+  height: 260px;
+}
+
+.emptyText {
+  font-size: 0.85rem;
+  color: #9ca3af;
+  padding: 0.7rem 0;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .page {
+    padding: 1rem;
+  }
+}

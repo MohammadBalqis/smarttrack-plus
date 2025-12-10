@@ -1,5 +1,6 @@
 // server/src/controllers/companyProductController.js
 import Product from "../models/Product.js";
+import { notifyAllManagersInCompany } from "../utils/notify.js";
 
 const resolveCompanyId = (user) => {
   if (!user) return null;
@@ -10,19 +11,12 @@ const resolveCompanyId = (user) => {
 
 /* ==========================================================
    📦 GET ALL PRODUCTS (Company + Manager)
-   Supports:
-   - category
-   - active (true/false)
-   - search (name)
-   - minPrice, maxPrice
-   - page, limit
 ========================================================== */
 export const getCompanyProducts = async (req, res) => {
   try {
     const companyId = resolveCompanyId(req.user);
-    if (!companyId) {
+    if (!companyId)
       return res.status(400).json({ error: "Unable to resolve company" });
-    }
 
     const {
       category,
@@ -36,16 +30,11 @@ export const getCompanyProducts = async (req, res) => {
 
     const filters = { companyId };
 
-    if (category) {
-      filters.category = category;
-    }
-
+    if (category) filters.category = category;
     if (active === "true") filters.isActive = true;
     if (active === "false") filters.isActive = false;
 
-    if (search) {
-      filters.name = { $regex: search.trim(), $options: "i" };
-    }
+    if (search) filters.name = { $regex: search.trim(), $options: "i" };
 
     if (minPrice || maxPrice) {
       filters.price = {};
@@ -53,8 +42,8 @@ export const getCompanyProducts = async (req, res) => {
       if (maxPrice) filters.price.$lte = Number(maxPrice);
     }
 
-    const pageNum = Number(page) || 1;
-    const limitNum = Number(limit) || 20;
+    const pageNum = Number(page);
+    const limitNum = Number(limit);
     const skip = (pageNum - 1) * limitNum;
 
     const [products, total] = await Promise.all([
@@ -88,9 +77,7 @@ export const getCompanyProduct = async (req, res) => {
 
     const product = await Product.findOne({ _id: id, companyId });
 
-    if (!product) {
-      return res.status(404).json({ error: "Product not found" });
-    }
+    if (!product) return res.status(404).json({ error: "Product not found" });
 
     res.json({ ok: true, product });
   } catch (err) {
@@ -100,14 +87,10 @@ export const getCompanyProduct = async (req, res) => {
 };
 
 /* ==========================================================
-   ➕ CREATE PRODUCT (company owner only)
+   ➕ CREATE PRODUCT (company only)
 ========================================================== */
 export const createCompanyProduct = async (req, res) => {
   try {
-    if (req.user.role !== "company") {
-      return res.status(403).json({ error: "Only company owners can create products" });
-    }
-
     const companyId = req.user._id;
 
     const {
@@ -121,9 +104,8 @@ export const createCompanyProduct = async (req, res) => {
       lowStockThreshold,
     } = req.body;
 
-    if (!name || price === undefined) {
+    if (!name || price === undefined)
       return res.status(400).json({ error: "Name and price are required" });
-    }
 
     const product = await Product.create({
       companyId,
@@ -133,9 +115,8 @@ export const createCompanyProduct = async (req, res) => {
       category: category || "general",
       attributes: attributes || {},
       images: Array.isArray(images) ? images : [],
-      stock: stock !== undefined ? Number(stock) : 0,
-      lowStockThreshold:
-        lowStockThreshold !== undefined ? Number(lowStockThreshold) : 5,
+      stock: stock ? Number(stock) : 0,
+      lowStockThreshold: lowStockThreshold ? Number(lowStockThreshold) : 5,
       stockHistory: [
         {
           change: stock ? Number(stock) : 0,
@@ -144,6 +125,16 @@ export const createCompanyProduct = async (req, res) => {
           userId: req.user._id,
         },
       ],
+    });
+
+    // 🔔 Notify managers — NEW PRODUCT
+    await notifyAllManagersInCompany(req, companyId, {
+      type: "product",
+      title: "New Product Added",
+      message: `A new product "${product.name}" has been added to the company catalog.`,
+      priority: "normal",
+      actionUrl: "/manager/products",
+      meta: { productId: product._id },
     });
 
     res.status(201).json({
@@ -158,14 +149,10 @@ export const createCompanyProduct = async (req, res) => {
 };
 
 /* ==========================================================
-   ✏️ UPDATE PRODUCT (company owner)
+   ✏ UPDATE PRODUCT (company only)
 ========================================================== */
 export const updateCompanyProduct = async (req, res) => {
   try {
-    if (req.user.role !== "company") {
-      return res.status(403).json({ error: "Only company owners can update products" });
-    }
-
     const companyId = req.user._id;
     const { id } = req.params;
 
@@ -182,9 +169,20 @@ export const updateCompanyProduct = async (req, res) => {
 
     const product = await Product.findOne({ _id: id, companyId });
 
-    if (!product) {
-      return res.status(404).json({ error: "Product not found" });
-    }
+    if (!product) return res.status(404).json({ error: "Product not found" });
+
+    // Detect changes for notifications
+    const changes = [];
+
+    if (price !== undefined && price !== product.price)
+      changes.push(`Price: ${product.price} → ${price}`);
+
+    if (category && category !== product.category)
+      changes.push(`Category: ${product.category} → ${category}`);
+
+    if (lowStockThreshold !== undefined &&
+        lowStockThreshold !== product.lowStockThreshold)
+      changes.push(`Low-stock alert updated.`);
 
     if (name !== undefined) product.name = name;
     if (description !== undefined) product.description = description;
@@ -192,26 +190,39 @@ export const updateCompanyProduct = async (req, res) => {
     if (category !== undefined) product.category = category;
     if (attributes !== undefined) product.attributes = attributes;
     if (Array.isArray(images)) product.images = images;
+
     if (lowStockThreshold !== undefined)
       product.lowStockThreshold = Number(lowStockThreshold);
 
-    // If stock is sent, treat it as absolute value
+    // Stock as absolute
     if (stock !== undefined) {
-      const prevStock = product.stock || 0;
-      const newStock = Number(stock);
-      const change = newStock - prevStock;
+      const prev = product.stock || 0;
+      const next = Number(stock);
+      const delta = next - prev;
 
-      product.stock = newStock;
+      product.stock = next;
 
       product.stockHistory.push({
-        change,
+        change: delta,
         reason: "Manual stock update",
         createdAt: new Date(),
         userId: req.user._id,
       });
+
+      changes.push(`Stock updated (${prev} → ${next})`);
     }
 
     await product.save();
+
+    // 🔔 Notify managers — PRODUCT UPDATED
+    await notifyAllManagersInCompany(req, companyId, {
+      type: "product",
+      title: `Product Updated: ${product.name}`,
+      message: changes.length > 0 ? changes.join(" | ") : "Product updated.",
+      priority: "normal",
+      actionUrl: "/manager/products",
+      meta: { productId: product._id },
+    });
 
     res.json({
       ok: true,
@@ -229,21 +240,23 @@ export const updateCompanyProduct = async (req, res) => {
 ========================================================== */
 export const toggleCompanyProductActive = async (req, res) => {
   try {
-    if (req.user.role !== "company") {
-      return res.status(403).json({ error: "Only company owners can update products" });
-    }
-
     const companyId = req.user._id;
     const { id } = req.params;
 
     const product = await Product.findOne({ _id: id, companyId });
-
-    if (!product) {
-      return res.status(404).json({ error: "Product not found" });
-    }
+    if (!product) return res.status(404).json({ error: "Product not found" });
 
     product.isActive = !product.isActive;
     await product.save();
+
+    // 🔔 Notify managers
+    await notifyAllManagersInCompany(req, companyId, {
+      type: "product",
+      title: "Product Status Updated",
+      message: `"${product.name}" is now ${product.isActive ? "ACTIVE" : "INACTIVE"}.`,
+      actionUrl: "/manager/products",
+      meta: { productId: product._id, active: product.isActive },
+    });
 
     res.json({
       ok: true,
@@ -252,37 +265,30 @@ export const toggleCompanyProductActive = async (req, res) => {
     });
   } catch (err) {
     console.error("❌ toggleCompanyProductActive error:", err.message);
-    res.status(500).json({ error: "Server error updating product status" });
+    res.status(500).json({ error: "Server error toggling product" });
   }
 };
 
 /* ==========================================================
-   📦 ADJUST STOCK (change by +/- qty)
+   📦 ADJUST STOCK
 ========================================================== */
 export const adjustCompanyProductStock = async (req, res) => {
   try {
-    if (req.user.role !== "company") {
-      return res
-        .status(403)
-        .json({ error: "Only company owners can adjust stock" });
-    }
-
     const companyId = req.user._id;
     const { id } = req.params;
     const { change, reason } = req.body;
 
     const delta = Number(change);
-    if (!delta) {
+    if (!delta)
       return res.status(400).json({ error: "Stock change must be non-zero" });
-    }
 
     const product = await Product.findOne({ _id: id, companyId });
+    if (!product) return res.status(404).json({ error: "Product not found" });
 
-    if (!product) {
-      return res.status(404).json({ error: "Product not found" });
-    }
+    const prev = product.stock || 0;
+    const next = prev + delta;
 
-    product.stock = (product.stock || 0) + delta;
+    product.stock = next;
 
     product.stockHistory.push({
       change: delta,
@@ -292,6 +298,15 @@ export const adjustCompanyProductStock = async (req, res) => {
     });
 
     await product.save();
+
+    // 🔔 Notify managers
+    await notifyAllManagersInCompany(req, companyId, {
+      type: "product",
+      title: "Stock Updated",
+      message: `Stock updated: ${product.name} (${prev} → ${next})`,
+      actionUrl: "/manager/products",
+      meta: { productId: product._id },
+    });
 
     res.json({
       ok: true,
