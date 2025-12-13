@@ -2,28 +2,111 @@ import { Router } from "express";
 import { protect } from "../middleware/authMiddleware.js";
 import { authorizeRoles } from "../middleware/roleMiddleware.js";
 
-/* DASHBOARD */
+const router = Router();
+const ownerAuth = [protect, authorizeRoles("superadmin", "owner")];
+
+/* ==========================================================
+   DASHBOARD
+========================================================== */
 import {
   getOwnerOverview,
   getCompaniesActivity,
   getRevenueChart,
 } from "../controllers/systemOwner/systemOwnerDashboardController.js";
 
-/* PROFILE */
-import {
-  getOwnerProfile,
-  updateOwnerProfile,
-  updateOwnerPassword,
-} from "../controllers/systemOwner/systemOwnerProfileController.js";
+router.get("/overview", ownerAuth, getOwnerOverview);
+router.get("/companies-activity", ownerAuth, getCompaniesActivity);
+router.get("/revenue-chart", ownerAuth, getRevenueChart);
 
-/* BILLING */
+/* ==========================================================
+   COMPANY MANAGEMENT
+========================================================== */
+import {
+  getCompanyDetails,
+  updateCompanySubscription,
+  updateCompanyStatus,
+  updateCompanyLimits,
+  deleteCompany, // suspend
+  permanentlyDeleteCompany, // 🔥 HARD DELETE
+} from "../controllers/systemOwner/systemOwnerCompaniesController.js";
+
+router.get("/company/:companyId", ownerAuth, getCompanyDetails);
+
+router.patch(
+  "/company/:companyId/subscription",
+  ownerAuth,
+  updateCompanySubscription
+);
+
+router.patch(
+  "/company/:companyId/status",
+  ownerAuth,
+  updateCompanyStatus
+);
+
+router.patch(
+  "/company/:companyId/limits",
+  ownerAuth,
+  updateCompanyLimits
+);
+
+/* 🟡 SOFT DELETE (Suspend) */
+router.delete(
+  "/company/:companyId",
+  ownerAuth,
+  deleteCompany
+);
+
+/* 🔥 HARD DELETE (Permanent) */
+router.delete(
+  "/company/:companyId/permanent",
+  ownerAuth,
+  permanentlyDeleteCompany
+);
+
+/* ==========================================================
+   COMPANY APPLICATIONS
+========================================================== */
+import {
+  getCompanyApplications,
+  approveCompanyApplication,
+  rejectCompanyApplication,
+} from "../controllers/systemOwner/companyApprovalController.js";
+
+router.get("/company-applications", ownerAuth, getCompanyApplications);
+
+router.patch(
+  "/company-applications/:id/approve",
+  ownerAuth,
+  approveCompanyApplication
+);
+
+router.patch(
+  "/company-applications/:id/reject",
+  ownerAuth,
+  rejectCompanyApplication
+);
+
+/* ==========================================================
+   BILLING
+========================================================== */
 import {
   getOwnerBillingOverview,
   getOwnerInvoices,
   generateCompanyInvoice,
 } from "../controllers/systemOwner/systemOwnerBillingController.js";
 
-/* SETTINGS */
+router.get("/billing/overview", ownerAuth, getOwnerBillingOverview);
+router.get("/billing/invoices", ownerAuth, getOwnerInvoices);
+router.post(
+  "/billing/invoices/generate/:companyId",
+  ownerAuth,
+  generateCompanyInvoice
+);
+
+/* ==========================================================
+   SETTINGS
+========================================================== */
 import {
   getGeneralSettings,
   updateGeneralSettings,
@@ -44,33 +127,6 @@ import {
   updateSecuritySettings,
 } from "../controllers/systemOwner/settings/ownerSecuritySettingsController.js";
 
-/* ACTIVITY LOGS */
-import { getOwnerActivityLogs } from "../controllers/systemOwnerActivityController.js";
-
-/* COMPANY DETAILS */
-import { getCompanyDetails } from "../controllers/systemOwner/systemOwnerCompanyDetailsController.js";
-
-/* COMPANY APPLICATIONS */
-import {
-  getCompanyApplications,
-  getCompanyApplicationById,
-  approveCompanyApplication,
-  rejectCompanyApplication,
-} from "../controllers/systemOwner/companyApprovalController.js";
-
-const router = Router();
-
-const ownerAuth = [protect, authorizeRoles("superadmin", "owner")];
-
-/* DASHBOARD */
-router.get("/overview", ownerAuth, getOwnerOverview);
-router.get("/companies-activity", ownerAuth, getCompaniesActivity);
-router.get("/revenue-chart", ownerAuth, getRevenueChart);
-
-/* COMPANY DETAILS */
-router.get("/company/:companyId", ownerAuth, getCompanyDetails);
-
-/* SETTINGS */
 router.get("/settings/general", ownerAuth, getGeneralSettings);
 router.put("/settings/general", ownerAuth, updateGeneralSettings);
 
@@ -81,25 +137,31 @@ router.get("/settings/billing", ownerAuth, getBillingSettings);
 router.put("/settings/billing", ownerAuth, updateBillingSettings);
 
 router.get("/settings/security", ownerAuth, getSecuritySettings);
-router.put("/settings/security", ownerAuth, updateSecuritySettings);
+router.put("/settings/security", updateSecuritySettings);
 
-/* BILLING */
-router.get("/billing/overview", ownerAuth, getOwnerBillingOverview);
-router.get("/billing/invoices", ownerAuth, getOwnerInvoices);
-router.post("/billing/invoices/generate/:companyId", ownerAuth, generateCompanyInvoice);
+/* ==========================================================
+   PROFILE
+========================================================== */
+import {
+  getOwnerProfile,
+  updateOwnerProfile,
+  updateOwnerPassword,
+} from "../controllers/systemOwner/systemOwnerProfileController.js";
 
-/* PROFILE */
 router.get("/profile", ownerAuth, getOwnerProfile);
 router.put("/profile", ownerAuth, updateOwnerProfile);
 router.put("/profile/password", ownerAuth, updateOwnerPassword);
 
-/* ACTIVITY LOGS (SUPERADMIN ONLY) */
-router.get("/activity-logs", protect, authorizeRoles("superadmin"), getOwnerActivityLogs);
+/* ==========================================================
+   ACTIVITY LOGS (SUPERADMIN ONLY)
+========================================================== */
+import { getOwnerActivityLogs } from "../controllers/systemOwnerActivityController.js";
 
-/* COMPANY APPLICATIONS */
-router.get("/company-applications", ownerAuth, getCompanyApplications);
-router.get("/company-applications/:id", ownerAuth, getCompanyApplicationById);
-router.patch("/company-applications/:id/approve", ownerAuth, approveCompanyApplication);
-router.patch("/company-applications/:id/reject", ownerAuth, rejectCompanyApplication);
+router.get(
+  "/activity-logs",
+  protect,
+  authorizeRoles("superadmin"),
+  getOwnerActivityLogs
+);
 
 export default router;

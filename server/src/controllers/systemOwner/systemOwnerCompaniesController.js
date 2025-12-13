@@ -1,399 +1,246 @@
-// server/src/controllers/systemOwner/systemOwnerCompanyController.js
+import Company from "../../models/Company.js";
 import User from "../../models/User.js";
 import Trip from "../../models/Trip.js";
 import Payment from "../../models/Payment.js";
-import CompanySettings from "../../models/Company.js";
-import Company from "../../models/Company.js";
 
 /* ==========================================================
-   Helper — subscription from driver count
-   ----------------------------------------------------------
-   0–10  drivers  -> 50$
-   11–30 drivers  -> 80$
-   31–50 drivers  -> 100$
-   >50   drivers  -> 150$
+   SUBSCRIPTION TIERS — SINGLE SOURCE OF TRUTH
 ========================================================== */
-const getSubscriptionFromDrivers = (driverCount = 0) => {
-  let tierLabel = "0–10 drivers";
-  let monthlyPrice = 50;
-  let plan = "starter";
-
-  if (driverCount <= 10) {
-    tierLabel = "0–10 drivers";
-    monthlyPrice = 50;
-    plan = "starter";
-  } else if (driverCount <= 30) {
-    tierLabel = "11–30 drivers";
-    monthlyPrice = 80;
-    plan = "growth";
-  } else if (driverCount <= 50) {
-    tierLabel = "31–50 drivers";
-    monthlyPrice = 100;
-    plan = "pro";
-  } else {
-    tierLabel = "50+ drivers";
-    monthlyPrice = 150;
-    plan = "enterprise";
-  }
-
-  return { plan, tierLabel, monthlyPrice };
-};
-
-/* Small helper to ensure a Company config doc exists */
-const ensureCompanyConfig = async (companyUser) => {
-  if (!companyUser) return null;
-
-  let config = await Company.findOne({ ownerId: companyUser._id });
-
-  if (!config) {
-    config = new Company({
-      name: companyUser.name,
-      email: companyUser.email,
-      phone: companyUser.phone,
-      address: companyUser.address || "",
-      ownerId: companyUser._id,
-      // defaults from schema: plan="free", billingStatus="active"
-    });
-    await config.save();
-  }
-
-  return config;
+const SUBSCRIPTIONS = {
+  drivers_0_10: {
+    tierKey: "drivers_0_10",
+    label: "0–10 drivers",
+    maxDrivers: 10,
+    priceUsd: 50,
+    plan: "starter",
+  },
+  drivers_11_30: {
+    tierKey: "drivers_11_30",
+    label: "11–30 drivers",
+    maxDrivers: 30,
+    priceUsd: 80,
+    plan: "growth",
+  },
+  drivers_31_50: {
+    tierKey: "drivers_31_50",
+    label: "31–50 drivers",
+    maxDrivers: 50,
+    priceUsd: 100,
+    plan: "pro",
+  },
+  drivers_51_plus: {
+    tierKey: "drivers_51_plus",
+    label: "51+ drivers",
+    maxDrivers: 9999,
+    priceUsd: 150,
+    plan: "enterprise",
+  },
 };
 
 /* ==========================================================
-   SO.3.1 — GET COMPANY DETAILS
-   GET /api/owner/companies/:companyId
+   GET COMPANY DETAILS
 ========================================================== */
 export const getCompanyDetails = async (req, res) => {
   try {
-    const { companyId } = req.params;
-
-    // 1) Base company user
-    const companyUser = await User.findOne({
-      _id: companyId,
-      role: "company",
-    });
-
-    if (!companyUser) {
-      return res.status(404).json({
-        ok: false,
-        error: "Company not found.",
-      });
+    const company = await Company.findById(req.params.companyId).lean();
+    if (!company) {
+      return res.status(404).json({ ok: false, error: "Company not found" });
     }
 
-    // 2) Stats
-    const [driverCount, managerCount, totalTrips] = await Promise.all([
-      User.countDocuments({ role: "driver", companyId }),
-      User.countDocuments({ role: "manager", companyId }),
-      Trip.countDocuments({ companyId }),
-    ]);
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
 
-    const startOfToday = new Date();
-    startOfToday.setHours(0, 0, 0, 0);
+    const [totalDrivers, activeDrivers, tripsToday, revenueAgg] =
+      await Promise.all([
+        User.countDocuments({ role: "driver", companyId: company._id }),
+        User.countDocuments({
+          role: "driver",
+          companyId: company._id,
+          isOnline: true,
+        }),
+        Trip.countDocuments({
+          companyId: company._id,
+          createdAt: { $gte: start },
+        }),
+        Payment.aggregate([
+          { $match: { companyId: company._id, status: "paid" } },
+          { $group: { _id: null, total: { $sum: "$amount" } } },
+        ]),
+      ]);
 
-    const tripsToday = await Trip.countDocuments({
-      companyId,
-      createdAt: { $gte: startOfToday },
-    });
-
-    // Revenue totals
-    const paymentsAgg = await Payment.aggregate([
-      { $match: { companyId, status: "paid" } },
-      {
-        $group: {
-          _id: null,
-          totalRevenue: { $sum: "$amount" },
-        },
-      },
-    ]);
-
-    const paymentsTodayAgg = await Payment.aggregate([
-      {
-        $match: {
-          companyId,
-          status: "paid",
-          createdAt: { $gte: startOfToday },
-        },
-      },
-      {
-        $group: {
-          _id: null,
-          totalRevenue: { $sum: "$amount" },
-        },
-      },
-    ]);
-
-    const totalRevenue = paymentsAgg[0]?.totalRevenue || 0;
-    const revenueToday = paymentsTodayAgg[0]?.totalRevenue || 0;
-
-    // 3) Settings & limits
-    const settingsDoc = await CompanySettings.findOne({ companyId });
-
-    // 4) Subscription from drivers + company config doc
-    const subscriptionFromDrivers = getSubscriptionFromDrivers(driverCount);
-    const companyConfig = await ensureCompanyConfig(companyUser);
-
-    const subscription = {
-      plan: companyConfig?.plan || subscriptionFromDrivers.plan,
-      tierLabel: subscriptionFromDrivers.tierLabel,
-      monthlyPrice: subscriptionFromDrivers.monthlyPrice,
-      billingStatus: companyConfig?.billingStatus || "active",
-    };
-
-    // 5) Response
-    return res.json({
+    res.json({
       ok: true,
       company: {
-        id: companyUser._id,
-        name: companyUser.name,
-        email: companyUser.email,
-        phone: companyUser.phone,
-        address: companyUser.address || "",
-        isSuspended: !!companyUser.isSuspended,
-        createdAt: companyUser.createdAt,
-      },
-      subscription,
-      limits: {
-        maxDrivers: settingsDoc?.maxDrivers || null,
-        maxManagers: settingsDoc?.maxManagers || null,
-        maxVehicles: settingsDoc?.maxVehicles || null,
-        maxShops: settingsDoc?.maxShops || null,
-      },
-      stats: {
-        driverCount,
-        managerCount,
-        totalTrips,
+        id: company._id,
+        name: company.name,
+        createdAt: company.createdAt,
+        subscriptionPlan: company.subscription?.label || "—",
+        subscriptionPrice: company.subscription?.priceUsd || 0,
+        maxDrivers: company.subscription?.maxDrivers || 0,
+        totalDrivers,
+        activeDrivers,
         tripsToday,
-        totalRevenue,
-        revenueToday,
+        totalRevenue: revenueAgg[0]?.total || 0,
+        status:
+          !company.isActive || company.billingStatus === "suspended"
+            ? "Suspended"
+            : "Active",
       },
     });
   } catch (err) {
     console.error("getCompanyDetails error:", err);
-    return res
-      .status(500)
-      .json({ ok: false, error: "Server error loading company details." });
+    res.status(500).json({ ok: false });
   }
 };
 
 /* ==========================================================
-   SO.3.2 — UPDATE COMPANY SUBSCRIPTION
-   PATCH /api/owner/companies/:companyId/subscription
-   Body:
-     - plan?          ("starter" | "growth" | "pro" | "enterprise")
-     - billingStatus? ("active" | "unpaid" | "suspended")
+   UPDATE SUBSCRIPTION
 ========================================================== */
 export const updateCompanySubscription = async (req, res) => {
   try {
-    const { companyId } = req.params;
-    const { plan, billingStatus } = req.body;
+    const { tierKey } = req.body;
+    const tier = SUBSCRIPTIONS[tierKey];
 
-    const companyUser = await User.findOne({
-      _id: companyId,
-      role: "company",
-    });
-
-    if (!companyUser) {
-      return res.status(404).json({
+    if (!tier) {
+      return res.status(400).json({
         ok: false,
-        error: "Company not found.",
+        error: "Invalid subscription tier",
       });
     }
 
-    const config = await ensureCompanyConfig(companyUser);
-
-    if (plan) {
-      config.plan = plan;
-    }
-    if (billingStatus) {
-      config.billingStatus = billingStatus;
-    }
-
-    await config.save();
-
-    return res.json({
-      ok: true,
-      message: "Subscription updated.",
-      company: {
-        id: companyUser._id,
-        name: companyUser.name,
-      },
+    await Company.findByIdAndUpdate(req.params.companyId, {
+      plan: tier.plan,
       subscription: {
-        plan: config.plan,
-        billingStatus: config.billingStatus,
+        tierKey: tier.tierKey,
+        label: tier.label,
+        maxDrivers: tier.maxDrivers,
+        priceUsd: tier.priceUsd,
+        isPastDue: false,
       },
+      billingStatus: "active",
+      isActive: true,
     });
+
+    res.json({ ok: true });
   } catch (err) {
     console.error("updateCompanySubscription error:", err);
-    return res
-      .status(500)
-      .json({ ok: false, error: "Server error updating subscription." });
+    res.status(500).json({ ok: false });
   }
 };
 
 /* ==========================================================
-   SO.3.3 — UPDATE COMPANY STATUS (ACTIVE / SUSPENDED)
-   PATCH /api/owner/companies/:companyId/status
-   Body:
-     - status: "active" | "suspended"
+   UPDATE STATUS (ACTIVE / SUSPENDED)
 ========================================================== */
 export const updateCompanyStatus = async (req, res) => {
   try {
-    const { companyId } = req.params;
     const { status } = req.body;
 
     if (!["active", "suspended"].includes(status)) {
       return res.status(400).json({
         ok: false,
-        error: "Invalid status. Use 'active' or 'suspended'.",
+        error: "Invalid status value",
       });
     }
 
-    const companyUser = await User.findOne({
-      _id: companyId,
-      role: "company",
-    });
-
-    if (!companyUser) {
-      return res.status(404).json({
-        ok: false,
-        error: "Company not found.",
-      });
-    }
-
-    companyUser.isSuspended = status === "suspended";
-    if (status === "suspended") {
-      companyUser.isActive = false;
-    }
-    await companyUser.save();
-
-    // Optional: align billingStatus on Company config
-    const config = await Company.findOne({ ownerId: companyId });
-    if (config) {
-      if (status === "suspended") {
-        config.billingStatus = "suspended";
-      } else if (config.billingStatus === "suspended") {
-        // bring back to active if owner re-activates
-        config.billingStatus = "active";
-      }
-      await config.save();
-    }
-
-    return res.json({
-      ok: true,
-      message: "Company status updated.",
-      company: {
-        id: companyUser._id,
-        isSuspended: companyUser.isSuspended,
+    const company = await Company.findByIdAndUpdate(
+      req.params.companyId,
+      {
+        isActive: status === "active",
+        billingStatus: status,
       },
-    });
+      { new: true }
+    );
+
+    if (!company) {
+      return res.status(404).json({ ok: false, error: "Company not found" });
+    }
+
+    res.json({ ok: true });
   } catch (err) {
     console.error("updateCompanyStatus error:", err);
-    return res
-      .status(500)
-      .json({ ok: false, error: "Server error updating status." });
+    res.status(500).json({ ok: false });
   }
 };
 
 /* ==========================================================
-   SO.3.4 — UPDATE COMPANY LIMITS (drivers / managers / vehicles)
-   PATCH /api/owner/companies/:companyId/limits
-   Body (all optional):
-     - maxDrivers
-     - maxManagers
-     - maxVehicles
-     - maxShops
+   UPDATE LIMITS
 ========================================================== */
 export const updateCompanyLimits = async (req, res) => {
   try {
-    const { companyId } = req.params;
-    const { maxDrivers, maxManagers, maxVehicles, maxShops } = req.body;
+    const { maxDrivers } = req.body;
 
-    const companyUser = await User.findOne({
-      _id: companyId,
-      role: "company",
+    await Company.findByIdAndUpdate(req.params.companyId, {
+      "subscription.maxDrivers": maxDrivers,
     });
 
-    if (!companyUser) {
-      return res.status(404).json({
-        ok: false,
-        error: "Company not found.",
-      });
-    }
-
-    const update = {};
-    if (maxDrivers !== undefined) update.maxDrivers = maxDrivers;
-    if (maxManagers !== undefined) update.maxManagers = maxManagers;
-    if (maxVehicles !== undefined) update.maxVehicles = maxVehicles;
-    if (maxShops !== undefined) update.maxShops = maxShops;
-
-    const settings = await CompanySettings.findOneAndUpdate(
-      { companyId },
-      { $set: update },
-      { new: true, upsert: true }
-    );
-
-    return res.json({
-      ok: true,
-      message: "Company limits updated.",
-      limits: {
-        maxDrivers: settings.maxDrivers || null,
-        maxManagers: settings.maxManagers || null,
-        maxVehicles: settings.maxVehicles || null,
-        maxShops: settings.maxShops || null,
-      },
-    });
+    res.json({ ok: true });
   } catch (err) {
     console.error("updateCompanyLimits error:", err);
-    return res
-      .status(500)
-      .json({ ok: false, error: "Server error updating limits." });
+    res.status(500).json({ ok: false });
   }
 };
 
 /* ==========================================================
-   SO.3.5 — DELETE / DEACTIVATE COMPANY
-   DELETE /api/owner/companies/:companyId
-   NOTE: this is a SOFT delete (flags), not hard delete.
+   SUSPEND COMPANY (SOFT DELETE)
 ========================================================== */
 export const deleteCompany = async (req, res) => {
   try {
-    const { companyId } = req.params;
-
-    const companyUser = await User.findOne({
-      _id: companyId,
-      role: "company",
+    await Company.findByIdAndUpdate(req.params.companyId, {
+      isActive: false,
+      billingStatus: "suspended",
     });
 
-    if (!companyUser) {
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("deleteCompany error:", err);
+    res.status(500).json({ ok: false });
+  }
+};
+
+/* ==========================================================
+   🔥 PERMANENT DELETE COMPANY (HARD DELETE)
+========================================================== */
+export const permanentlyDeleteCompany = async (req, res) => {
+  try {
+    const { companyId } = req.params;
+
+    const company = await Company.findById(companyId);
+    if (!company) {
       return res.status(404).json({
         ok: false,
-        error: "Company not found.",
+        error: "Company not found",
       });
     }
 
-    // Soft delete: mark inactive + suspended
-    companyUser.isActive = false;
-    companyUser.isSuspended = true;
-    companyUser.deletedAt = new Date();
-    await companyUser.save();
+    // 1️⃣ Delete drivers & managers
+    await User.deleteMany({
+      companyId,
+      role: { $in: ["driver", "manager"] },
+    });
 
-    // Optional: mark company config as suspended / unpaid
-    const config = await Company.findOne({ ownerId: companyId });
-    if (config) {
-      config.billingStatus = "suspended";
-      await config.save();
-    }
+    // 2️⃣ Delete company owner
+    await User.deleteOne({
+      _id: company.ownerId,
+    });
+
+    // 3️⃣ Delete trips
+    await Trip.deleteMany({ companyId });
+
+    // 4️⃣ Delete payments
+    await Payment.deleteMany({ companyId });
+
+    // 5️⃣ Delete company
+    await Company.deleteOne({ _id: companyId });
 
     return res.json({
       ok: true,
-      message:
-        "Company has been deactivated (soft delete). You can keep data for reports.",
+      message: "Company permanently deleted",
     });
   } catch (err) {
-    console.error("deleteCompany error:", err);
-    return res
-      .status(500)
-      .json({ ok: false, error: "Server error deleting company." });
+    console.error("permanentlyDeleteCompany error:", err);
+    res.status(500).json({
+      ok: false,
+      error: "Failed to permanently delete company",
+    });
   }
 };

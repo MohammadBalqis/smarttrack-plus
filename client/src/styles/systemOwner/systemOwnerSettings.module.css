@@ -1,229 +1,259 @@
+@import "./_baseOwner.module.css";
+
 /* ==========================================================
-   SYSTEM OWNER — SETTINGS PAGE
+   SYSTEM OWNER — SETTINGS (PREMIUM)
 ========================================================== */
 
+/* ================= PAGE ================= */
 .page {
-  padding: 24px;
+  padding: 28px;
   max-width: 1200px;
   margin: 0 auto;
 }
 
+/* ================= HEADER ================= */
 .headerRow {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
+  margin-bottom: 26px;
 }
 
 .title {
-  font-size: 28px;
-  font-weight: 700;
-  color: #0f172a;
-  margin-bottom: 4px;
+  font-size: 30px;
+  font-weight: 800;
+  color: var(--text-main);
+  margin-bottom: 6px;
 }
 
 .subtitle {
   font-size: 14px;
-  color: #64748b;
+  color: var(--text-muted);
 }
 
+/* ================= ACTION BTN ================= */
 .refreshBtn {
-  padding: 8px 14px;
-  border-radius: 8px;
+  padding: 10px 18px;
+  border-radius: 999px;
   border: none;
-  background-color: #0ea5e9;
-  color: white;
+  background: linear-gradient(
+    135deg,
+    rgba(56, 189, 248, 0.95),
+    rgba(14, 165, 233, 0.95)
+  );
+  color: #020617;
   font-size: 14px;
+  font-weight: 700;
   cursor: pointer;
-}
-.refreshBtn:hover {
-  background-color: #0284c7;
+  box-shadow: 0 14px 30px rgba(56, 189, 248, 0.35);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-/* Alerts */
+.refreshBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 20px 40px rgba(56, 189, 248, 0.45);
+}
+
+/* ================= ALERTS ================= */
 .errorBox {
-  margin-bottom: 16px;
+  margin-bottom: 18px;
   padding: 12px 14px;
-  border-radius: 8px;
-  background: #fef2f2;
-  color: #b91c1c;
-  border: 1px solid #fecaca;
+  border-radius: 12px;
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.4);
   font-size: 14px;
 }
 
 .successBox {
-  margin-bottom: 16px;
+  margin-bottom: 18px;
   padding: 12px 14px;
-  border-radius: 8px;
-  background: #ecfdf5;
-  color: #15803d;
-  border: 1px solid #bbf7d0;
+  border-radius: 12px;
+  background: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+  border: 1px solid rgba(34, 197, 94, 0.35);
   font-size: 14px;
 }
 
-/* Form layout */
+/* ================= FORM ================= */
 .form {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-}
-
-.grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 20px;
 }
 
+/* ================= GRID ================= */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+}
+
+/* ================= CARD ================= */
 .card {
-  background: #ffffff;
-  border-radius: 12px;
-  padding: 18px 18px 16px;
-  border: 1px solid #e2e8f0;
+  background: var(--bg-card);
+  border-radius: 18px;
+  padding: 22px;
+  border: 1px solid var(--border-soft);
+  box-shadow: 0 18px 40px rgba(2, 6, 23, 0.45);
 }
 
 .cardTitle {
   font-size: 18px;
-  font-weight: 600;
-  color: #0f172a;
+  font-weight: 700;
+  color: var(--text-main);
   margin-bottom: 4px;
 }
 
 .cardHint {
   font-size: 13px;
-  color: #64748b;
+  color: var(--text-muted);
   margin-bottom: 16px;
 }
 
-/* Fields */
-
+/* ================= FIELDS ================= */
 .formRow {
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 
 .label {
   display: block;
   font-size: 13px;
   font-weight: 600;
-  color: #0f172a;
-  margin-bottom: 4px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
 }
 
 .input,
 .select,
 .textarea {
   width: 100%;
-  padding: 8px 10px;
-  border-radius: 8px;
-  border: 1px solid #cbd5e1;
+  padding: 11px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border-soft);
   font-size: 14px;
   outline: none;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
-  background: #f8fafc;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-main);
+  transition: border 0.15s ease, box-shadow 0.15s ease,
+    background 0.15s ease;
+}
+
+.input::placeholder,
+.textarea::placeholder {
+  color: #94a3b8;
 }
 
 .input:focus,
 .select:focus,
 .textarea:focus {
-  border-color: #0ea5e9;
-  box-shadow: 0 0 0 1px rgba(14, 165, 233, 0.2);
-  background: #ffffff;
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.45);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .textarea {
-  min-height: 80px;
+  min-height: 90px;
   resize: vertical;
 }
 
 .helpText {
   font-size: 12px;
   color: #94a3b8;
-  margin-top: 4px;
+  margin-top: 6px;
 }
 
-/* Switches */
-
+/* ================= SWITCHES ================= */
 .switchRow {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 6px;
+  gap: 12px;
+  margin-bottom: 10px;
 }
 
 .switchRow input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
+  accent-color: #38bdf8;
+  cursor: pointer;
 }
 
 .switchLabel {
   font-size: 14px;
   font-weight: 500;
-  color: #0f172a;
+  color: var(--text-main);
 }
 
-/* Tiers */
-
+/* ================= TIERS ================= */
 .tiersGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-  margin-top: 8px;
-  margin-bottom: 8px;
+  gap: 12px;
+  margin-top: 10px;
 }
 
 .tierCard {
-  border-radius: 10px;
-  border: 1px solid #e2e8f0;
-  padding: 10px;
-  background: #f8fafc;
+  border-radius: 14px;
+  border: 1px solid var(--border-soft);
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .tierTitle {
   font-size: 14px;
-  font-weight: 600;
-  color: #0f172a;
+  font-weight: 700;
+  color: var(--text-main);
   margin-bottom: 4px;
 }
 
 .tierPrice {
-  font-size: 16px;
-  font-weight: 700;
-  color: #0ea5e9;
+  font-size: 18px;
+  font-weight: 800;
+  color: #38bdf8;
   margin-bottom: 2px;
 }
 
 .tierMeta {
   font-size: 12px;
-  color: #64748b;
+  color: var(--text-muted);
 }
 
 .notice {
   font-size: 12px;
   color: #94a3b8;
-  margin-top: 6px;
+  margin-top: 8px;
 }
 
-/* Footer */
+/* ================= FOOTER ================= */
 .footerBar {
   display: flex;
   justify-content: flex-end;
-  margin-top: 4px;
+  margin-top: 6px;
 }
 
 .saveBtn {
-  padding: 10px 18px;
+  padding: 12px 22px;
   border-radius: 999px;
   border: none;
-  background: #0ea5e9;
-  color: white;
-  font-weight: 600;
-  cursor: pointer;
+  background: linear-gradient(
+    135deg,
+    rgba(56, 189, 248, 0.95),
+    rgba(14, 165, 233, 0.95)
+  );
+  color: #020617;
+  font-weight: 700;
   font-size: 14px;
-}
-.saveBtn:hover {
-  background: #0284c7;
+  cursor: pointer;
+  box-shadow: 0 14px 30px rgba(56, 189, 248, 0.35);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-/* Responsive */
+.saveBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 20px 40px rgba(56, 189, 248, 0.45);
+}
+
+/* ================= RESPONSIVE ================= */
 @media (max-width: 900px) {
   .grid {
     grid-template-columns: 1fr;

@@ -1,195 +1,206 @@
-/* ==========================================================
-   SYSTEM OWNER — BILLING PAGE
-========================================================== */
+@import "./_baseOwner.module.css";
 
+/* ==========================================================
+   PAGE
+========================================================== */
 .page {
-  padding: 24px;
-  max-width: 1200px;
+  padding: 24px 28px;
+  max-width: 1400px;
   margin: 0 auto;
 }
 
-/* ================= HEADER ================= */
-
+/* ==========================================================
+   HEADER
+========================================================== */
 .headerRow {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 18px;
+  margin-bottom: 20px;
 }
 
 .title {
   font-size: 26px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--text-main);
   margin-bottom: 4px;
 }
 
 .subtitle {
   font-size: 14px;
-  color: #64748b;
+  color: var(--text-muted);
 }
 
+/* Refresh */
 .refreshBtn {
   padding: 8px 16px;
   border-radius: 999px;
-  border: none;
-  background: #0ea5e9;
-  color: #ffffff;
-  font-weight: 600;
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  background: linear-gradient(
+    135deg,
+    rgba(56, 189, 248, 0.9),
+    rgba(14, 165, 233, 0.9)
+  );
+  color: #020617;
+  font-weight: 700;
   font-size: 14px;
   cursor: pointer;
-  box-shadow: 0 8px 16px rgba(14, 165, 233, 0.25);
-  transition: transform 0.15s ease, box-shadow 0.15s ease,
-    background 0.15s ease;
+  box-shadow: 0 12px 30px rgba(56, 189, 248, 0.35);
+  transition: all 0.2s ease;
 }
 
 .refreshBtn:hover {
-  background: #0284c7;
   transform: translateY(-1px);
-  box-shadow: 0 12px 24px rgba(14, 165, 233, 0.3);
+  box-shadow: 0 18px 40px rgba(56, 189, 248, 0.45);
 }
 
 .refreshBtn:disabled {
-  opacity: 0.7;
-  cursor: default;
+  opacity: 0.6;
+  cursor: not-allowed;
   transform: none;
   box-shadow: none;
 }
 
-/* ================= ALERT / ERROR ================= */
-
+/* ==========================================================
+   ERROR
+========================================================== */
 .errorBox {
   margin-bottom: 16px;
   padding: 12px 14px;
-  border-radius: 8px;
-  border: 1px solid #fecaca;
-  background: #fef2f2;
-  color: #b91c1c;
+  border-radius: 12px;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  background: rgba(239, 68, 68, 0.12);
+  color: #f87171;
   font-size: 14px;
 }
 
-/* ================= KPI CARDS ================= */
-
+/* ==========================================================
+   KPI CARDS
+========================================================== */
 .statsGrid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
-  margin-bottom: 24px;
+  margin-bottom: 26px;
 }
 
 .statCard {
-  background: #ffffff;
-  border-radius: 14px;
-  padding: 14px 16px;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.04);
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
+  border-radius: 18px;
+  padding: 18px 18px;
+  box-shadow: 0 18px 40px rgba(2, 6, 23, 0.45);
 }
 
 .statLabel {
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: #94a3b8;
-  margin-bottom: 6px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
 }
 
 .statValue {
-  font-size: 22px;
-  font-weight: 700;
-  color: #0f172a;
-  margin-bottom: 2px;
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--text-main);
+  margin-bottom: 4px;
 }
 
 .statHint {
   font-size: 12px;
-  color: #64748b;
+  color: var(--text-muted);
 }
 
-/* ================= FILTERS ================= */
-
+/* ==========================================================
+   FILTERS
+========================================================== */
 .filtersRow {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 14px;
   align-items: flex-end;
-  margin-bottom: 14px;
+  margin-bottom: 16px;
 }
 
 .filterGroup {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 
 .filterLabel {
   font-size: 12px;
   font-weight: 600;
-  color: #64748b;
+  color: var(--text-muted);
 }
 
-.select,
-.input {
-  min-width: 180px;
-  padding: 7px 10px;
-  border-radius: 8px;
-  border: 1px solid #cbd5e1;
+.select {
+  min-width: 200px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border-soft);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-main);
   font-size: 14px;
   outline: none;
 }
 
-.select:focus,
-.input:focus {
-  border-color: #0ea5e9;
-  box-shadow: 0 0 0 1px rgba(14, 165, 233, 0.35);
+.select:focus {
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.45);
 }
 
 .filterActions {
   margin-left: auto;
-  display: flex;
-  gap: 8px;
 }
 
 .resetBtn {
-  padding: 7px 12px;
-  border-radius: 8px;
-  border: 1px solid #cbd5e1;
-  background: #f8fafc;
+  padding: 8px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border-soft);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-main);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
+  transition: all 0.15s ease;
 }
 
 .resetBtn:hover {
-  background: #e2e8f0;
+  background: var(--bg-card-hover);
 }
 
-/* ================= TABLE ================= */
-
+/* ==========================================================
+   INVOICES CARD
+========================================================== */
 .card {
-  background: #ffffff;
-  border-radius: 14px;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.04);
-  padding: 0;
+  background: var(--bg-card);
+  border-radius: 18px;
+  border: 1px solid var(--border-soft);
+  box-shadow: 0 18px 40px rgba(2, 6, 23, 0.45);
+  overflow: hidden;
 }
 
 .cardHeader {
-  padding: 14px 18px;
-  border-bottom: 1px solid #e2e8f0;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-soft);
 }
 
 .cardTitle {
-  font-size: 16px;
-  font-weight: 600;
-  color: #0f172a;
-  margin-bottom: 2px;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-main);
 }
 
 .cardSub {
   font-size: 13px;
-  color: #64748b;
+  color: var(--text-muted);
 }
 
+/* ==========================================================
+   TABLE
+========================================================== */
 .tableWrapper {
   width: 100%;
   overflow-x: auto;
@@ -202,106 +213,104 @@
 }
 
 .table thead {
-  background: #f8fafc;
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .table th,
 .table td {
-  padding: 10px 14px;
+  padding: 12px 16px;
   text-align: left;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--border-soft);
   white-space: nowrap;
 }
 
 .table th {
-  font-size: 12px;
-  font-weight: 600;
-  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
 }
 
+.table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* ==========================================================
+   TABLE CELLS
+========================================================== */
 .invoiceId {
-  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo,
-    Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-family: "JetBrains Mono", monospace;
   font-size: 12px;
-  color: #0f172a;
+  color: #38bdf8;
 }
 
 .companyName {
   font-weight: 600;
-  color: #0f172a;
+  color: var(--text-main);
 }
 
 .companyMeta {
   font-size: 11px;
-  color: #94a3b8;
+  color: var(--text-muted);
 }
 
 .amount {
-  font-weight: 600;
-  color: #0f172a;
+  font-weight: 700;
+  color: var(--text-main);
 }
 
 .periodText {
   font-size: 12px;
-  color: #475569;
+  color: #cbd5f5;
 }
 
-/* ================= STATUS BADGES ================= */
-
+/* ==========================================================
+   STATUS BADGES
+========================================================== */
 .statusBadge {
   display: inline-flex;
   align-items: center;
-  padding: 3px 8px;
+  padding: 4px 10px;
   border-radius: 999px;
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .statusPending {
-  background: #fef3c7;
-  color: #92400e;
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
 }
 
 .statusPaid {
-  background: #dcfce7;
-  color: #166534;
+  background: rgba(34, 197, 94, 0.2);
+  color: #22c55e;
 }
 
 .statusOverdue {
-  background: #fee2e2;
-  color: #b91c1c;
+  background: rgba(239, 68, 68, 0.25);
+  color: #f87171;
 }
 
 .statusCancelled {
-  background: #e2e8f0;
-  color: #475569;
+  background: rgba(148, 163, 184, 0.2);
+  color: #94a3b8;
 }
 
-/* Past due label in company column (optional) */
-.pastDueChip {
-  margin-left: 6px;
-  padding: 2px 7px;
-  border-radius: 999px;
-  background: #fee2e2;
-  color: #b91c1c;
-  font-size: 10px;
-  font-weight: 600;
-}
-
-/* ================= EMPTY STATE ================= */
-
+/* ==========================================================
+   EMPTY STATE
+========================================================== */
 .emptyBox {
-  padding: 32px;
+  padding: 36px;
   text-align: center;
   font-size: 14px;
-  color: #64748b;
+  color: var(--text-muted);
 }
 
-/* ================= RESPONSIVE ================= */
-
-@media (max-width: 900px) {
+/* ==========================================================
+   RESPONSIVE
+========================================================== */
+@media (max-width: 1100px) {
   .statsGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -323,11 +332,5 @@
 
   .filterActions {
     margin-left: 0;
-    justify-content: flex-start;
-  }
-
-  .table th,
-  .table td {
-    padding: 8px 10px;
   }
 }

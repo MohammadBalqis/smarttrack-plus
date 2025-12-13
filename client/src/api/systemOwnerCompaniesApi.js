@@ -2,25 +2,40 @@
 import api from "./apiClient";
 
 /* ==========================================================
-   SYSTEM OWNER — COMPANY MANAGEMENT API
+   GET COMPANY DETAILS
 ========================================================== */
+export const getOwnerCompanyDetailsApi = (id) =>
+  api.get(`/owner/company/${id}`);
 
-// 1) Get company details (full object)
-export const getOwnerCompanyDetailsApi = (companyId) =>
-  api.get(`/owner/company/${companyId}`);
+/* ==========================================================
+   UPDATE SUBSCRIPTION
+========================================================== */
+export const updateOwnerCompanySubscriptionApi = (id, data) =>
+  api.patch(`/owner/company/${id}/subscription`, data);
 
-// 2) Update subscription plan
-export const updateOwnerCompanySubscriptionApi = (companyId, data) =>
-  api.put(`/owner/company/${companyId}/subscription`, data);
+/* ==========================================================
+   UPDATE STATUS (active | suspended)
+========================================================== */
+export const updateOwnerCompanyStatusApi = (id, data) =>
+  api.patch(`/owner/company/${id}/status`, data);
 
-// 3) Update status (active / suspended)
-export const updateOwnerCompanyStatusApi = (companyId, data) =>
-  api.put(`/owner/company/${companyId}/status`, data);
+/* ==========================================================
+   UPDATE LIMITS
+========================================================== */
+export const updateOwnerCompanyLimitsApi = (id, data) =>
+  api.patch(`/owner/company/${id}/limits`, data);
 
-// 4) Update limits (maxDrivers)
-export const updateOwnerCompanyLimitsApi = (companyId, data) =>
-  api.put(`/owner/company/${companyId}/limits`, data);
+/* ==========================================================
+   SOFT DELETE (Suspend company)
+========================================================== */
+export const deleteOwnerCompanyApi = (id) =>
+  api.delete(`/owner/company/${id}`);
 
-// 5) Delete company
-export const deleteOwnerCompanyApi = (companyId) =>
-  api.delete(`/owner/company/${companyId}`);
+/* ==========================================================
+   🔥 HARD DELETE (Permanent)
+   - Deletes company
+   - Deletes owner account
+   - Deletes managers & drivers
+========================================================== */
+export const deleteOwnerCompanyPermanentApi = (id) =>
+  api.delete(`/owner/company/${id}/permanent`);

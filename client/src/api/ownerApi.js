@@ -70,5 +70,4 @@ export const getOwnerActivityLogsApi = (params = {}) =>
   api.get("/owner/activity-logs", { params });
 
 
-export const getOwnerCompanyDetailsApi = (companyId) =>
-  api.get(`/owner/company/${companyId}`);
+

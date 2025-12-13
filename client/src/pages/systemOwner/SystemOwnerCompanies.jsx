@@ -1,8 +1,5 @@
-// client/src/pages/owner/OwnerCompanies.jsx
 import React, { useEffect, useState } from "react";
-import {
-  getOwnerCompaniesActivityApi,
-} from "../../api/ownerApi";
+import { getOwnerCompaniesActivityApi } from "../../api/ownerApi";
 
 import {
   getOwnerCompanyDetailsApi,
@@ -10,27 +7,39 @@ import {
   updateOwnerCompanyStatusApi,
   updateOwnerCompanyLimitsApi,
   deleteOwnerCompanyApi,
+  deleteOwnerCompanyPermanentApi, // 🔥 NEW
 } from "../../api/systemOwnerCompaniesApi";
 
 import styles from "../../styles/systemOwner/systemOwnerCompanies.module.css";
+
+/* ==========================================================
+   SUBSCRIPTION TIERS
+========================================================== */
+const SUBSCRIPTION_TIERS = [
+  { tierKey: "drivers_0_10", label: "0–10 drivers", price: 50 },
+  { tierKey: "drivers_11_30", label: "11–30 drivers", price: 80 },
+  { tierKey: "drivers_31_50", label: "31–50 drivers", price: 100 },
+  { tierKey: "drivers_51_plus", label: "51+ drivers", price: 150 },
+];
 
 const OwnerCompanies = () => {
   const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedCompany, setSelectedCompany] = useState(null);
-  const [modalType, setModalType] = useState(""); // "subscription" | "status" | "limits" | "delete"
+  const [modalType, setModalType] = useState(""); // subscription | status | limits | suspend | delete
   const [error, setError] = useState("");
+  const [actionLoading, setActionLoading] = useState(false);
 
   /* ==========================================================
-     LOAD MAIN COMPANY TABLE
+     LOAD COMPANIES
   ========================================================== */
   const loadCompanies = async () => {
     try {
       setLoading(true);
+      setError("");
       const res = await getOwnerCompaniesActivityApi();
-      setCompanies(res.data?.companies || []);
-    } catch (err) {
-      console.error("Load companies error:", err);
+      setCompanies(res.data.companies || []);
+    } catch {
       setError("Failed to load companies.");
     } finally {
       setLoading(false);
@@ -42,16 +51,15 @@ const OwnerCompanies = () => {
   }, []);
 
   /* ==========================================================
-     OPEN MODAL (preload company data)
+     MODAL
   ========================================================== */
   const openModal = async (companyId, type) => {
     try {
       setError("");
       const res = await getOwnerCompanyDetailsApi(companyId);
-      setSelectedCompany(res.data?.company || null);
+      setSelectedCompany(res.data.company);
       setModalType(type);
-    } catch (err) {
-      console.error("Modal load error:", err);
+    } catch {
       setError("Failed to load company details.");
     }
   };
@@ -59,72 +67,98 @@ const OwnerCompanies = () => {
   const closeModal = () => {
     setSelectedCompany(null);
     setModalType("");
+    setActionLoading(false);
   };
 
   /* ==========================================================
-     SUBMIT ACTIONS
+     ACTIONS
   ========================================================== */
-  const updateSubscription = async (newPlan) => {
+  const updateSubscription = async (tierKey) => {
     try {
-      await updateOwnerCompanySubscriptionApi(selectedCompany._id, {
-        plan: newPlan,
-      });
+      setActionLoading(true);
+      await updateOwnerCompanySubscriptionApi(selectedCompany.id, { tierKey });
+      await loadCompanies();
       closeModal();
-      loadCompanies();
-    } catch (err) {
-      setError("Failed to update subscription plan.");
+    } catch {
+      setError("Failed to update subscription.");
+      setActionLoading(false);
     }
   };
 
-  const updateStatus = async (newStatus) => {
+  const updateStatus = async (status) => {
     try {
-      await updateOwnerCompanyStatusApi(selectedCompany._id, {
-        status: newStatus,
-      });
+      setActionLoading(true);
+      await updateOwnerCompanyStatusApi(selectedCompany.id, { status });
+      await loadCompanies();
       closeModal();
-      loadCompanies();
-    } catch (err) {
+    } catch {
       setError("Failed to update company status.");
+      setActionLoading(false);
     }
   };
 
   const updateLimits = async (maxDrivers) => {
     try {
-      await updateOwnerCompanyLimitsApi(selectedCompany._id, { maxDrivers });
+      setActionLoading(true);
+      await updateOwnerCompanyLimitsApi(selectedCompany.id, { maxDrivers });
+      await loadCompanies();
       closeModal();
-      loadCompanies();
-    } catch (err) {
-      setError("Failed to update company limits.");
+    } catch {
+      setError("Failed to update limits.");
+      setActionLoading(false);
     }
   };
 
-  const deleteCompany = async () => {
+  /* ================== SUSPEND (SOFT DELETE) ================== */
+  const suspendCompany = async () => {
+    if (!window.confirm("Suspend this company?")) return;
+
     try {
-      await deleteOwnerCompanyApi(selectedCompany._id);
+      setActionLoading(true);
+      await deleteOwnerCompanyApi(selectedCompany.id);
+      await loadCompanies();
       closeModal();
-      loadCompanies();
-    } catch (err) {
-      setError("Failed to delete company.");
+    } catch {
+      setError("Failed to suspend company.");
+      setActionLoading(false);
+    }
+  };
+
+  /* ================== DELETE FOREVER (HARD DELETE) ================== */
+  const deleteCompanyForever = async () => {
+    const confirm1 = window.confirm(
+      "⚠️ This will permanently delete the company AND ALL USERS.\nAre you sure?"
+    );
+    if (!confirm1) return;
+
+    const confirm2 = window.prompt(
+      "Type DELETE to permanently remove this company:"
+    );
+    if (confirm2 !== "DELETE") return;
+
+    try {
+      setActionLoading(true);
+      await deleteOwnerCompanyPermanentApi(selectedCompany.id);
+      await loadCompanies();
+      closeModal();
+    } catch {
+      setError("Failed to permanently delete company.");
+      setActionLoading(false);
     }
   };
 
   /* ==========================================================
-     RENDER PAGE
+     RENDER
   ========================================================== */
   return (
     <div className={styles.page}>
       <h1 className={styles.title}>Companies & Subscriptions</h1>
-      <p className={styles.subtitle}>
-        Manage companies, their subscription plans, driver limits, and status.
-      </p>
 
       {error && <div className={styles.errorBox}>{error}</div>}
 
       <div className={styles.tableCard}>
         {loading ? (
-          <div className={styles.loading}>Loading companies...</div>
-        ) : companies.length === 0 ? (
-          <div className={styles.empty}>No companies found.</div>
+          <div className={styles.loading}>Loading…</div>
         ) : (
           <table className={styles.table}>
             <thead>
@@ -135,25 +169,23 @@ const OwnerCompanies = () => {
                 <th>Active Drivers</th>
                 <th>Trips Today</th>
                 <th>Status</th>
-                <th className={styles.actionsTh}>Actions</th>
+                <th />
               </tr>
             </thead>
-
             <tbody>
               {companies.map((c) => (
                 <tr key={c.companyId}>
                   <td>
-                    <div className={styles.companyName}>{c.name}</div>
-                    <div className={styles.companyMeta}>
-                      Created: {new Date(c.createdAt).toLocaleDateString()}
+                    <strong>{c.name}</strong>
+                    <div>
+                      Created:{" "}
+                      {new Date(c.createdAt).toLocaleDateString()}
                     </div>
                   </td>
-
-                  <td>{c.subscriptionPlan}</td>
+                  <td>{c.subscriptionPlan || "—"}</td>
                   <td>{c.maxDrivers ?? "—"}</td>
                   <td>{c.activeDrivers}</td>
                   <td>{c.tripsToday}</td>
-
                   <td>
                     <span
                       className={
@@ -165,34 +197,24 @@ const OwnerCompanies = () => {
                       {c.status}
                     </span>
                   </td>
-
-                  <td className={styles.actionsCell}>
-                    <button
-                      className={styles.actionBtn}
-                      onClick={() => openModal(c.companyId, "subscription")}
-                    >
+                  <td>
+                    <button onClick={() => openModal(c.companyId, "subscription")}>
                       Subscription
                     </button>
-
-                    <button
-                      className={styles.actionBtn}
-                      onClick={() => openModal(c.companyId, "limits")}
-                    >
+                    <button onClick={() => openModal(c.companyId, "limits")}>
                       Limits
                     </button>
-
-                    <button
-                      className={styles.actionBtn}
-                      onClick={() => openModal(c.companyId, "status")}
-                    >
+                    <button onClick={() => openModal(c.companyId, "status")}>
                       Status
                     </button>
-
+                    <button onClick={() => openModal(c.companyId, "suspend")}>
+                      Suspend
+                    </button>
                     <button
-                      className={styles.deleteBtn}
+                      className={styles.dangerBtn}
                       onClick={() => openModal(c.companyId, "delete")}
                     >
-                      Delete
+                      Delete Forever
                     </button>
                   </td>
                 </tr>
@@ -202,95 +224,49 @@ const OwnerCompanies = () => {
         )}
       </div>
 
-      {/* ==========================================================
-         MODAL — REUSABLE
-      ========================================================== */}
+      {/* ================= MODAL ================= */}
       {modalType && selectedCompany && (
         <div className={styles.modalOverlay}>
           <div className={styles.modal}>
-            {/* ---- Subscription ---- */}
-            {modalType === "subscription" && (
-              <>
-                <h3>Update Subscription – {selectedCompany.name}</h3>
-                <p>Select a subscription tier:</p>
+            {modalType === "subscription" &&
+              SUBSCRIPTION_TIERS.map((t) => (
+                <button
+                  key={t.tierKey}
+                  disabled={actionLoading}
+                  onClick={() => updateSubscription(t.tierKey)}
+                >
+                  {t.label} — ${t.price}/month
+                </button>
+              ))}
 
-                <div className={styles.modalOptions}>
-                  {["50", "80", "100", "150"].map((price) => (
-                    <button
-                      key={price}
-                      className={styles.optionBtn}
-                      onClick={() => updateSubscription(price)}
-                    >
-                      {price}$ / month
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-
-            {/* ---- Status ---- */}
             {modalType === "status" && (
               <>
-                <h3>Update Status – {selectedCompany.name}</h3>
-                <div className={styles.modalOptions}>
-                  <button
-                    className={styles.optionBtn}
-                    onClick={() => updateStatus("active")}
-                  >
-                    Activate
-                  </button>
-                  <button
-                    className={styles.optionBtn}
-                    onClick={() => updateStatus("suspended")}
-                  >
-                    Suspend
-                  </button>
-                </div>
+                <button onClick={() => updateStatus("active")}>Activate</button>
+                <button onClick={() => updateStatus("suspended")}>Suspend</button>
               </>
             )}
 
-            {/* ---- Limits ---- */}
-            {modalType === "limits" && (
-              <>
-                <h3>Driver Limit – {selectedCompany.name}</h3>
-                <div className={styles.modalOptions}>
-                  {[10, 30, 50, 100].map((limit) => (
-                    <button
-                      key={limit}
-                      className={styles.optionBtn}
-                      onClick={() => updateLimits(limit)}
-                    >
-                      Max {limit} Drivers
-                    </button>
-                  ))}
-                </div>
-              </>
+            {modalType === "limits" &&
+              [10, 30, 50, 100].map((l) => (
+                <button key={l} onClick={() => updateLimits(l)}>
+                  Max {l} drivers
+                </button>
+              ))}
+
+            {modalType === "suspend" && (
+              <button onClick={suspendCompany}>Confirm Suspend</button>
             )}
 
-            {/* ---- Delete ---- */}
             {modalType === "delete" && (
-              <>
-                <h3>Delete Company</h3>
-                <p>
-                  Are you sure you want to delete{" "}
-                  <strong>{selectedCompany.name}</strong>? This action cannot be
-                  undone.
-                </p>
-
-                <div className={styles.modalActions}>
-                  <button className={styles.deleteBtn} onClick={deleteCompany}>
-                    Confirm Delete
-                  </button>
-                  <button className={styles.cancelBtn} onClick={closeModal}>
-                    Cancel
-                  </button>
-                </div>
-              </>
+              <button
+                className={styles.dangerBtn}
+                onClick={deleteCompanyForever}
+              >
+                DELETE FOREVER
+              </button>
             )}
 
-            <button className={styles.closeBtn} onClick={closeModal}>
-              ✕
-            </button>
+            <button onClick={closeModal}>✕</button>
           </div>
         </div>
       )}

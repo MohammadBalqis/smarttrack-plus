@@ -1,35 +1,31 @@
+import bcrypt from "bcryptjs";
 import CompanyApplication from "../../models/CompanyApplication.js";
 import User from "../../models/User.js";
 import Company from "../../models/Company.js";
 import { logActivity } from "../../utils/activityLogger.js";
 
 /* ==========================================================
-   OWNER APPROVAL — COMPANY APPLICATIONS
-========================================================== */
-
-/* ==========================================================
-   GET /api/owner/company-applications
+   GET APPLICATIONS
 ========================================================== */
 export const getCompanyApplications = async (req, res) => {
   try {
     const { status = "pending", page = 1, limit = 20, search = "" } = req.query;
 
     const query = {};
-    if (status && status !== "all") query.status = status;
+    if (status !== "all") query.status = status;
 
     if (search) {
       query.$or = [
         { companyName: { $regex: search, $options: "i" } },
         { companyEmail: { $regex: search, $options: "i" } },
         { ownerName: { $regex: search, $options: "i" } },
-        { commercialRegistrationNumber: { $regex: search, $options: "i" } },
       ];
     }
 
     const p = Math.max(Number(page), 1);
     const l = Math.min(Math.max(Number(limit), 1), 50);
 
-    const [items, total] = await Promise.all([
+    const [applications, total] = await Promise.all([
       CompanyApplication.find(query)
         .sort({ createdAt: -1 })
         .skip((p - 1) * l)
@@ -39,42 +35,37 @@ export const getCompanyApplications = async (req, res) => {
 
     res.json({
       ok: true,
-      applications: items,
+      applications,
       page: p,
-      limit: l,
-      total,
       pages: Math.ceil(total / l),
+      total,
     });
   } catch (err) {
     console.error("getCompanyApplications error:", err);
-    res.status(500).json({ ok: false, error: "Failed to load applications." });
+    res.status(500).json({ ok: false, error: "Failed to load applications" });
   }
 };
 
 /* ==========================================================
-   GET /api/owner/company-applications/:id
+   GET APPLICATION BY ID
 ========================================================== */
 export const getCompanyApplicationById = async (req, res) => {
   try {
     const app = await CompanyApplication.findById(req.params.id);
     if (!app) {
-      return res.status(404).json({ ok: false, error: "Application not found." });
+      return res.status(404).json({ ok: false, error: "Application not found" });
     }
-
     res.json({ ok: true, application: app });
   } catch (err) {
-    console.error("getCompanyApplicationById error:", err);
-    res.status(500).json({ ok: false, error: "Failed to load application." });
+    res.status(500).json({ ok: false, error: "Failed to load application" });
   }
 };
 
 /* ==========================================================
-   PATCH /api/owner/company-applications/:id/approve
+   APPROVE APPLICATION  ✅ HARD FIXED
 ========================================================== */
 export const approveCompanyApplication = async (req, res) => {
   try {
-    const { note = "Approved by system owner" } = req.body;
-
     const app = await CompanyApplication.findById(req.params.id);
     if (!app) {
       return res.status(404).json({ ok: false, error: "Application not found" });
@@ -85,37 +76,30 @@ export const approveCompanyApplication = async (req, res) => {
     }
 
     /* ======================================================
-       RESOLVE CATEGORY
-    ====================================================== */
-    const finalCategory =
-      app.businessCategoryOther?.trim()
-        ? "other"
-        : app.businessCategory || "other";
-
-    const customCategory =
-      app.businessCategoryOther?.trim()
-        ? app.businessCategoryOther.trim()
-        : null;
-
-    /* ======================================================
-       FIND OR CREATE USER (EMAIL UNIQUE)
+       1️⃣ USER (EMAIL UNIQUE)
     ====================================================== */
     let user = await User.findOne({ email: app.companyEmail });
 
     if (!user) {
+      const passwordHash = app.passwordHash
+        ? app.passwordHash
+        : await bcrypt.hash("Temp@12345", 10);
+
       user = await User.create({
         name: app.ownerName,
         email: app.companyEmail,
-        passwordHash: app.passwordHash || "TEMP",
+        passwordHash,
         role: "company",
         isActive: true,
       });
     }
 
     /* ======================================================
-       FIND OR CREATE COMPANY (NAME UNIQUE)
+       2️⃣ COMPANY (NO apiKey, NO duplicates)
     ====================================================== */
-    let company = await Company.findOne({ name: app.companyName });
+    let company = await Company.findOne({
+      $or: [{ ownerId: user._id }, { name: app.companyName }],
+    });
 
     if (!company) {
       company = await Company.create({
@@ -123,52 +107,52 @@ export const approveCompanyApplication = async (req, res) => {
         email: app.companyEmail,
         phone: app.phone || "",
         address: app.address || "",
-        businessCategory: finalCategory,
-        businessCategoryCustom: customCategory,
+        businessCategory: app.businessCategory || "other",
+        businessCategoryCustom: app.businessCategoryOther || null,
         commercialRegistrationNumber: app.commercialRegistrationNumber,
-        billingStatus: "active",
-        isActive: true,
         ownerId: user._id,
+
+        isActive: true,
+        billingStatus: "active",
+        subscription: undefined, // 🔥 IMPORTANT: not null
       });
     }
 
     /* ======================================================
-       LINK USER ↔ COMPANY
+       3️⃣ LINK USER → COMPANY
     ====================================================== */
     user.companyId = company._id;
     await user.save();
 
     /* ======================================================
-       UPDATE APPLICATION
+       4️⃣ UPDATE APPLICATION
     ====================================================== */
     app.status = "approved";
-    app.reviewedBy = req.user._id;
-    app.reviewedAt = new Date();
-    app.reviewNote = note;
     app.createdCompanyId = company._id;
     app.createdUserId = user._id;
+    app.reviewedBy = req.user._id;
+    app.reviewedAt = new Date();
     await app.save();
 
     /* ======================================================
-       ACTIVITY LOG
+       5️⃣ LOG ACTIVITY
     ====================================================== */
     await logActivity({
       userId: req.user._id,
       action: "COMPANY_APPLICATION_APPROVED",
-      description: `Approved company: ${company.name} (${company.email})`,
+      description: `Approved company ${company.name}`,
       ipAddress: req.ip,
       deviceInfo: req.headers["user-agent"],
     });
 
-    res.json({
+    return res.json({
       ok: true,
       message: "Company approved successfully",
       companyId: company._id,
-      userId: user._id,
     });
   } catch (err) {
     console.error("approveCompanyApplication error:", err);
-    res.status(500).json({
+    return res.status(500).json({
       ok: false,
       error: err.message || "Approval failed",
     });
@@ -176,25 +160,21 @@ export const approveCompanyApplication = async (req, res) => {
 };
 
 /* ==========================================================
-   PATCH /api/owner/company-applications/:id/reject
+   REJECT APPLICATION
 ========================================================== */
 export const rejectCompanyApplication = async (req, res) => {
   try {
-    const { reason = "" } = req.body;
+    const { reason } = req.body;
 
-    if (!reason.trim()) {
+    if (!reason?.trim()) {
       return res
         .status(400)
-        .json({ ok: false, error: "Rejection reason is required." });
+        .json({ ok: false, error: "Rejection reason is required" });
     }
 
     const app = await CompanyApplication.findById(req.params.id);
     if (!app) {
-      return res.status(404).json({ ok: false, error: "Application not found." });
-    }
-
-    if (app.status === "rejected") {
-      return res.json({ ok: true, message: "Already rejected." });
+      return res.status(404).json({ ok: false, error: "Application not found" });
     }
 
     app.status = "rejected";
@@ -203,24 +183,9 @@ export const rejectCompanyApplication = async (req, res) => {
     app.reviewNote = reason.trim();
     await app.save();
 
-    await logActivity({
-      userId: req.user._id,
-      action: "COMPANY_APPLICATION_REJECTED",
-      description: `Rejected company application: ${app.companyName} (${app.companyEmail}) — ${reason}`,
-      ipAddress: req.ip,
-      deviceInfo: req.headers["user-agent"],
-    });
-
-    res.json({
-      ok: true,
-      message: "Company application rejected.",
-      application: app,
-    });
+    res.json({ ok: true });
   } catch (err) {
     console.error("rejectCompanyApplication error:", err);
-    res.status(500).json({
-      ok: false,
-      error: err.message || "Failed to reject application.",
-    });
+    res.status(500).json({ ok: false, error: "Reject failed" });
   }
 };
