@@ -3,6 +3,7 @@ import { protect } from "../middleware/authMiddleware.js";
 import { authorizeRoles } from "../middleware/roleMiddleware.js";
 import User from "../models/User.js";
 
+
 const router = Router();
 
 /* ==========================================================
@@ -50,5 +51,6 @@ router.put(
     }
   }
 );
+
 
 export default router;

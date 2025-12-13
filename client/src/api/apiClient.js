@@ -1,5 +1,6 @@
 import api from "./axiosConfig";
 
+
 // This file is a clean wrapper around axiosConfig
 // so all your API files import THIS instead of axios directly
 

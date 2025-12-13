@@ -1,56 +1,32 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
-import { useBranding } from "./BrandingContext";  // ✅ FIX
+// client/src/context/AuthContext.jsx
+import { createContext, useContext, useState } from "react";
 
-const AuthContext = createContext(null);
+export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [token, setToken] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [auth, setAuth] = useState({
+    user: JSON.parse(localStorage.getItem("st_user")) || null,
+    token: localStorage.getItem("st_token") || null,
+    sid: localStorage.getItem("st_sid") || null,
+  });
 
-  // ✅ Use branding from BrandingContext
-  const { branding } = useBranding();
+  const login = (token, user, sessionId) => {
+    localStorage.setItem("st_token", token);
+    localStorage.setItem("st_sid", sessionId);
+    localStorage.setItem("st_user", JSON.stringify(user));
 
-  useEffect(() => {
-    const storedToken = localStorage.getItem("st_token");
-    const storedUser = localStorage.getItem("st_user");
-
-    if (storedToken && storedUser) {
-      setToken(storedToken);
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch {
-        setUser(null);
-      }
-    }
-    setLoading(false);
-  }, []);
-
-  const login = (tokenValue, userData) => {
-    setToken(tokenValue);
-    setUser(userData);
-    localStorage.setItem("st_token", tokenValue);
-    localStorage.setItem("st_user", JSON.stringify(userData));
+    setAuth({ user, token, sid: sessionId });
   };
 
   const logout = () => {
-    setToken(null);
-    setUser(null);
     localStorage.removeItem("st_token");
+    localStorage.removeItem("st_sid");
     localStorage.removeItem("st_user");
+    setAuth({ user: null, token: null, sid: null });
   };
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        login,
-        logout,
-        branding,                          // now defined!
-        primaryColor: branding.primaryColor,
-        secondaryColor: branding.secondaryColor,
-      }}
-    >
+    <AuthContext.Provider value={{ auth, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

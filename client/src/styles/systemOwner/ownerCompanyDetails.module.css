@@ -1,0 +1,50 @@
+.page {
+  padding: 24px;
+  color: #e5e7eb;
+}
+
+.title {
+  font-size: 26px;
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.card {
+  background: #020617;
+  border: 1px solid #1e293b;
+  border-radius: 14px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.card span {
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+.card strong {
+  font-size: 20px;
+  color: #f8fafc;
+}
+
+.good {
+  color: #22c55e;
+}
+
+.bad {
+  color: #ef4444;
+}
+
+.loading,
+.error {
+  padding: 24px;
+  color: #94a3b8;
+}

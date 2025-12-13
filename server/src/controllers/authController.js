@@ -1,14 +1,14 @@
-// server/src/controllers/authController.js
 import User from "../models/User.js";
-import Shop from "../models/Shop.js";
 import Session from "../models/Session.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { logActivity } from "../utils/activityLogger.js";
 import { getClientInfo } from "../utils/clientInfo.js";
+import Company from "../models/Company.js";
+import CompanyApplication from "../models/CompanyApplication.js";
+import { logActivity } from "../utils/activityLogger.js";
 
 /* ==========================================================
-   🔐 JWT + SESSION HELPERS
+   🔐 SESSION + JWT HELPERS
 ========================================================== */
 
 const MAX_ACTIVE_SESSIONS = 3;
@@ -21,7 +21,7 @@ const generateTokenWithSession = (user, sessionId) =>
       companyId: user.companyId || null,
       shopId: user.shopId || null,
       isSuperAdmin: user.role === "superadmin",
-      sid: sessionId, // session id
+      sid: sessionId,
     },
     process.env.JWT_SECRET,
     { expiresIn: "12h" }
@@ -30,87 +30,56 @@ const generateTokenWithSession = (user, sessionId) =>
 const createAuthTokenWithSession = async (req, user) => {
   const client = getClientInfo(req);
 
-  // (1) ENFORCE MAX ACTIVE SESSIONS
-  const activeSessions = await Session.find({
+  const active = await Session.find({
     userId: user._id,
     isActive: true,
     isRevoked: false,
-  })
-    .sort({ createdAt: 1 }) // oldest first
-    .lean();
+  }).sort({ createdAt: 1 });
 
-  if (activeSessions.length >= MAX_ACTIVE_SESSIONS) {
-    const toRevoke = activeSessions.slice(
-      0,
-      activeSessions.length - (MAX_ACTIVE_SESSIONS - 1)
+  if (active.length >= MAX_ACTIVE_SESSIONS) {
+    await Session.updateOne(
+      { _id: active[0]._id },
+      { isActive: false, isRevoked: true, revokedAt: new Date() }
     );
-
-    if (toRevoke.length > 0) {
-      await Session.updateMany(
-        { _id: { $in: toRevoke.map((s) => s._id) } },
-        { isActive: false, isRevoked: true, revokedAt: new Date() }
-      );
-    }
   }
 
-  // (2) CREATE NEW SESSION
   const session = await Session.create({
     userId: user._id,
-    ipAddress: client.ipAddress,
-    userAgent: client.userAgent,
-    deviceType: client.deviceType,
-    os: client.os,
-    browser: client.browser,
-    deviceId: client.deviceId,
+    ...client,
     isActive: true,
     isRevoked: false,
   });
 
-  // (3) CREATE JWT
   const token = generateTokenWithSession(user, session._id.toString());
-
   return { token, session };
 };
 
 /* ==========================================================
-   🟢 REGISTER — Public (CUSTOMERS ONLY)
+   🟢 REGISTER CUSTOMER
 ========================================================== */
 export const register = async (req, res) => {
   try {
-    const { name, email, password, role = "customer" } = req.body;
+    const { name, email, password } = req.body;
 
     if (!name || !email || !password)
       return res.status(400).json({ error: "Missing fields" });
 
-    if (role !== "customer")
-      return res.status(403).json({
-        error: "Only customers can self-register",
-      });
-
-    const exists = await User.findOne({ email });
+    const exists = await User.findOne({ email: email.toLowerCase().trim() });
     if (exists) return res.status(409).json({ error: "Email already used" });
 
     const passwordHash = await bcrypt.hash(password, 10);
 
     const user = await User.create({
-      name,
-      email,
+      name: name.trim(),
+      email: email.toLowerCase().trim(),
       passwordHash,
       role: "customer",
       isActive: true,
     });
 
-    await logActivity({
-      userId: user._id,
-      action: "REGISTER",
-      description: `Customer registered: ${user.email}`,
-      ipAddress: req.ip,
-      deviceInfo: req.headers["user-agent"],
-    });
-
     const { token, session } = await createAuthTokenWithSession(req, user);
 
-    res.status(201).json({
+    return res.status(201).json({
       ok: true,
       message: "Customer registered",
       user: {
@@ -123,70 +92,60 @@ export const register = async (req, res) => {
       sessionId: session._id,
     });
   } catch (err) {
-    console.error("Register error:", err.message);
+    console.error("Register error:", err);
     res.status(500).json({ error: "Server error" });
   }
 };
 
 /* ==========================================================
-   🟡 LOGIN — All roles
+   🟡 LOGIN — ALL ROLES (FIXED)
+   - Blocks companies that are pending/rejected
 ========================================================== */
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    if (!user) return res.status(404).json({ error: "User not found" });
 
-    if (!user) {
-      await logActivity({
-        action: "LOGIN_FAILED",
-        description: `Email not found: ${email}`,
-        ipAddress: req.ip,
-        deviceInfo: req.headers["user-agent"],
-      });
-      return res.status(404).json({ error: "User not found" });
-    }
-
-    if (!user.isActive) {
-      await logActivity({
-        userId: user._id,
-        action: "LOGIN_FAILED_SUSPENDED",
-        description: `Suspended account tried to login: ${email}`,
-        ipAddress: req.ip,
-        deviceInfo: req.headers["user-agent"],
-      });
+    if (!user.isActive)
       return res.status(403).json({ error: "Account suspended" });
+
+    // ✅ Company approval gate
+    if (user.role === "company") {
+      if (user.companyStatus === "pending") {
+        return res.status(403).json({
+          error:
+            "Your company account is pending System Owner approval. Please wait.",
+        });
+      }
+      if (user.companyStatus === "rejected") {
+        return res.status(403).json({
+          error:
+            "Your company registration was rejected. Please contact support.",
+        });
+      }
+
+      // optional: if company doc exists and is inactive
+      if (user.companyId) {
+        const company = await Company.findById(user.companyId).select("isActive");
+        if (company && company.isActive === false) {
+          return res.status(403).json({
+            error: "Company is disabled by System Owner.",
+          });
+        }
+      }
     }
 
-    const isMatch = await user.matchPassword(password);
-    if (!isMatch) {
-      await logActivity({
-        userId: user._id,
-        action: "LOGIN_INVALID_PASSWORD",
-        description: `Invalid password: ${email}`,
-        ipAddress: req.ip,
-        deviceInfo: req.headers["user-agent"],
-      });
-      return res.status(401).json({ error: "Invalid password" });
-    }
+    const isMatch =
+      (user.matchPassword && (await user.matchPassword(password))) ||
+      (await bcrypt.compare(password, user.passwordHash));
+
+    if (!isMatch) return res.status(401).json({ error: "Invalid credentials" });
 
     const { token, session } = await createAuthTokenWithSession(req, user);
 
-    await logActivity({
-      userId: user._id,
-      action: "LOGIN_SUCCESS",
-      description: `User logged in: ${email}`,
-      ipAddress: req.ip,
-      deviceInfo: req.headers["user-agent"],
-      meta: {
-        sessionId: session._id,
-        deviceType: session.deviceType,
-        os: session.os,
-        browser: session.browser,
-      },
-    });
-
-    res.json({
+    return res.json({
       ok: true,
       message: "Logged in",
       user: {
@@ -194,21 +153,22 @@ export const login = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
-        companyId: user.companyId,
-        shopId: user.shopId,
+        companyId: user.companyId || null,
+        shopId: user.shopId || null,
         isSuperAdmin: user.role === "superadmin",
+        isSystemOwner: user.isSystemOwner || false,
       },
       token,
       sessionId: session._id,
     });
   } catch (err) {
-    console.error("Login error:", err.message);
+    console.error("Login error:", err);
     res.status(500).json({ error: "Server error" });
   }
 };
 
 /* ==========================================================
-   👑 SUPERADMIN CREATES COMPANY
+   👑 SUPERADMIN CREATES COMPANY (manual)
 ========================================================== */
 export const superAdminCreateCompany = async (req, res) => {
   try {
@@ -217,41 +177,34 @@ export const superAdminCreateCompany = async (req, res) => {
     if (!name || !email || !password)
       return res.status(400).json({ error: "Missing fields" });
 
-    const exists = await User.findOne({ email });
+    const exists = await User.findOne({ email: email.toLowerCase().trim() });
     if (exists) return res.status(409).json({ error: "Email already used" });
 
     const passwordHash = await bcrypt.hash(password, 10);
 
-    const company = await User.create({
-      name,
-      email,
+    const companyUser = await User.create({
+      name: name.trim(),
+      email: email.toLowerCase().trim(),
       passwordHash,
       role: "company",
-      companyName: companyName || name,
+      companyName: (companyName || name).trim(),
+      companyStatus: "approved",
       isActive: true,
     });
 
-    await logActivity({
-      userId: req.user._id,
-      action: "SUPERADMIN_CREATE_COMPANY",
-      description: `SuperAdmin created company: ${email}`,
-      ipAddress: req.ip,
-      deviceInfo: req.headers["user-agent"],
-    });
-
-    res.status(201).json({
+    return res.status(201).json({
       ok: true,
       message: "Company created successfully",
-      company,
+      company: companyUser,
     });
   } catch (err) {
-    console.error("Superadmin create company error:", err.message);
-    res.status(500).json({ error: "Server error" });
+    console.error("SuperAdmin Create Company error:", err);
+    return res.status(500).json({ error: "Server error" });
   }
 };
 
 /* ==========================================================
-   🟠 COMPANY CREATES MANAGER or DRIVER
+   🟠 COMPANY CREATES MANAGER/DRIVER
 ========================================================== */
 export const companyCreateUser = async (req, res) => {
   try {
@@ -261,67 +214,167 @@ export const companyCreateUser = async (req, res) => {
       return res.status(400).json({ error: "Missing fields" });
 
     if (!["manager", "driver"].includes(role))
-      return res
-        .status(400)
-        .json({ error: "Role must be 'manager' or 'driver'" });
+      return res.status(400).json({ error: "Invalid role" });
 
-    const exists = await User.findOne({ email });
-    if (exists)
-      return res.status(409).json({ error: "Email already used" });
+    const exists = await User.findOne({ email: email.toLowerCase().trim() });
+    if (exists) return res.status(409).json({ error: "Email already used" });
 
     const passwordHash = await bcrypt.hash(password, 10);
 
-    /* ==========================================================
-       🟣 MANAGER MUST HAVE shopId
-    ========================================================== */
-    if (role === "manager") {
-      if (!shopId)
-        return res
-          .status(400)
-          .json({ error: "shopId is required when creating a manager" });
-
-      const shop = await Shop.findOne({
-        _id: shopId,
-        companyId: req.user._id,
-        isActive: true,
-      });
-
-      if (!shop) {
-        return res.status(404).json({
-          error: "Shop not found or does not belong to your company",
-        });
-      }
-    }
-
-    /* ==========================================================
-       🟡 DRIVER shopId = optional
-    ========================================================== */
-
-    const newUser = await User.create({
-      name,
-      email,
+    const user = await User.create({
+      name: name.trim(),
+      email: email.toLowerCase().trim(),
       passwordHash,
       role,
-      companyId: req.user._id,
-      shopId: shopId || null,
+      companyId: req.user.companyId || req.user._id,
+      shopId: role === "manager" ? shopId : null,
       isActive: true,
     });
 
+    return res.status(201).json({
+      ok: true,
+      message: `${role} created successfully`,
+      user,
+    });
+  } catch (err) {
+    console.error("Company create user error:", err);
+    return res.status(500).json({ error: "Server error" });
+  }
+};
+
+/* ==========================================================
+   👑 CREATE SYSTEM OWNER (dev)
+========================================================== */
+export const createSystemOwner = async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+
+    if (!name || !email || !password)
+      return res.status(400).json({ error: "Missing fields" });
+
+    const exists = await User.findOne({ email: email.toLowerCase().trim() });
+    if (exists) return res.status(409).json({ error: "Email already exists" });
+
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    const owner = await User.create({
+      name: name.trim(),
+      email: email.toLowerCase().trim(),
+      passwordHash,
+      role: "superadmin",
+      isSystemOwner: true,
+      isActive: true,
+    });
+
+    return res.status(201).json({
+      ok: true,
+      message: "System Owner created successfully",
+      owner,
+    });
+  } catch (err) {
+    console.error("Create System Owner error:", err);
+    return res.status(500).json({ error: "Server error" });
+  }
+};
+
+/* ==========================================================
+   🏢 PUBLIC — COMPANY REGISTRATION REQUEST (PENDING)
+   ✅ creates CompanyApplication ONLY
+   POST /api/public/company/register
+========================================================== */
+export const registerCompanyRequest = async (req, res) => {
+  try {
+    const {
+      companyName,
+      ownerName,
+      email,
+      password,
+      phone,
+      address,
+      businessCategory,
+      commercialRegistrationNumber,
+      documentFileName,
+      documentFileUrl,
+    } = req.body;
+
+    if (
+      !companyName ||
+      !ownerName ||
+      !email ||
+      !password ||
+      !commercialRegistrationNumber ||
+      !documentFileUrl
+    ) {
+      return res.status(400).json({
+        error:
+          "Missing fields. companyName, ownerName, email, password, commercialRegistrationNumber, and documentFileUrl are required.",
+      });
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+    const normalizedCompany = companyName.trim();
+
+    // User must not exist yet
+    const existsUser = await User.findOne({ email: normalizedEmail });
+    if (existsUser) return res.status(409).json({ error: "Email already used" });
+
+    // Prevent duplicate pending application
+    const existsApp = await CompanyApplication.findOne({
+      companyEmail: normalizedEmail,
+      status: "pending",
+    });
+    if (existsApp)
+      return res.status(409).json({
+        error: "You already submitted an application. Please wait for approval.",
+      });
+
+    // Optional: prevent duplicate company names (by checking Company + pending apps)
+    const existsCompany = await Company.findOne({ name: normalizedCompany });
+    if (existsCompany)
+      return res.status(409).json({ error: "Company name already used" });
+
+    const existsCompanyAppName = await CompanyApplication.findOne({
+      companyName: normalizedCompany,
+      status: "pending",
+    });
+    if (existsCompanyAppName)
+      return res.status(409).json({
+        error: "A pending application already uses this company name.",
+      });
+
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    const app = await CompanyApplication.create({
+      companyName: normalizedCompany,
+      companyEmail: normalizedEmail,
+      ownerName: ownerName.trim(),
+      phone: phone || "",
+      address: address || "",
+      businessCategory: businessCategory || "other",
+      commercialRegistrationNumber: commercialRegistrationNumber.trim(),
+      documentFileName: documentFileName || "company-document",
+      documentUrl: documentFileUrl,
+      passwordHash, // ✅ hashed only
+      status: "pending",
+    });
+
     await logActivity({
-      userId: req.user._id,
-      action: "COMPANY_CREATE_USER",
-      description: `Company created ${role}: ${email}`,
+      userId: null,
+      action: "COMPANY_REGISTER_REQUEST",
+      description: `Company registration requested: ${app.companyName} (${app.companyEmail})`,
       ipAddress: req.ip,
       deviceInfo: req.headers["user-agent"],
     });
 
-    res.status(201).json({
+    return res.status(201).json({
       ok: true,
-      message: `${role} created successfully`,
-      user: newUser,
+      message:
+        "Registration received. Your company account is pending System Owner approval.",
+      applicationId: app._id,
+      status: app.status,
     });
   } catch (err) {
-    console.error("Company create user error:", err.message);
-    res.status(500).json({ error: "Server error" });
+    console.error("registerCompanyRequest error:", err);
+    return res.status(500).json({ error: "Server error" });
   }
 };

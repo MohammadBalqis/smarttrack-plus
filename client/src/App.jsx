@@ -1,6 +1,7 @@
 // src/App.jsx
 import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import Login from "./pages/auth/Login";
 
 import { AuthProvider } from "./context/AuthContext";
 import RoleRoute from "./components/RoleRoute";
@@ -19,8 +20,14 @@ import DriverLayout from "./layout/DriverLayout";
 ========================================================== */
 import SystemOwnerDashboard from "./pages/systemOwner/SystemOwnerDashboard";
 import SystemOwnerCompanies from "./pages/systemOwner/SystemOwnerCompanies";
-import OwnerBilling from "./pages/systemOwner/OwnerBilling"; // ⬅ placeholder / real page
+import OwnerBilling from "./pages/systemOwner/OwnerBilling";
 import OwnerInvoiceDetails from "./pages/systemOwner/OwnerInvoiceDetails";
+import OwnerSettings from "./pages/systemOwner/SystemOwnerSettings";
+import OwnerActivityLogs from "./pages/systemOwner/SystemOwnerActivityLogs";
+import OwnerProfile from "./pages/systemOwner/SystemOwnerProfile";
+import SystemOwnerCompanyDetails from"./pages/systemOwner/SystemOwnerCompanyDetails";
+import OwnerCompanyApprovals from "./pages/systemOwner/OwnerCompanyApprovals";
+
 /* ==========================================================
    COMPANY PAGES
 ========================================================== */
@@ -81,22 +88,29 @@ import DriverPaymentsSummary from "./pages/driver/DriverPaymentsSummary";
 import DriverNotifications from "./pages/driver/DriverNotifications";
 import DriverSettings from "./pages/driver/DriverSettings";
 
-/* ==========================================================
-   APP ROUTES
-========================================================== */
+
+import CompanyRegister from "./pages/auth/RegisterCompany";
+
+
 
 function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          {/* ==========================================================
-              SYSTEM OWNER
-          ========================================================== */}
+          {/* ========= PUBLIC AUTH ROUTES ========= */}
+          <Route path="/login" element={<Login />} />
+       
+          <Route path="/register/company" element={<CompanyRegister />} />
+
+
+          {/* You can add /register later here */}
+
+          {/* ========= SYSTEM OWNER ========= */}
           <Route
             path="/owner"
             element={
-              <RoleRoute roles={["owner", "superadmin"]}>
+              <RoleRoute roles={["superadmin"]}>
                 <SystemOwnerLayout />
               </RoleRoute>
             }
@@ -105,12 +119,15 @@ function App() {
             <Route path="companies" element={<SystemOwnerCompanies />} />
             <Route path="billing" element={<OwnerBilling />} />
             <Route path="billing/:invoiceId" element={<OwnerInvoiceDetails />} />
-            <Route path="settings" element={<OwnerSettings />} /> 
+            <Route path="settings" element={<OwnerSettings />} />
+              <Route path="activity" element={<OwnerActivityLogs />} />  {/* 👈 NEW */}
+              <Route path="profile" element={<OwnerProfile />} />   {/* NEW */}
+            <Route path="companies/:companyId" element={<SystemOwnerCompanyDetails />} />
+            <Route path="approvals" element={<OwnerCompanyApprovals />} />
+
           </Route>
 
-          {/* ==========================================================
-              COMPANY
-          ========================================================== */}
+          {/* ========= COMPANY ========= */}
           <Route
             path="/company"
             element={
@@ -133,9 +150,7 @@ function App() {
             <Route path="chat" element={<CompanyChat />} />
           </Route>
 
-          {/* ==========================================================
-              MANAGER
-          ========================================================== */}
+          {/* ========= MANAGER ========= */}
           <Route
             path="/manager"
             element={
@@ -156,9 +171,7 @@ function App() {
             <Route path="chat" element={<ManagerChatPage />} />
           </Route>
 
-          {/* ==========================================================
-              CUSTOMER
-          ========================================================== */}
+          {/* ========= CUSTOMER ========= */}
           <Route
             path="/customer"
             element={
@@ -181,9 +194,7 @@ function App() {
             <Route path="support" element={<CustomerSupport />} />
           </Route>
 
-          {/* ==========================================================
-              DRIVER — WEB DASHBOARD
-          ========================================================== */}
+          {/* ========= DRIVER ========= */}
           <Route
             path="/driver"
             element={
@@ -195,27 +206,18 @@ function App() {
             <Route index element={<DriverDashboard />} />
             <Route path="live-trip" element={<DriverLiveTrip />} />
             <Route path="scan-qr" element={<DriverScanQR />} />
-
-            {/* Trips */}
             <Route path="trips" element={<DriverTrips />} />
             <Route path="trips/:tripId" element={<DriverTripDetails />} />
-
-            {/* Payments */}
             <Route path="payments" element={<DriverPayments />} />
             <Route path="payments/:paymentId" element={<DriverPaymentDetails />} />
             <Route path="payments-summary" element={<DriverPaymentsSummary />} />
-
-            {/* Notifications */}
             <Route path="notifications" element={<DriverNotifications />} />
-
-            {/* Settings */}
             <Route path="settings" element={<DriverSettings />} />
           </Route>
 
-          {/* ==========================================================
-              FALLBACK → LOGIN
-          ========================================================== */}
-          <Route path="*" element={<Navigate to="/login" />} />
+          {/* ========= DEFAULT & FALLBACK ========= */}
+          <Route path="/" element={<Navigate to="/login" replace />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

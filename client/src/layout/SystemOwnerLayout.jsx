@@ -27,6 +27,11 @@ const SystemOwnerLayout = () => {
           >
             Dashboard
           </NavLink>
+         
+
+            <NavLink to="/owner/approvals" className={styles.link}>
+  Company Approvals
+</NavLink>
 
           <NavLink
             to="/owner/companies"
@@ -45,7 +50,24 @@ const SystemOwnerLayout = () => {
           >
             Billing & Invoices
           </NavLink>
-
+                {/* 👇 NEW ITEM */}
+          <NavLink
+            to="/owner/activity"
+            className={({ isActive }) =>
+              isActive ? `${styles.link} ${styles.active}` : styles.link
+            }
+          >
+            Activity Logs
+          </NavLink>
+          {/* ➜ NEW PROFILE PAGE */}
+  <NavLink
+    to="/owner/profile"
+    className={({ isActive }) =>
+      isActive ? `${styles.link} ${styles.active}` : styles.link
+    }
+  >
+    Profile
+  </NavLink>
           <NavLink
             to="/owner/settings"
             className={({ isActive }) =>
@@ -54,6 +76,7 @@ const SystemOwnerLayout = () => {
           >
             Settings
           </NavLink>
+           
 
           <button type="button" onClick={logout} className={styles.logoutBtn}>
             Logout
@@ -64,12 +87,7 @@ const SystemOwnerLayout = () => {
       {/* MAIN AREA */}
       <div className={styles.main}>
         <header className={styles.topbar}>
-          <button
-            className={styles.menuToggle}
-            onClick={() => setSidebarOpen((prev) => !prev)}
-          >
-            ☰
-          </button>
+         
 
           <div className={styles.topbarRight}>
             <span className={styles.userName}>{user?.name || "Owner"}</span>

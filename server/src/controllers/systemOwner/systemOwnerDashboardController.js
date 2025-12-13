@@ -232,3 +232,49 @@ export const getRevenueChart = async (req, res) => {
       .json({ ok: false, error: "Server error loading chart." });
   }
 };
+export const getCompanyDetails = async (req, res) => {
+  try {
+    const { companyId } = req.params;
+
+    const company = await User.findOne({ _id: companyId, role: "company" });
+
+    if (!company)
+      return res.status(404).json({ error: "Company not found" });
+
+    const totalDrivers = await User.countDocuments({ role: "driver", companyId });
+    const activeDrivers = await User.countDocuments({
+      role: "driver",
+      companyId,
+      driverStatus: "available"
+    });
+
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+
+    const tripsToday = await Trip.countDocuments({
+      companyId,
+      createdAt: { $gte: start }
+    });
+
+    const revenueAgg = await Payment.aggregate([
+      { $match: { companyId, createdAt: { $gte: start }, status: "paid" } },
+      { $group: { _id: null, total: { $sum: "$amount" } } }
+    ]);
+
+    const revenueToday = revenueAgg[0]?.total || 0;
+
+    return res.json({
+      ok: true,
+      company: {
+        ...company.toObject(),
+        totalDrivers,
+        activeDrivers,
+        tripsToday,
+        revenueToday
+      }
+    });
+  } catch (err) {
+    console.error("Company details error:", err);
+    res.status(500).json({ error: "Server error loading company details" });
+  }
+};

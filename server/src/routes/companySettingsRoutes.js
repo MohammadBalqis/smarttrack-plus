@@ -8,15 +8,19 @@ import {
   updateCompanyPassword,
   updateCompanyPreferences,
 } from "../controllers/companySettingsController.js";
+import { createCompanyShop } from "../controllers/companyShopController.js";
 
 const router = Router();
 
-// All routes: only for role "company"
+// Only company role can access
 router.use(protect, authorizeRoles("company"));
 
 router.get("/profile", getCompanyProfile);
 router.put("/profile", updateCompanyProfile);
 router.put("/password", updateCompanyPassword);
 router.put("/preferences", updateCompanyPreferences);
+
+// 🆕 Add shop creation here
+router.post("/create-shop", createCompanyShop);
 
 export default router;

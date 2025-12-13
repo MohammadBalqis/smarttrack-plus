@@ -1,152 +1,27 @@
-/* ==========================================================
-   SYSTEM OWNER — COMPANIES PAGE
-========================================================== */
-.page {
-  padding: 24px;
-  max-width: 1300px;
-  margin: 0 auto;
-}
+@import "./_baseOwner.module.css";
 
-.headerRow {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-}
-
-.title {
-  font-size: 28px;
-  font-weight: 700;
-  color: #0f172a;
-}
-
-.subtitle {
-  font-size: 15px;
-  color: #64748b;
-  margin-top: 4px;
-}
-
-.refreshBtn {
-  background: #0284c7;
-  color: #fff;
-  padding: 10px 14px;
-  border-radius: 8px;
-  border: none;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-.refreshBtn:hover {
-  background: #0369a1;
-}
-
-/* ==========================================================
-   TABLE
-========================================================== */
 .tableCard {
-  background: #ffffff;
-  border-radius: 12px;
-  border: 1px solid #e5e7eb;
-  padding: 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
+  border-radius: 16px;
+  overflow: hidden;
 }
 
-.tableHeader {
-  margin-bottom: 12px;
+.actionsCell button {
+  background: transparent;
+  border: 1px solid var(--border-soft);
+  color: var(--text-main);
+  padding: 6px 10px;
+  border-radius: 8px;
+  margin-right: 6px;
+  cursor: pointer;
 }
 
-.tableHeader h2 {
-  font-size: 20px;
-  font-weight: 700;
-  color: #0f172a;
+.actionsCell button:hover {
+  background: var(--bg-card-hover);
 }
 
-.tableHeader p {
-  color: #64748b;
-}
-
-.tableWrapper {
-  width: 100%;
-  overflow-x: auto;
-}
-
-.table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.table th {
-  background: #f8fafc;
-  padding: 12px;
-  text-align: left;
-  font-size: 14px;
-  color: #475569;
-  font-weight: 600;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.table td {
-  padding: 12px;
-  border-bottom: 1px solid #e2e8f0;
-  font-size: 14px;
-  color: #334155;
-}
-
-.companyName {
-  font-weight: 600;
-  color: #0f172a;
-}
-
-.companyMeta {
-  font-size: 12px;
-  color: #64748b;
-}
-
-/* Subscription badge */
-.planBadge {
-  display: inline-block;
-  padding: 4px 10px;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 600;
-  color: #fff;
-}
-
-.plan_free {
-  background: #94a3b8;
-}
-.plan_basic {
-  background: #10b981;
-}
-.plan_pro {
-  background: #3b82f6;
-}
-.plan_enterprise {
-  background: #9333ea;
-}
-
-/* Status */
-.statusActive {
-  color: #10b981;
-  font-weight: 700;
-}
-.statusSuspended {
-  color: #ef4444;
-  font-weight: 700;
-}
-
-/* Past-Due badge */
-.pastDue {
-  background: #ef4444;
-  color: #fff;
-  padding: 3px 6px;
-  font-size: 11px;
-  border-radius: 6px;
-  margin-left: 4px;
-}
-
-/* Empty state */
-.emptyBox {
-  padding: 40px;
-  text-align: center;
-  color: #64748b;
-  font-size: 15px;
+.deleteBtn {
+  border-color: var(--danger);
+  color: var(--danger);
 }

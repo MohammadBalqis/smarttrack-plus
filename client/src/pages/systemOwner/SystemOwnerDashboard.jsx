@@ -1,5 +1,6 @@
 // client/src/pages/owner/SystemOwnerDashboard.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   getOwnerOverviewApi,
   getOwnerCompaniesActivityApi,
@@ -19,199 +20,199 @@ import {
 import styles from "../../styles/systemOwner/ownerDashboard.module.css";
 
 /* ==========================================================
-   SUBSCRIPTION TIER CALCULATOR
+   SUBSCRIPTION TIER
 ========================================================== */
-const getSubscriptionTier = (driverCount) => {
-  if (driverCount <= 10) return { tier: "Basic", price: 50 };
-  if (driverCount <= 30) return { tier: "Standard", price: 80 };
-  if (driverCount <= 50) return { tier: "Pro", price: 100 };
+const getSubscriptionTier = (drivers = 0) => {
+  if (drivers <= 10) return { tier: "Basic", price: 50 };
+  if (drivers <= 30) return { tier: "Standard", price: 80 };
+  if (drivers <= 50) return { tier: "Pro", price: 100 };
   return { tier: "Enterprise", price: 150 };
 };
 
 const SystemOwnerDashboard = () => {
-  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+
   const [overview, setOverview] = useState(null);
   const [companies, setCompanies] = useState([]);
   const [chartData, setChartData] = useState([]);
-  const [error, setError] = useState("");
+  const [chartMode, setChartMode] = useState("revenue"); // revenue | trips
+  const [filter, setFilter] = useState("all");
+  const [loading, setLoading] = useState(true);
 
+  /* ================= LOAD DATA ================= */
   const loadData = async () => {
-    try {
-      setLoading(true);
-      setError("");
+    setLoading(true);
+    const [ov, comp, chart] = await Promise.all([
+      getOwnerOverviewApi(),
+      getOwnerCompaniesActivityApi(),
+      getOwnerRevenueChartApi(),
+    ]);
 
-      const [ovRes, compRes, chartRes] = await Promise.all([
-        getOwnerOverviewApi(),
-        getOwnerCompaniesActivityApi(),
-        getOwnerRevenueChartApi(),
-      ]);
-
-      setOverview(ovRes.data || {});
-      setCompanies(compRes.data?.companies || []);
-      setChartData(chartRes.data?.chart || []);
-    } catch (err) {
-      console.error("System owner dashboard load error:", err);
-      setError("Failed to load dashboard data.");
-    } finally {
-      setLoading(false);
-    }
+    setOverview(ov.data);
+    setCompanies(comp.data.companies || []);
+    setChartData(chart.data.chart || []);
+    setLoading(false);
   };
 
   useEffect(() => {
     loadData();
   }, []);
 
-  const money = (v) => (v == null ? "0.00" : Number(v).toFixed(2));
+  /* ================= FILTER ================= */
+  const filteredCompanies = useMemo(() => {
+    if (filter === "active")
+      return companies.filter((c) => c.status === "Active");
+    if (filter === "late")
+      return companies.filter((c) => c.isPastDue);
+    if (filter === "suspended")
+      return companies.filter((c) => c.status === "Suspended");
+    return companies;
+  }, [companies, filter]);
+
+  /* ================= CSV EXPORT ================= */
+  const exportCSV = () => {
+    const rows = [
+      [
+        "Company",
+        "Drivers",
+        "Active Drivers",
+        "Tier",
+        "Price",
+        "Status",
+      ],
+      ...filteredCompanies.map((c) => {
+        const t = getSubscriptionTier(c.totalDrivers);
+        return [
+          c.name,
+          c.totalDrivers,
+          c.activeDrivers,
+          t.tier,
+          t.price,
+          c.status,
+        ];
+      }),
+    ];
+
+    const csv = rows.map((r) => r.join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "companies.csv";
+    a.click();
+  };
+
+  /* ================= WIDGETS ================= */
+  const recentCompanies = [...companies]
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    .slice(0, 5);
+
+  const topCompanies = [...companies]
+    .sort((a, b) => b.totalRevenue - a.totalRevenue)
+    .slice(0, 5);
+
+  if (loading) return <div className={styles.loading}>Loading dashboard…</div>;
 
   return (
     <div className={styles.page}>
       {/* HEADER */}
-      <div className={styles.headerRow}>
-        <div>
-          <h1 className={styles.title}>System Owner Dashboard</h1>
-          <p className={styles.subtitle}>
-            Overview of platform performance, subscriptions, and revenue.
-          </p>
+      <div className={styles.header}>
+        <h1>System Owner Dashboard</h1>
+        <div className={styles.headerActions}>
+          <select value={filter} onChange={(e) => setFilter(e.target.value)}>
+            <option value="all">All Companies</option>
+            <option value="active">Active</option>
+            <option value="late">Past Due</option>
+            <option value="suspended">Suspended</option>
+          </select>
+          <button onClick={exportCSV}>Export CSV</button>
         </div>
-
-        <button
-          type="button"
-          className={styles.refreshBtn}
-          onClick={loadData}
-          disabled={loading}
-        >
-          {loading ? "Refreshing..." : "↻ Refresh"}
-        </button>
       </div>
 
-      {error && <div className={styles.errorBox}>{error}</div>}
+      {/* KPI GRID */}
+      <div className={styles.kpis}>
+        <div className={styles.kpi}>Companies <span>{overview.totalCompanies}</span></div>
+        <div className={styles.kpi}>Drivers <span>{overview.totalDrivers}</span></div>
+        <div className={styles.kpi}>Trips <span>{overview.totalTrips}</span></div>
+        <div className={styles.kpi}>Revenue Today <span>${overview.revenueToday}</span></div>
+      </div>
 
-      {/* KPI CARDS */}
-      {overview && (
-        <div className={styles.statsGrid}>
-          {[
-            ["Companies", overview.totalCompanies, "Active paid tenants"],
-            ["Managers", overview.totalManagers, "Store branches"],
-            ["Drivers", overview.totalDrivers, "Across all companies"],
-            ["Customers", overview.totalCustomers, "Registered users"],
-            ["Total Trips", overview.totalTrips, "All-time"],
-            ["Trips Today", overview.tripsToday, "Last 24 hours"],
-            ["Revenue Today", `$${money(overview.revenueToday)}`, "Paid orders today"],
-          ].map(([label, value, hint]) => (
-            <div className={styles.card} key={label}>
-              <p className={styles.cardLabel}>{label}</p>
-              <p className={styles.cardValue}>{value}</p>
-              <p className={styles.cardHint}>{hint}</p>
-            </div>
+      {/* TABLE */}
+      <div className={styles.card}>
+        <h2>Companies</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Company</th>
+              <th>Drivers</th>
+              <th>Tier</th>
+              <th>Revenue</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredCompanies.map((c) => {
+              const t = getSubscriptionTier(c.totalDrivers);
+              return (
+                <tr
+                  key={c.companyId}
+                  onClick={() => navigate(`/owner/companies/${c.companyId}`)}
+                >
+                  <td>{c.name}</td>
+                  <td>{c.totalDrivers}</td>
+                  <td>{t.tier} (${t.price})</td>
+                  <td>${c.totalRevenue}</td>
+                  <td className={styles[c.status.toLowerCase()]}>
+                    {c.status}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* CHART */}
+      <div className={styles.card}>
+        <div className={styles.chartHeader}>
+          <h2>Last 14 Days</h2>
+          <div>
+            <button onClick={() => setChartMode("revenue")}>Revenue</button>
+            <button onClick={() => setChartMode("trips")}>Trips</button>
+          </div>
+        </div>
+
+        <ResponsiveContainer width="100%" height={280}>
+          <LineChart data={chartData}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="date" />
+            <YAxis />
+            <Tooltip />
+            <Line
+              type="monotone"
+              dataKey={chartMode === "revenue" ? "total" : "trips"}
+              stroke="#38bdf8"
+              strokeWidth={2}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* WIDGETS */}
+      <div className={styles.widgets}>
+        <div className={styles.widget}>
+          <h3>Recently Joined</h3>
+          {recentCompanies.map((c) => (
+            <div key={c.companyId}>{c.name}</div>
           ))}
         </div>
-      )}
 
-      {/* MAIN LAYOUT: TABLE + CHART */}
-      <div className={styles.bottomLayout}>
-        {/* COMPANIES TABLE */}
-        <div className={styles.tableCard}>
-          <div className={styles.cardHeader}>
-            <h2>Companies & Subscriptions</h2>
-            <p className={styles.cardSub}>
-              Auto-calculated subscription tier based on number of drivers.
-            </p>
-          </div>
-
-          {companies.length === 0 ? (
-            <div className={styles.emptyBox}>No companies found yet.</div>
-          ) : (
-            <div className={styles.tableWrapper}>
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th>Company</th>
-                    <th>Subscription Tier</th>
-                    <th>Price</th>
-                    <th>Total Drivers</th>
-                    <th>Active Drivers</th>
-                    <th>Trips Today</th>
-                    <th>Revenue Today</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {companies.map((c) => {
-                    const sub = getSubscriptionTier(c.totalDrivers || 0);
-
-                    return (
-                      <tr key={c.companyId}>
-                        <td>
-                          <div className={styles.companyName}>{c.name}</div>
-                          <div className={styles.companyMeta}>
-                            Joined: {new Date(c.createdAt).toLocaleDateString()}
-                          </div>
-                        </td>
-
-                        <td>
-                          <span className={styles.subTier}>{sub.tier}</span>
-                          {c.isPastDue && (
-                            <span className={styles.badgePastDue}>Late</span>
-                          )}
-                        </td>
-
-                        <td>${sub.price}</td>
-
-                        <td>{c.totalDrivers ?? 0}</td>
-                        <td>{c.activeDrivers ?? 0}</td>
-                        <td>{c.tripsToday ?? 0}</td>
-                        <td>${money(c.totalRevenue)}</td>
-
-                        <td>
-                          <span
-                            className={
-                              c.status === "Suspended"
-                                ? styles.statusSuspended
-                                : styles.statusActive
-                            }
-                          >
-                            {c.status}
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+        <div className={styles.widget}>
+          <h3>Top Revenue</h3>
+          {topCompanies.map((c) => (
+            <div key={c.companyId}>
+              {c.name} — ${c.totalRevenue}
             </div>
-          )}
-        </div>
-
-        {/* REVENUE CHART */}
-        <div className={styles.chartCard}>
-          <div className={styles.cardHeader}>
-            <h2>Revenue — Last 14 Days</h2>
-            <p className={styles.cardSub}>
-              Total paid payments from all companies.
-            </p>
-          </div>
-
-          {chartData.length === 0 ? (
-            <div className={styles.emptyBox}>No data yet.</div>
-          ) : (
-            <div className={styles.chartWrapper}>
-              <ResponsiveContainer width="100%" height={260}>
-                <LineChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" />
-                  <YAxis />
-                  <Tooltip />
-                  <Line
-                    type="monotone"
-                    dataKey="total"
-                    stroke="#0ea5e9"
-                    strokeWidth={2}
-                    dot={false}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          )}
+          ))}
         </div>
       </div>
     </div>

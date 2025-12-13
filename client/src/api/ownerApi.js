@@ -54,3 +54,21 @@ export const getOwnerSettingsApi = () => api.get("/owner/settings");
 export const updateOwnerSettingsApi = (data) =>
   api.put("/owner/settings", data);
 
+
+/* PROFILE */
+export const getOwnerProfileApi = () =>
+  api.get("/owner/profile");
+
+export const updateOwnerProfileApi = (data) =>
+  api.put("/owner/profile", data);
+
+export const updateOwnerPasswordApi = (data) =>
+  api.put("/owner/profile/password", data);
+
+
+export const getOwnerActivityLogsApi = (params = {}) =>
+  api.get("/owner/activity-logs", { params });
+
+
+export const getOwnerCompanyDetailsApi = (companyId) =>
+  api.get(`/owner/company/${companyId}`);

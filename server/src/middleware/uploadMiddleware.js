@@ -2,21 +2,18 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 
-const dir = path.join(process.cwd(), "uploads", "drivers");
-fs.mkdirSync(dir, { recursive: true });
+const uploadDir = "uploads/company-documents";
+
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
 
 const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, dir),
-  filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname || "");
-    const base = path.basename(file.originalname || "photo", ext).replace(/\s+/g, "_");
-    cb(null, `${base}-${Date.now()}${ext || ".jpg"}`);
-  },
+  destination: (req, file, cb) => cb(null, uploadDir),
+  filename: (req, file, cb) =>
+    cb(null, Date.now() + path.extname(file.originalname)),
 });
 
-const fileFilter = (_req, file, cb) => {
-  const ok = /image\/(jpeg|png|webp)/.test(file.mimetype);
-  cb(ok ? null : new Error("Only JPG/PNG/WEBP images allowed"), ok);
-};
+const uploadCompanyDoc = multer({ storage }).single("document");
 
-export const uploadDriverPhoto = multer({ storage, fileFilter }).single("image");
+export default uploadCompanyDoc;

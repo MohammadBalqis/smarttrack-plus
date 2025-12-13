@@ -30,7 +30,7 @@ const companySchema = new mongoose.Schema(
       ],
       default: "other",
     },
-
+businessCategoryCustom: { type: String, default: null },
     commercialRegistrationNumber: { type: String, default: null },
 
     /* ==========================================================

@@ -1,4 +1,3 @@
-// client/src/api/axiosConfig.js
 import axios from "axios";
 
 const api = axios.create({
@@ -6,16 +5,17 @@ const api = axios.create({
   withCredentials: true,
 });
 
-// Attach JWT if you store it in localStorage
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("smarttrack_token");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+    const token = localStorage.getItem("st_token");
+    const sid = localStorage.getItem("st_sid");
+
+    if (token) config.headers.Authorization = `Bearer ${token}`;
+    if (sid) config.headers["x-session-id"] = sid;
+
     return config;
   },
-  (error) => Promise.reject(error)
+  (err) => Promise.reject(err)
 );
 
 export default api;

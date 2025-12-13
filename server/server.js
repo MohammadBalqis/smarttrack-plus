@@ -1,319 +1,129 @@
-// server.js (CLEAN, FIXED, SECURE)
+// server.js — FINAL, CLEAN, WORKING (SmartTrack+)
+
 import express from "express";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
 import path from "path";
 import http from "http";
 import { Server } from "socket.io";
+import cors from "cors";
 import morgan from "morgan";
 import helmet from "helmet";
+import compression from "compression";
 import mongoSanitize from "express-mongo-sanitize";
 import xss from "xss-clean";
-import compression from "compression";
-import cors from "cors";
 
+/* ==========================================================
+   ENV
+========================================================== */
 dotenv.config();
+
+/* ==========================================================
+   APP
+========================================================== */
 const app = express();
 
 /* ==========================================================
-   🔐 SECURITY & RATE LIMIT
+   BASE MIDDLEWARE
 ========================================================== */
-import { sanitizeRequest } from "./src/middleware/sanitizeMiddleware.js";
-import { applySecurityMiddlewares } from "./src/middleware/securityMiddleware.js";
-import { globalLimiter } from "./src/middleware/globalRateLimit.js";
-import { loginLimiter } from "./src/middleware/loginRateLimit.js";
-import { registerLimiter } from "./src/middleware/registerRateLimit.js";
-import { apiLimiter } from "./src/middleware/rateLimitMiddleware.js";
-
-/* ==========================================================
-   🧩 BASE MIDDLEWARE
-========================================================== */
-app.use(sanitizeRequest);
-app.use(express.json({ limit: "1mb" }));
-app.use(express.urlencoded({ extended: true, limit: "1mb" }));
-app.use(morgan("dev"));
-applySecurityMiddlewares(app);
-
-app.use(
-  helmet.crossOriginResourcePolicy({
-    policy: "cross-origin",
-  })
-);
-
-// CORS (allow your frontend)
 app.use(
   cors({
-    origin: "*",
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    origin: "http://localhost:5173",
     credentials: true,
   })
 );
 
-// Global limiter
-app.use(globalLimiter);
+app.use(express.json({ limit: "5mb" }));
+app.use(express.urlencoded({ extended: true, limit: "5mb" }));
+app.use(morgan("dev"));
 
-// Login/Register limiters
-app.use("/api/auth/login", loginLimiter);
-app.use("/api/auth/register", registerLimiter);
-
-// Prevent injection
+/* ==========================================================
+   SECURITY
+========================================================== */
+app.use(helmet());
 app.use(mongoSanitize());
 app.use(xss());
-
-// Performance
 app.use(compression());
 
 /* ==========================================================
-   📁 STATIC FILES
+   STATIC FILES
 ========================================================== */
-app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
+app.use(
+  "/uploads",
+  express.static(path.join(process.cwd(), "uploads"))
+);
 
 /* ==========================================================
-   🔗 ROUTES IMPORTS
+   ROUTES IMPORT
 ========================================================== */
+
+/* Auth */
 import authRoutes from "./src/routes/authRoutes.js";
-import superAdminRoutes from "./src/routes/superAdminRoutes.js";
 
-import companyRoutes from "./src/routes/companyRoutes.js";
-import companyDashboardRoutes from "./src/routes/companyDashboardRoutes.js";
-import companyTripsRoutes from "./src/routes/companyTripsRoutes.js";
-import companyCustomerRoutes from "./src/routes/companyCustomerRoutes.js";
-import companyProductRoutes from "./src/routes/companyProductRoutes.js";
-import companyVehicleRoutes from "./src/routes/companyVehicleRoutes.js";
-import companyPaymentRoutes from "./src/routes/companyPaymentRoutes.js";
-import companyDriverRoutes from "./src/routes/companyDriverRoutes.js";
-import companyOrdersRoutes from "./src/routes/companyOrderRoutes.js";
-import companyBrandingRoutes from "./src/routes/companyBrandingRoutes.js";
-import customerNotificationRoutes from "./src/routes/customerNotificationRoutes.js";
-import managerLiveRoutes from "./src/routes/managerLiveRoutes.js";
-import managerDashboardRoutes from "./src/routes/managerDashboardRoutes.js";
-import managerDriverRoutes from "./src/routes/managerDriverRoutes.js";
-import managerVehicleRoutes from "./src/routes/managerVehicleRoutes.js";
-import managerTripRoutes from "./src/routes/managerTripRoutes.js";
-import managerCustomerRoutes from "./src/routes/managerCustomerRoutes.js";
-import managerOrderRoutes from "./src/routes/managerOrdersRoutes.js";
-import managerNotificationRoutes from "./src/routes/managerNotificationRoutes.js";
-import managerProfileRoutes from "./src/routes/managerProfileRoutes.js";
-import managerPaymentsRoutes from "./src/routes/managerPaymentsRoutes.js";
-import notificationRoutes from "./src/routes/notificationRoutes.js";
-import driverRoutes from "./src/routes/driverRoutes.js";
-import chatRoutes from "./src/routes/chatRoutes.js";
-import customerRoutes from "./src/routes/customerRoutes.js";
-import customerTripRoutes from "./src/routes/customerTripRoutes.js";
-import customerPaymentRoutes from "./src/routes/customerPaymentRoutes.js";
-import productRoutes from "./src/routes/productRoutes.js";
-import paymentRoutes from "./src/routes/paymentRoutes.js";
-import invoiceRoutes from "./src/routes/invoiceRoutes.js";
-import customerSettingsRoutes from "./src/routes/customerSettingsRoutes.js";
-import companySettingsRoutes from "./src/routes/companySettingsRoutes.js";
-import adminStatsRoutes from "./src/routes/adminStatsRoutes.js";
-import globalSettingsRoutes from "./src/routes/globalSettingsRoutes.js";
-import brandingRoutes from "./src/routes/brandingRoutes.js";
-import billingSettingsRoutes from "./src/routes/billingSettingsRoutes.js";
-import supportRoutes from "./src/routes/supportRoutes.js";
-import managerShopProductsRoutes from "./src/routes/managerShopProductsRoutes.js";
-import companyShopRoutes from "./src/routes/companyShopRoutes.js";
-import qrRoutes from "./src/routes/qrRoutes.js";
-import publicApiRoutes from "./src/routes/publicApiRoutes.js";
-import sessionRoutes from "./src/routes/sessionRoutes.js";
-import driverTripRoutes from "./src/routes/driverTripRoutes.js";
-import driverNotificationRoutes from "./src/routes/driverNotificationRoutes.js";
+/* Public company registration */
+import publicCompanyRegisterRoutes from "./src/routes/publicCompanyRegisterRoutes.js";
+
+/* (OPTIONAL – keep if you already use them later) */
 import systemOwnerRoutes from "./src/routes/systemOwnerRoutes.js";
-import systemOwnerCompanyRoutes from "./src/routes/systemOwnerCompanyRoutes.js";
-/* ==========================================================
-   🌐 PUBLIC ROUTES
-========================================================== */
-app.use("/api/public", apiLimiter);
-app.use("/api/public/company", publicApiRoutes);
-app.use("/api/notifications", notificationRoutes);
+import companyRoutes from "./src/routes/companyRoutes.js";
 
 /* ==========================================================
-   📌 MAIN ROUTES
+   ROUTES MOUNT
 ========================================================== */
+
+/* Auth */
 app.use("/api/auth", authRoutes);
 
-// SuperAdmin
+/* ✅ PUBLIC COMPANY REGISTER
+   POST /api/company/register
+*/
+app.use("/api", publicCompanyRegisterRoutes);
+
+/* Protected / future routes */
 app.use("/api/owner", systemOwnerRoutes);
-app.use("/api/owner/companies", systemOwnerCompanyRoutes);
-// Company
 app.use("/api/company", companyRoutes);
-app.use("/api/company/dashboard", companyDashboardRoutes);
-app.use("/api/company/trips", companyTripsRoutes);
-app.use("/api/company/customers", companyCustomerRoutes);
-app.use("/api/company/products", companyProductRoutes);
-app.use("/api/company/vehicles", companyVehicleRoutes);
-app.use("/api/company/orders", companyOrdersRoutes);
-app.use("/api/company/drivers", companyDriverRoutes);
-app.use("/api/company/payments", companyPaymentRoutes);
-app.use("/api/company/branding", brandingRoutes);
-app.use("/api/company/settings", companySettingsRoutes);
-app.use("/api/company/branding", companyBrandingRoutes);
-app.use("/api/company/shops", companyShopRoutes);
-
-// Manager
-app.use("/api/manager/dashboard", managerDashboardRoutes);
-app.use("/api/manager/drivers", managerDriverRoutes);
-app.use("/api/manager/vehicles", managerVehicleRoutes);
-app.use("/api/manager/trips", managerTripRoutes);
-app.use("/api/manager/customers", managerCustomerRoutes);
-app.use("/api/manager/orders", managerOrderRoutes);
-app.use("/api/manager/notifications", managerNotificationRoutes);
-app.use("/api/manager/profile", managerProfileRoutes);
-app.use("/api/manager", managerPaymentsRoutes);
-app.use("/api/manager", managerLiveRoutes);
-app.use("/api/manager/shop-products", managerShopProductsRoutes);
-
-// Driver
-app.use("/api/driver", driverRoutes);
-app.use("/api/qr", qrRoutes);
-app.use("/api/driver/trips", driverTripRoutes);
-app.use("/api/driver/notifications", driverNotificationRoutes);
-// Customer
-app.use("/api/customer/profile", customerRoutes);
-app.use("/api/customer/trips", customerTripRoutes);
-app.use("/api/customer/payments", customerPaymentRoutes);
-app.use("/api/customer/settings", customerSettingsRoutes);
-app.use("/api/customer/notifications", customerNotificationRoutes);
-
-// Shared
-app.use("/api/products", productRoutes);
-app.use("/api/payments", paymentRoutes);
-app.use("/api/invoices", invoiceRoutes);
-app.use("/api/settings", globalSettingsRoutes);
-app.use("/api/billing-settings", billingSettingsRoutes);
-app.use("/api/sessions", sessionRoutes);
-
-// Support + Chat
-app.use("/api", supportRoutes);
-app.use("/api", chatRoutes);
 
 /* ==========================================================
-   🌡️ HEALTH CHECK
+   HEALTH CHECK
 ========================================================== */
 app.get("/api/health", (req, res) => {
-  res.json({ status: "✅ SmartTrack API is running" });
+  res.json({
+    ok: true,
+    status: "SmartTrack API is running 🚀",
+  });
 });
 
 /* ==========================================================
-   💾 DB CONNECTION
+   DATABASE
 ========================================================== */
 const connectDB = async () => {
   try {
     await mongoose.connect(process.env.MONGO_URI);
     console.log("✅ MongoDB connected");
   } catch (err) {
-    console.error("❌ MongoDB connection failed:", err.message);
+    console.error("❌ MongoDB connection failed:", err);
     process.exit(1);
   }
 };
 
 /* ==========================================================
-   🔌 SOCKET.IO (PREMIUM VERSION)
+   SOCKET.IO
 ========================================================== */
 const server = http.createServer(app);
 
 export const io = new Server(server, {
-  cors: {
-    origin: "*",
-    methods: ["GET", "POST", "PATCH", "PUT", "DELETE"],
-  },
+  cors: { origin: "*" },
   pingTimeout: 30000,
 });
 
 app.set("io", io);
 
-io.on("connection", (socket) => {
-  console.log("🔵 Socket connected:", socket.id);
-
-  /* ========================================================
-     USER REGISTRATION
-     - Backwards compatible:
-       🔹 if payload is string  -> join that room (old style)
-       🔹 if payload is object  -> { userId, role, companyId }
-  ========================================================= */
-  socket.on("register", (payload) => {
-    if (!payload) return;
-
-    // Old: register(userId)
-    if (typeof payload === "string") {
-      socket.join(String(payload));
-      return;
-    }
-
-    // New: register({ userId, role, companyId })
-    const { userId, role, companyId } = payload;
-    if (!userId) return;
-
-    socket.join(String(userId)); // personal room
-
-    switch (role) {
-      case "company":
-        socket.join(`company_${userId}`);
-        break;
-      case "manager":
-        socket.join(`manager_${userId}`);
-        if (companyId) socket.join(`company_${companyId}`);
-        break;
-      case "driver":
-        socket.join(`driver_${userId}`);
-        if (companyId) socket.join(`company_${companyId}`);
-        break;
-      case "customer":
-        socket.join(`customer_${userId}`);
-        if (companyId) socket.join(`company_${companyId}`);
-        break;
-      default:
-        break;
-    }
-  });
-
-  /* JOIN TRIP ROOM */
-  socket.on("join_trip", ({ tripId }) => {
-    if (!tripId) return;
-    socket.join(`trip:${tripId}`);
-  });
-
-  /* LEAVE TRIP ROOM */
-  socket.on("leave_trip", ({ tripId }) => {
-    if (!tripId) return;
-    socket.leave(`trip:${tripId}`);
-  });
-
-  /* DRIVER LOCATION UPDATE */
-  socket.on("driver_location_update", ({ tripId, lat, lng }) => {
-    if (!tripId || lat == null || lng == null) return;
-
-    io.to(`trip:${tripId}`).emit("trip:location_update", {
-      tripId,
-      lat,
-      lng,
-      timestamp: Date.now(),
-    });
-  });
-
-  /* DRIVER STATUS UPDATE */
-  socket.on("driver_status_update", ({ tripId, status }) => {
-    if (!tripId || !status) return;
-
-    io.to(`trip:${tripId}`).emit("trip:status_update", {
-      tripId,
-      status,
-      timestamp: Date.now(),
-    });
-  });
-
-  socket.on("disconnect", () => {
-    console.log("🔴 Socket disconnected:", socket.id);
-  });
-});
-
-
 /* ==========================================================
-   🚀 START SERVER
+   START SERVER
 ========================================================== */
 const PORT = process.env.PORT || 5000;
 
 server.listen(PORT, async () => {
   await connectDB();
-  console.log(`🚀 SmartTrack Server running on port ${PORT}`);
+  console.log(`🚀 SmartTrack backend running on port ${PORT}`);
 });

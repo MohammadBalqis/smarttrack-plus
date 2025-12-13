@@ -6,11 +6,11 @@ import bcrypt from "bcryptjs";
    🧩 ROLE-BASED ACCESS CONTROL (RBAC)
 ===================================================== */
 export const ROLES_LIST = [
-  "superadmin",   // Full system access
-  "company",      // Company owner account
-  "manager",      // Works under company
-  "driver",       // Works under manager/company
-  "customer",     // End user
+  "superadmin",
+  "company",
+  "manager",
+  "driver",
+  "customer",
 ];
 
 /* =====================================================
@@ -44,38 +44,28 @@ const userSchema = new mongoose.Schema(
     },
 
     /* =====================================================
-       🟦 SUPERADMIN PROPERTIES
+       🟦 SUPERADMIN / SYSTEM OWNER
     ===================================================== */
     isSystemOwner: { type: Boolean, default: false },
-
-    systemAccessLevel: {
-      type: Number, // 1=view, 2=edit, 3=full
-      default: 3,
-      min: 1,
-      max: 3,
-    },
+    systemAccessLevel: { type: Number, default: 3, min: 1, max: 3 },
 
     /* =====================================================
-       🏢 COMPANY RELATIONS (FIXED)
-       - Drivers/Managers/Company Owner → companyId
-       - Customers → companyIds (multi-company)
+       🏢 COMPANY RELATIONS
     ===================================================== */
-
-    // Single-company link (driver/manager/company)
     companyId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Company",
       default: null,
       index: true,
     },
-     shopId: {
+
+    shopId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Shop",
       default: null,
       index: true,
-      },
+    },
 
-    // NEW — Multi-company support (customers)
     companyIds: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -83,18 +73,16 @@ const userSchema = new mongoose.Schema(
       },
     ],
 
-    // Drivers created by a manager
     managerId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       default: null,
     },
 
-    // Company accounts (optional label)
     companyName: { type: String, trim: true },
 
     /* =====================================================
-       🧾 COMPANY BILLING SETTINGS (10B / 10E)
+       🧾 COMPANY BILLING SETTINGS
     ===================================================== */
     commissionDeliveryPercentage: {
       type: Number,
@@ -102,18 +90,42 @@ const userSchema = new mongoose.Schema(
       min: 0,
       max: 100,
     },
-
     commissionProductPercentage: {
       type: Number,
       default: 10,
       min: 0,
       max: 100,
     },
-
     enableProductCommission: { type: Boolean, default: false },
-
     enableProductSales: { type: Boolean, default: true },
+// ... داخل userSchema fields
 
+/* =====================================================
+   🏢 COMPANY APPROVAL (System Owner)
+===================================================== */
+companyStatus: {
+  type: String,
+  enum: ["pending", "approved", "rejected"],
+  default: null, // only used for role=company
+  index: true,
+},
+
+companyApproval: {
+  approvedAt: { type: Date, default: null },
+  approvedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    default: null,
+  },
+  rejectionReason: { type: String, default: "" },
+},
+
+/* Company registration document (1 doc) */
+companyVerificationDoc: {
+  fileName: { type: String, default: "" },
+  fileUrl: { type: String, default: "" }, // later you can replace with multer upload
+},
+  
     /* =====================================================
        👤 PROFILE INFO
     ===================================================== */
@@ -147,39 +159,38 @@ const userSchema = new mongoose.Schema(
     },
 
     driverNotes: { type: String, trim: true },
+
     /* =====================================================
-   🎨 BRANDING (Company Customization)
-===================================================== */
-branding: {
-  companyDisplayName: { type: String, default: "" },
-  shortTagline: { type: String, default: "" },
+       🎨 BRANDING FOR COMPANY & MANAGERS
+    ===================================================== */
+    branding: {
+      companyDisplayName: { type: String, default: "" },
+      shortTagline: { type: String, default: "" },
 
-  logoUrl: { type: String, default: "" },
-  coverUrl: { type: String, default: "" },
+      logoUrl: { type: String, default: "" },
+      coverUrl: { type: String, default: "" },
 
-  primaryColor: { type: String, default: "#2563EB" },
-  secondaryColor: { type: String, default: "#1F2937" },
-  accentColor: { type: String, default: "#10B981" },
+      primaryColor: { type: String, default: "#2563EB" },
+      secondaryColor: { type: String, default: "#1F2937" },
+      accentColor: { type: String, default: "#10B981" },
 
-  contactEmail: { type: String, default: "" },
-  contactPhone: { type: String, default: "" },
+      contactEmail: { type: String, default: "" },
+      contactPhone: { type: String, default: "" },
 
-  website: { type: String, default: "" },
-  addressLine: { type: String, default: "" },
-  city: { type: String, default: "" },
-  country: { type: String, default: "" },
+      website: { type: String, default: "" },
+      addressLine: { type: String, default: "" },
+      city: { type: String, default: "" },
+      country: { type: String, default: "" },
 
-  facebookUrl: { type: String, default: "" },
-  instagramUrl: { type: String, default: "" },
-  tiktokUrl: { type: String, default: "" },
-  whatsappNumber: { type: String, default: "" },
+      facebookUrl: { type: String, default: "" },
+      instagramUrl: { type: String, default: "" },
+      tiktokUrl: { type: String, default: "" },
+      whatsappNumber: { type: String, default: "" },
 
-  about: { type: String, default: "" },
-
-  isPublic: { type: Boolean, default: true },
-  meta: { type: Object, default: {} },
-},
-
+      about: { type: String, default: "" },
+      isPublic: { type: Boolean, default: true },
+      meta: { type: Object, default: {} },
+    },
 
     /* =====================================================
        🟦 MANAGER-SPECIFIC FIELDS
@@ -189,11 +200,9 @@ branding: {
     managerPermissions: { type: Array, default: [] },
 
     /* =====================================================
-       🟩 CUSTOMER-SPECIFIC FIELDS
-       Supports multi-company customers
+       🟩 CUSTOMER FIELDS
     ===================================================== */
     customerNotes: { type: String, trim: true },
-
     customerRating: { type: Number, default: 0 },
 
     customerDocuments: [
@@ -223,14 +232,14 @@ userSchema.methods.matchPassword = async function (enteredPassword) {
 };
 
 /* =====================================================
-   🧠 VIRTUAL: SUPERADMIN CHECK
+   🧠 VIRTUAL CHECKERS
 ===================================================== */
 userSchema.virtual("isSuperAdmin").get(function () {
   return this.role === "superadmin";
 });
 
 /* =====================================================
-   📦 EXPORT MODEL
+   📦 EXPORT
 ===================================================== */
 const User = mongoose.model("User", userSchema);
 export default User;

@@ -1,0 +1,188 @@
+/**************************************************************
+ 🌙 SYSTEM OWNER LAYOUT — PREMIUM DARK MODE
+***************************************************************/
+:root {
+  --sidebar-width: 260px;
+  --sidebar-bg: #0f172a;
+  --sidebar-hover: #1e293b;
+  --sidebar-active: #3b82f6;
+
+  --text-light: #f1f5f9;
+  --text-muted: #94a3b8;
+
+  --border-color: #1e293b;
+  --topbar-bg: #0f172a;
+
+  --card-bg: #1e293b;
+  --card-border: #2d3b53;
+
+  --accent: #3b82f6;
+}
+
+/**************************************************************
+ 📌 LAYOUT WRAPPER
+***************************************************************/
+.layout {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  background: #0b1220;
+}
+
+/**************************************************************
+ 📌 SIDEBAR
+***************************************************************/
+.sidebar {
+  width: var(--sidebar-width);
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  padding: 22px 18px;
+  transition: all 0.25s ease-in-out;
+}
+
+.logo {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-light);
+  margin-bottom: 30px;
+}
+
+.logoSub {
+  display: block;
+  color: var(--accent);
+  font-size: 13px;
+  margin-top: -3px;
+}
+
+.menu {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.link {
+  padding: 12px 14px;
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 15px;
+  border-radius: 10px;
+  transition: 0.2s;
+}
+
+.link:hover {
+  background: var(--sidebar-hover);
+  color: var(--text-light);
+}
+
+.active {
+  background: var(--sidebar-active);
+  color: white !important;
+}
+
+/* Profile position at the bottom */
+.profileLink {
+  margin-top: auto;
+  padding: 12px 14px;
+  background: #1a2435;
+  color: var(--text-light);
+  border-radius: 10px;
+  font-size: 15px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: 0.2s;
+}
+
+.profileLink:hover {
+  background: #223048;
+}
+
+/* Logout button */
+.logoutBtn {
+  padding: 10px 14px;
+  margin-top: 15px;
+  background: #b91c1c;
+  border: none;
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.logoutBtn:hover {
+  background: #dc2626;
+}
+
+/**************************************************************
+ 📌 TOPBAR
+***************************************************************/
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.topbar {
+  height: 58px;
+  background: var(--topbar-bg);
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 18px;
+}
+
+.menuToggle {
+  font-size: 24px;
+  color: var(--text-light);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.topbarRight {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.userName {
+  font-size: 15px;
+  color: var(--text-light);
+  font-weight: 600;
+}
+
+.userRole {
+  font-size: 12px;
+  color: var(--accent);
+}
+
+/**************************************************************
+ 📌 CONTENT AREA
+***************************************************************/
+.content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 22px;
+  background: #0b1220;
+  color: var(--text-light);
+}
+
+/**************************************************************
+ 📱 RESPONSIVE
+***************************************************************/
+@media (max-width: 900px) {
+  .sidebar {
+    position: absolute;
+    height: 100vh;
+    left: -260px;
+    top: 0;
+    z-index: 20;
+  }
+
+  .sidebar.open {
+    left: 0;
+  }
+}
