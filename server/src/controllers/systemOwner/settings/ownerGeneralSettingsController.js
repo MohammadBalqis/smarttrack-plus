@@ -1,48 +1,48 @@
-import SystemConfig from "../../../models/SystemConfig.js";
+import SystemOwnerSettings from "../../../models/SystemOwnerSettings.js";
 
-
-/* ==========================================================
-   GET GENERAL SETTINGS
-========================================================== */
 export const getGeneralSettings = async (req, res) => {
   try {
-    const config = await SystemConfig.findOne();
+    let settings = await SystemOwnerSettings.findOne({
+      ownerId: req.user._id,
+    });
+
+    if (!settings) {
+      settings = await SystemOwnerSettings.create({
+        ownerId: req.user._id,
+      });
+    }
 
     return res.json({
       ok: true,
       general: {
-        platformName: config.platformName,
-        ownerEmail: config.ownerEmail,
-        supportEmail: config.supportEmail,
-        supportPhone: config.supportPhone,
+        platformName: settings.platformName,
+        supportEmail: settings.supportEmail,
+        supportPhone: settings.supportPhone,
       },
     });
   } catch (err) {
-    console.error("General settings load error:", err);
+    console.error("getGeneralSettings error:", err);
     res.status(500).json({ ok: false, error: "Failed to load general settings." });
   }
 };
 
-/* ==========================================================
-   UPDATE GENERAL SETTINGS
-========================================================== */
 export const updateGeneralSettings = async (req, res) => {
   try {
-    const { platformName, ownerEmail, supportEmail, supportPhone } = req.body;
+    const { platformName, supportEmail, supportPhone } = req.body;
 
-    const config = await SystemConfig.findOneAndUpdate(
-      {},
-      { platformName, ownerEmail, supportEmail, supportPhone },
+    const settings = await SystemOwnerSettings.findOneAndUpdate(
+      { ownerId: req.user._id },
+      { platformName, supportEmail, supportPhone },
       { new: true, upsert: true }
     );
 
     return res.json({
       ok: true,
-      message: "General settings updated successfully.",
-      general: config,
+      message: "General settings updated.",
+      general: settings,
     });
   } catch (err) {
-    console.error("General settings update error:", err);
+    console.error("updateGeneralSettings error:", err);
     res.status(500).json({ ok: false, error: "Failed to update settings." });
   }
 };

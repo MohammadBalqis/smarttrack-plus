@@ -126,6 +126,13 @@ import {
   getSecuritySettings,
   updateSecuritySettings,
 } from "../controllers/systemOwner/settings/ownerSecuritySettingsController.js";
+import {
+  getOwnerSettings,
+  updateOwnerSettings,
+} from "../controllers/systemOwner/systemOwnerSettingsController.js";
+
+router.get("/settings", ownerAuth, getOwnerSettings);
+router.put("/settings", ownerAuth, updateOwnerSettings);
 
 router.get("/settings/general", ownerAuth, getGeneralSettings);
 router.put("/settings/general", ownerAuth, updateGeneralSettings);

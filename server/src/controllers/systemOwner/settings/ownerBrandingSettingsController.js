@@ -1,37 +1,53 @@
-import SystemConfig from "../../../models/SystemConfig.js";
+import SystemOwnerSettings from "../../../models/SystemOwnerSettings.js";
 
-
+/* ==========================================================
+   GET BRANDING SETTINGS
+========================================================== */
 export const getBrandingSettings = async (req, res) => {
   try {
-    const config = await SystemConfig.findOne();
+    let settings = await SystemOwnerSettings.findOne({
+      ownerId: req.user._id,
+    });
+
+    if (!settings) {
+      settings = await SystemOwnerSettings.create({
+        ownerId: req.user._id,
+      });
+    }
 
     return res.json({
       ok: true,
-      branding: config.branding,
+      branding: {
+        platformName: settings.platformName,
+        platformLogo: settings.platformLogo,
+      },
     });
   } catch (err) {
-    console.error("Branding settings load error:", err);
+    console.error("getBrandingSettings error:", err);
     res.status(500).json({ ok: false, error: "Failed to load branding settings." });
   }
 };
 
+/* ==========================================================
+   UPDATE BRANDING SETTINGS
+========================================================== */
 export const updateBrandingSettings = async (req, res) => {
   try {
-    const branding = req.body;
+    const { platformName, platformLogo } = req.body;
 
-    const config = await SystemConfig.findOneAndUpdate(
-      {},
-      { branding },
-      { new: true }
+    const settings = await SystemOwnerSettings.findOneAndUpdate(
+      { ownerId: req.user._id },
+      { platformName, platformLogo },
+      { new: true, upsert: true }
     );
 
     return res.json({
       ok: true,
-      message: "Branding settings updated.",
-      branding: config.branding,
+      message: "Branding updated.",
+      branding: settings,
     });
   } catch (err) {
-    console.error("Branding settings update error:", err);
-    res.status(500).json({ ok: false, error: "Failed to update branding settings." });
+    console.error("updateBrandingSettings error:", err);
+    res.status(500).json({ ok: false, error: "Failed to update branding." });
   }
 };
