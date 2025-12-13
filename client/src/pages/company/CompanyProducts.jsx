@@ -264,23 +264,13 @@ const CompanyProducts = () => {
 
       {/* Filters */}
       <div className={styles.filtersRow}>
-        <select
-          value={categoryFilter}
-          onChange={(e) => {
-            setCategoryFilter(e.target.value);
-            setPage(1);
-          }}
-        >
-          <option value="">All categories</option>
-          <option value="restaurant">Restaurant</option>
-          <option value="water">Water</option>
-          <option value="fuel">Fuel</option>
-          <option value="electronics">Electronics</option>
-          <option value="clothes">Clothes</option>
-          <option value="books">Books</option>
-          <option value="machines">Machines</option>
-          <option value="general">General</option>
-        </select>
+       <input
+  type="text"
+  name="category"
+  value={form.category}
+  onChange={handleFormChange}
+  placeholder=""
+/>
 
         <select
           value={activeFilter}
@@ -494,20 +484,14 @@ const CompanyProducts = () => {
 
                 <label>
                   Category
-                  <select
-                    name="category"
-                    value={form.category}
-                    onChange={handleFormChange}
-                  >
-                    <option value="restaurant">Restaurant</option>
-                    <option value="water">Water</option>
-                    <option value="fuel">Fuel</option>
-                    <option value="electronics">Electronics</option>
-                    <option value="clothes">Clothes</option>
-                    <option value="books">Books</option>
-                    <option value="machines">Machines</option>
-                    <option value="general">General</option>
-                  </select>
+                  <input
+  type="text"
+  name="category"
+  value={form.category}
+  onChange={handleFormChange}
+  placeholder=""
+/>
+
                 </label>
               </div>
 

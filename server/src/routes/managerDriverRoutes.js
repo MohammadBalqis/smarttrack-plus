@@ -4,62 +4,104 @@ import { authorizeRoles } from "../middleware/roleMiddleware.js";
 
 import {
   getManagerDrivers,
-  updateManagerDriver,
+
+  // profile (NO login yet)
+  createManagerDriverProfile,
+  updateManagerDriverProfile,
+
+  // verification
+  upsertManagerDriverVerification,
+  verifyManagerDriver,
+  rejectManagerDriver,
+
+  // account creation (AFTER verification)
+  createManagerDriverAccount,
+
+  // status & stats
   toggleManagerDriverStatus,
   getManagerDriverStats,
-  getManagerDriverRecentTrips,
 } from "../controllers/managerDriversController.js";
 
 const router = Router();
 
 /* ==========================================================
-   🚗 GET ALL DRIVERS
+   🔐 PROTECTION
 ========================================================== */
-router.get(
-  "/drivers",
-  protect,
-  authorizeRoles("manager", "company"),
-  getManagerDrivers
+router.use(protect, authorizeRoles("manager", "company"));
+
+/* ==========================================================
+   🚗 DRIVERS LIST (cards / table)
+   GET /api/manager/drivers
+========================================================== */
+router.get("/drivers", getManagerDrivers);
+
+/* ==========================================================
+   ➕ CREATE DRIVER PROFILE (NO EMAIL / PASSWORD)
+   POST /api/manager/drivers
+========================================================== */
+router.post("/drivers", createManagerDriverProfile);
+
+/* ==========================================================
+   ✏ UPDATE DRIVER PROFILE
+   PATCH /api/manager/drivers/:driverId/profile
+========================================================== */
+router.patch(
+  "/drivers/:driverId/profile",
+  updateManagerDriverProfile
 );
 
 /* ==========================================================
-   ✏ UPDATE DRIVER
+   🛂 SUBMIT / UPDATE VERIFICATION INFO
+   PATCH /api/manager/drivers/:driverId/verification
 ========================================================== */
-router.put(
-  "/driver/:driverId/edit",
-  protect,
-  authorizeRoles("manager", "company"),
-  updateManagerDriver
+router.patch(
+  "/drivers/:driverId/verification",
+  upsertManagerDriverVerification
 );
 
 /* ==========================================================
-   🔁 TOGGLE ACTIVE / INACTIVE
+   ✅ VERIFY DRIVER (MANAGER ACTION)
+   PATCH /api/manager/drivers/:driverId/verify
 ========================================================== */
-router.put(
-  "/driver/:driverId/status",
-  protect,
-  authorizeRoles("manager", "company"),
+router.patch(
+  "/drivers/:driverId/verify",
+  verifyManagerDriver
+);
+
+/* ==========================================================
+   ❌ REJECT DRIVER
+   PATCH /api/manager/drivers/:driverId/reject
+========================================================== */
+router.patch(
+  "/drivers/:driverId/reject",
+  rejectManagerDriver
+);
+
+/* ==========================================================
+   🔐 CREATE LOGIN ACCOUNT (ONLY AFTER VERIFIED)
+   POST /api/manager/drivers/:driverId/create-account
+========================================================== */
+router.post(
+  "/drivers/:driverId/create-account",
+  createManagerDriverAccount
+);
+
+/* ==========================================================
+   🔁 ACTIVATE / SUSPEND DRIVER
+   PATCH /api/manager/drivers/:driverId/toggle
+========================================================== */
+router.patch(
+  "/drivers/:driverId/toggle",
   toggleManagerDriverStatus
 );
 
 /* ==========================================================
-   🏆 DRIVER PERFORMANCE STATS
+   📊 DRIVER PERFORMANCE STATS
+   GET /api/manager/drivers/:driverId/stats
 ========================================================== */
 router.get(
-  "/driver/:driverId/stats",
-  protect,
-  authorizeRoles("manager", "company"),
+  "/drivers/:driverId/stats",
   getManagerDriverStats
-);
-
-/* ==========================================================
-   📜 RECENT TRIPS
-========================================================== */
-router.get(
-  "/driver/:driverId/recent-trips",
-  protect,
-  authorizeRoles("manager", "company"),
-  getManagerDriverRecentTrips
 );
 
 export default router;

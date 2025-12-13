@@ -2,24 +2,31 @@
 import mongoose from "mongoose";
 
 /* ==========================================================
-   🛒 ORDER ITEM SCHEMA
+   🛒 ORDER ITEM (PRODUCT SNAPSHOT)
+   - Snapshot protects analytics if product changes later
 ========================================================== */
 const orderItemSchema = new mongoose.Schema(
   {
     productId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Product",
+      required: true,
+      index: true,
     },
-    name: { type: String },
-    price: { type: Number },
-    quantity: { type: Number },
-    subtotal: { type: Number }, // price * quantity
+
+    // Snapshot fields (do NOT change after order)
+    name: { type: String, required: true },
+    category: { type: String, default: "general" },
+    price: { type: Number, required: true, min: 0 },
+
+    quantity: { type: Number, required: true, min: 1 },
+    subtotal: { type: Number, required: true }, // price * quantity
   },
   { _id: false }
 );
 
 /* ==========================================================
-   🧾 ORDER SCHEMA
+   🧾 ORDER
 ========================================================== */
 const orderSchema = new mongoose.Schema(
   {
@@ -34,15 +41,23 @@ const orderSchema = new mongoose.Schema(
     },
 
     /* ------------------------------------------------------
-       🏢 COMPANY (the store that received the order)
-       ⚠️ IMPORTANT: You used `User` instead of `Company`
-       and you told me you don’t want to change structure.
-       So we keep `ref: "User"` exactly as in your system.
+       🏢 COMPANY (store)
+       (kept as User ref per your architecture)
     ------------------------------------------------------ */
     companyId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
+      index: true,
+    },
+
+    /* ------------------------------------------------------
+       🏪 BRANCH (IMPORTANT FOR BRANCH STOCK)
+    ------------------------------------------------------ */
+    branchId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Branch",
+      default: null,
       index: true,
     },
 
@@ -63,7 +78,7 @@ const orderSchema = new mongoose.Schema(
     },
 
     /* ------------------------------------------------------
-       🔗 TRIP CONNECTION (optional)
+       🔗 TRIP
     ------------------------------------------------------ */
     tripId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -74,8 +89,14 @@ const orderSchema = new mongoose.Schema(
     /* ------------------------------------------------------
        🛒 ITEMS
     ------------------------------------------------------ */
-    items: [orderItemSchema],
+    items: {
+      type: [orderItemSchema],
+      required: true,
+    },
 
+    /* ------------------------------------------------------
+       💰 PRICING
+    ------------------------------------------------------ */
     subtotal: { type: Number, default: 0 },
     deliveryFee: { type: Number, default: 0 },
     discount: { type: Number, default: 0 },
@@ -83,18 +104,18 @@ const orderSchema = new mongoose.Schema(
     total: { type: Number, default: 0 },
 
     /* ------------------------------------------------------
-       🚦 ORDER STATUS
+       🚦 STATUS
     ------------------------------------------------------ */
     status: {
       type: String,
       enum: [
-        "pending",      // customer placed order
-        "accepted",     // company accepted
-        "preparing",    // preparing items
-        "assigned",     // driver assigned
-        "delivering",   // driver on route
-        "delivered",    // driver delivered
-        "completed",    // customer confirmed
+        "pending",
+        "accepted",
+        "preparing",
+        "assigned",
+        "delivering",
+        "delivered",
+        "completed",
         "cancelled",
       ],
       default: "pending",
@@ -110,23 +131,23 @@ const orderSchema = new mongoose.Schema(
        📍 LOCATIONS
     ------------------------------------------------------ */
     pickupLocation: {
-      address: { type: String },
-      lat: { type: Number },
-      lng: { type: Number },
+      address: String,
+      lat: Number,
+      lng: Number,
     },
 
     dropoffLocation: {
-      address: { type: String },
-      lat: { type: Number },
-      lng: { type: Number },
+      address: String,
+      lat: Number,
+      lng: Number,
     },
 
     /* ------------------------------------------------------
-       📅 TIMELINE HISTORY
+       📜 TIMELINE
     ------------------------------------------------------ */
     timeline: [
       {
-        status: { type: String },
+        status: String,
         timestamp: { type: Date, default: Date.now },
       },
     ],
@@ -134,4 +155,14 @@ const orderSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+/* ==========================================================
+   🔎 INDEXES FOR ANALYTICS & REPORTS
+========================================================== */
+orderSchema.index({ companyId: 1, createdAt: -1 });
+orderSchema.index({ companyId: 1, status: 1 });
+orderSchema.index({ "items.productId": 1 });
+
+/* ==========================================================
+   EXPORT
+========================================================== */
 export default mongoose.model("Order", orderSchema);

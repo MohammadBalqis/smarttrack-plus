@@ -98,20 +98,24 @@ export const register = async (req, res) => {
 };
 
 /* ==========================================================
-   🟡 LOGIN — ALL ROLES (FIXED)
-   - Blocks companies that are pending/rejected
+   🟡 LOGIN — ALL ROLES (FIXED & SAFE)
 ========================================================== */
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    const user = await User.findOne({
+      email: email.toLowerCase().trim(),
+    }).select("+passwordHash");
+
     if (!user) return res.status(404).json({ error: "User not found" });
 
     if (!user.isActive)
       return res.status(403).json({ error: "Account suspended" });
 
-    // ✅ Company approval gate
+    /* ===============================
+       🏢 COMPANY APPROVAL GATE
+    ================================ */
     if (user.role === "company") {
       if (user.companyStatus === "pending") {
         return res.status(403).json({
@@ -119,6 +123,7 @@ export const login = async (req, res) => {
             "Your company account is pending System Owner approval. Please wait.",
         });
       }
+
       if (user.companyStatus === "rejected") {
         return res.status(403).json({
           error:
@@ -126,7 +131,6 @@ export const login = async (req, res) => {
         });
       }
 
-      // optional: if company doc exists and is inactive
       if (user.companyId) {
         const company = await Company.findById(user.companyId).select("isActive");
         if (company && company.isActive === false) {
@@ -137,11 +141,12 @@ export const login = async (req, res) => {
       }
     }
 
-    const isMatch =
-      (user.matchPassword && (await user.matchPassword(password))) ||
-      (await bcrypt.compare(password, user.passwordHash));
-
-    if (!isMatch) return res.status(401).json({ error: "Invalid credentials" });
+    /* ===============================
+       🔐 PASSWORD CHECK (SINGLE SOURCE)
+    ================================ */
+    const isMatch = await user.matchPassword(password);
+    if (!isMatch)
+      return res.status(401).json({ error: "Invalid credentials" });
 
     const { token, session } = await createAuthTokenWithSession(req, user);
 
@@ -204,7 +209,7 @@ export const superAdminCreateCompany = async (req, res) => {
 };
 
 /* ==========================================================
-   🟠 COMPANY CREATES MANAGER/DRIVER
+   🟠 COMPANY CREATES MANAGER / DRIVER
 ========================================================== */
 export const companyCreateUser = async (req, res) => {
   try {
@@ -279,8 +284,6 @@ export const createSystemOwner = async (req, res) => {
 
 /* ==========================================================
    🏢 PUBLIC — COMPANY REGISTRATION REQUEST (PENDING)
-   ✅ creates CompanyApplication ONLY
-   POST /api/public/company/register
 ========================================================== */
 export const registerCompanyRequest = async (req, res) => {
   try {
@@ -314,11 +317,9 @@ export const registerCompanyRequest = async (req, res) => {
     const normalizedEmail = email.toLowerCase().trim();
     const normalizedCompany = companyName.trim();
 
-    // User must not exist yet
     const existsUser = await User.findOne({ email: normalizedEmail });
     if (existsUser) return res.status(409).json({ error: "Email already used" });
 
-    // Prevent duplicate pending application
     const existsApp = await CompanyApplication.findOne({
       companyEmail: normalizedEmail,
       status: "pending",
@@ -328,7 +329,6 @@ export const registerCompanyRequest = async (req, res) => {
         error: "You already submitted an application. Please wait for approval.",
       });
 
-    // Optional: prevent duplicate company names (by checking Company + pending apps)
     const existsCompany = await Company.findOne({ name: normalizedCompany });
     if (existsCompany)
       return res.status(409).json({ error: "Company name already used" });
@@ -354,7 +354,7 @@ export const registerCompanyRequest = async (req, res) => {
       commercialRegistrationNumber: commercialRegistrationNumber.trim(),
       documentFileName: documentFileName || "company-document",
       documentUrl: documentFileUrl,
-      passwordHash, // ✅ hashed only
+      passwordHash,
       status: "pending",
     });
 

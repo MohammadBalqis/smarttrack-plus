@@ -1,17 +1,21 @@
 import mongoose from "mongoose";
 
 /* ==========================================================
-   🚘 VEHICLE MODEL — Cars, Motors & Full Fleet Management
+   🚘 VEHICLE MODEL — DRIVER-BOUND VEHICLES ONLY
+   Vehicles are created ONLY during driver verification
 ========================================================== */
 const vehicleSchema = new mongoose.Schema(
   {
+    /* =========================
+       OWNERSHIP
+    ========================= */
     companyId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
+      index: true,
     },
 
-    // NEW — Required for managers seeing only their shop's fleet
     shopId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Shop",
@@ -19,59 +23,99 @@ const vehicleSchema = new mongoose.Schema(
       index: true,
     },
 
-    // 🔗 Driver assigned to the vehicle
     driverId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      default: null,
+      required: true,
+      index: true,
     },
 
-    // 🚗 Vehicle type
+    /* =========================
+       SOURCE CONTROL
+    ========================= */
+    createdFromDriver: {
+      type: Boolean,
+      default: true,
+      immutable: true,
+    },
+
+    /* =========================
+       VEHICLE INFO
+    ========================= */
     type: {
       type: String,
       enum: ["car", "motor", "truck", "van", "pickup"],
       required: true,
     },
 
-    brand: { type: String, required: true, trim: true },
-    model: { type: String, required: true, trim: true },
-    plateNumber: { type: String, required: true, unique: true, trim: true },
+    brand: {
+      type: String,
+      required: true,
+      trim: true,
+    },
 
-    // 📸 Vehicle image
-    vehicleImage: { type: String, default: null },
+    model: {
+      type: String,
+      required: true,
+      trim: true,
+    },
 
-    // 🔧 Vehicle state
+    plateNumber: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+    },
+
+    vehicleImage: {
+      type: String,
+      default: null,
+    },
+
+    /* =========================
+       DRIVER DOCUMENTS
+    ========================= */
+    driverCertificate: {
+      type: String,
+      required: true, // comes from driver verification
+    },
+
+    /* =========================
+       STATUS (COMPANY CONTROL)
+    ========================= */
     status: {
       type: String,
-      enum: ["available", "in_use", "maintenance"],
-      default: "available",
+      enum: ["active", "maintenance"],
+      default: "active",
+      index: true,
     },
 
-    // 🛠 Maintenance tracking
-    lastServiceDate: { type: Date, default: null },
-    nextServiceDue: { type: Date, default: null },
-
-    // 🛣 Performance & Usage
-    mileage: { type: Number, default: 0 },
-    fuelType: {
-      type: String,
-      enum: ["petrol", "diesel", "electric", "hybrid", "unknown"],
-      default: "unknown",
-    },
-    engineCapacity: { type: String, default: null },
-
-    // 📍 Last known trip for dashboard preview
+    /* =========================
+       TRIP TRACKING
+    ========================= */
     lastTripId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Trip",
       default: null,
     },
 
-    // Extra notes
-    notes: { type: String, trim: true },
+    /* =========================
+       NOTES
+    ========================= */
+    notes: {
+      type: String,
+      trim: true,
+      default: "",
+    },
   },
   { timestamps: true }
 );
+
+/* ==========================================================
+   INDEXES
+========================================================== */
+vehicleSchema.index({ companyId: 1, driverId: 1 });
+vehicleSchema.index({ plateNumber: 1 });
 
 const Vehicle = mongoose.model("Vehicle", vehicleSchema);
 export default Vehicle;

@@ -1,281 +1,175 @@
-/* Overlay behind the drawer */
-.overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.55);
-  display: flex;
-  justify-content: flex-end;
-  z-index: 999;
-}
-
-/* Drawer container */
-.drawer {
-  background: #ffffff;
-  width: 420px;
-  max-width: 100%;
-  height: 100%;
+/* =====================================================
+   PAGE
+===================================================== */
+.page {
   padding: 24px;
-  box-shadow: -4px 0 20px rgba(15, 23, 42, 0.3);
   display: flex;
   flex-direction: column;
-  position: relative;
+  gap: 24px;
 }
 
-/* Close button */
-.closeBtn {
-  position: absolute;
-  top: 14px;
-  right: 14px;
-  border: none;
-  background: transparent;
-  font-size: 18px;
-  cursor: pointer;
-  color: #64748b;
-}
-
-.closeBtn:hover {
-  color: #0f172a;
-}
-
-/* Title */
-.title {
-  font-size: 20px;
-  font-weight: 600;
-  margin-bottom: 16px;
-  color: #0f172a;
-}
-
-/* Profile card */
-.profileCard {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 14px 12px;
-  border-radius: 12px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  margin-bottom: 16px;
-}
-
-/* Avatar circle */
-.avatar {
-  width: 56px;
-  height: 56px;
-  border-radius: 999px;
-  background: #0f172a;
-  color: #f9fafb;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 22px;
-  font-weight: 600;
-}
-
-/* Profile info */
-.profileInfo h3 {
-  margin: 0 0 4px;
-  font-size: 18px;
-  font-weight: 600;
-  color: #0f172a;
-}
-
-.email {
+/* =====================================================
+   HEADER
+===================================================== */
+.header h1 {
+  font-size: 28px;
+  font-weight: 700;
   margin: 0;
-  font-size: 14px;
+}
+
+.header p {
+  margin-top: 6px;
   color: #64748b;
-}
-
-.phone {
-  margin: 4px 0;
   font-size: 14px;
-  color: #475569;
 }
 
-/* Status badges */
-.activeBadge,
-.inactiveBadge {
-  display: inline-block;
-  padding: 2px 10px;
+/* =====================================================
+   ERROR
+===================================================== */
+.error {
+  color: #dc2626;
+  font-size: 14px;
+}
+
+/* =====================================================
+   GRID
+===================================================== */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+/* =====================================================
+   CARD
+===================================================== */
+.card {
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 18px;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
+}
+
+/* =====================================================
+   TOP (AVATAR + STATUS)
+===================================================== */
+.top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #e5e7eb;
+}
+
+/* STATUS BADGES */
+.verified,
+.pending {
+  padding: 6px 10px;
   border-radius: 999px;
   font-size: 12px;
-  font-weight: 500;
-  margin-top: 4px;
+  font-weight: 600;
 }
 
-.activeBadge {
-  background: rgba(22, 163, 74, 0.12);
+.verified {
+  background: #dcfce7;
   color: #166534;
 }
 
-.inactiveBadge {
-  background: rgba(248, 113, 113, 0.12);
-  color: #b91c1c;
+.pending {
+  background: #fef3c7;
+  color: #92400e;
 }
 
-.joined {
-  font-size: 12px;
-  color: #94a3b8;
-  margin-top: 4px;
+/* =====================================================
+   TEXT
+===================================================== */
+.card h3 {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 4px 0 0;
 }
 
-/* Loading & error text */
-.loadingText {
+.phone {
   font-size: 14px;
-  color: #64748b;
-  margin-bottom: 8px;
+  color: #2563eb;
+  font-weight: 500;
 }
 
-.error {
-  font-size: 14px;
-  color: #b91c1c;
-  background: #fee2e2;
-  border-radius: 8px;
-  padding: 8px 10px;
-  margin-bottom: 10px;
-}
-
-/* KPI grid */
-.kpiGrid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-  margin: 12px 0 16px;
-}
-
-.kpiCard {
-  padding: 10px;
-  border-radius: 10px;
-  border: 1px solid #e2e8f0;
-  background: #f9fafb;
-}
-
-.kpiCard h4 {
-  margin: 0 0 4px;
+.address {
   font-size: 13px;
   color: #64748b;
 }
 
-.kpiCard p {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: #0f172a;
-}
-
-/* Section */
+/* =====================================================
+   INFO SECTIONS
+===================================================== */
 .section {
-  margin-top: 10px;
+  font-size: 13px;
+  color: #334155;
 }
 
-.section h3 {
-  margin: 0 0 8px;
-  font-size: 16px;
-  font-weight: 600;
+.section strong {
   color: #0f172a;
 }
 
-.empty {
-  font-size: 14px;
-  color: #94a3b8;
-  margin-top: 4px;
+/* =====================================================
+   IMAGES (VEHICLE + ID)
+===================================================== */
+.images {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
 }
 
-/* Table wrapper */
-.tableWrapper {
-  max-height: 260px;
-  overflow-y: auto;
-  border-radius: 10px;
-  border: 1px solid #e2e8f0;
-}
-
-/* Table */
-.table {
+.images img {
   width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-}
-
-.table thead {
-  background: #f1f5f9;
-}
-
-.table th,
-.table td {
-  padding: 8px 10px;
-  border-bottom: 1px solid #e2e8f0;
-  text-align: left;
-}
-
-.table th {
-  font-weight: 600;
-  color: #475569;
-  font-size: 12px;
-}
-
-.table tbody tr:hover {
+  max-width: 120px;
+  height: 70px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
   background: #f8fafc;
 }
 
-/* Route text */
-.route {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
+/* =====================================================
+   FOOTER
+===================================================== */
+.footer {
+  margin-top: auto;
+  padding-top: 10px;
+  border-top: 1px dashed #e5e7eb;
+  font-size: 13px;
+  color: #475569;
 }
 
-.arrow {
-  font-size: 12px;
-  color: #94a3b8;
-}
-
-/* Status labels (fallback) */
-.status_default {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-size: 11px;
-  background: #e2e8f0;
-  color: #0f172a;
-}
-
-/* Example statuses (you can adjust or extend) */
-.status_assigned,
-.status_in_progress,
-.status_delivering {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-size: 11px;
-  background: rgba(59, 130, 246, 0.12);
-  color: #1d4ed8;
-}
-
-.status_delivered {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-size: 11px;
-  background: rgba(22, 163, 74, 0.12);
-  color: #15803d;
-}
-
-.status_cancelled {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-size: 11px;
-  background: rgba(248, 113, 113, 0.12);
-  color: #b91c1c;
-}
-
-/* Responsive */
+/* =====================================================
+   RESPONSIVE
+===================================================== */
 @media (max-width: 640px) {
-  .drawer {
-    width: 100%;
+  .page {
+    padding: 16px;
   }
 
-  .kpiGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .images img {
+    max-width: 100%;
   }
 }

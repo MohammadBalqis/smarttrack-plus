@@ -4,20 +4,26 @@ import Payment from "../../models/Payment.js";
 import Company from "../../models/Company.js";
 
 /* ==========================================================
-   GET OWNER OVERVIEW
+   GET OWNER OVERVIEW (VERIFIED DRIVERS ONLY)
 ========================================================== */
 export const getOwnerOverview = async (req, res) => {
   try {
     const [
       totalCompanies,
       totalManagers,
-      totalDrivers,
+
+      // 🔥 VERIFIED DRIVERS ONLY
+      totalVerifiedDrivers,
+
       totalCustomers,
       totalTrips,
     ] = await Promise.all([
       Company.countDocuments({ isActive: true }),
       User.countDocuments({ role: "manager" }),
-      User.countDocuments({ role: "driver" }),
+      User.countDocuments({
+        role: "driver",
+        driverVerificationStatus: "verified",
+      }),
       User.countDocuments({ role: "customer" }),
       Trip.countDocuments(),
     ]);
@@ -38,7 +44,7 @@ export const getOwnerOverview = async (req, res) => {
       ok: true,
       totalCompanies,
       totalManagers,
-      totalDrivers,
+      totalDrivers: totalVerifiedDrivers, // 🔥 source of truth
       totalCustomers,
       totalTrips,
       tripsToday,
@@ -51,11 +57,10 @@ export const getOwnerOverview = async (req, res) => {
 };
 
 /* ==========================================================
-   COMPANIES ACTIVITY TABLE ✅ FINAL FIX
+   COMPANIES ACTIVITY TABLE (SUBSCRIPTION-AWARE)
 ========================================================== */
 export const getCompaniesActivity = async (req, res) => {
   try {
-    // ✅ keep soft-deleted companies visible but controlled by status
     const companies = await Company.find().lean();
 
     const start = new Date();
@@ -65,13 +70,31 @@ export const getCompaniesActivity = async (req, res) => {
       companies.map(async (company) => {
         const companyId = company._id;
 
-        const [totalDrivers, activeDrivers, tripsToday] = await Promise.all([
-          User.countDocuments({ role: "driver", companyId }),
+        const [
+          verifiedDrivers,
+          pendingDrivers,
+          activeDrivers,
+          tripsToday,
+        ] = await Promise.all([
+          // 🔥 BILLABLE DRIVERS
           User.countDocuments({
             role: "driver",
             companyId,
-            isOnline: true,
+            driverVerificationStatus: "verified",
           }),
+
+          User.countDocuments({
+            role: "driver",
+            companyId,
+            driverVerificationStatus: "pending",
+          }),
+
+          User.countDocuments({
+            role: "driver",
+            companyId,
+            isActive: true,
+          }),
+
           Trip.countDocuments({
             companyId,
             createdAt: { $gte: start },
@@ -83,10 +106,12 @@ export const getCompaniesActivity = async (req, res) => {
           name: company.name,
           createdAt: company.createdAt,
 
-          // 🔥 SOURCE OF TRUTH
+          // 🔥 SUBSCRIPTION SOURCE OF TRUTH
           subscriptionPlan: company.subscription?.label || "—",
           maxDrivers: company.subscription?.maxDrivers ?? "—",
 
+          verifiedDrivers, // 👈 used for billing
+          pendingDrivers,  // 👈 onboarding insight
           activeDrivers,
           tripsToday,
 

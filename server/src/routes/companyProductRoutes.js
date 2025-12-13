@@ -2,6 +2,9 @@
 import { Router } from "express";
 import { protect } from "../middleware/authMiddleware.js";
 import { authorizeRoles } from "../middleware/roleMiddleware.js";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
 
 import {
   getCompanyProducts,
@@ -12,64 +15,92 @@ import {
   adjustCompanyProductStock,
 } from "../controllers/companyProductController.js";
 
+/* ==========================================================
+   📸 PRODUCT IMAGE UPLOAD CONFIG
+========================================================== */
+const productImageStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const dir = "uploads/products";
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    const unique = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(null, unique + ext);
+  },
+});
+
+const uploadProductImage = multer({
+  storage: productImageStorage,
+  limits: { fileSize: 2 * 1024 * 1024 },
+});
+
 const router = Router();
 
 /* ==========================================================
-   LIST PRODUCTS (company + manager)
+   🔐 AUTH
+========================================================== */
+router.use(protect);
+
+/* ==========================================================
+   📦 LIST PRODUCTS
+   GET /api/company/products
 ========================================================== */
 router.get(
-  "/products",
-  protect,
+  "/",
   authorizeRoles("company", "manager"),
   getCompanyProducts
 );
 
 /* ==========================================================
-   SINGLE PRODUCT (company + manager)
+   📄 SINGLE PRODUCT
+   GET /api/company/products/:id
 ========================================================== */
 router.get(
-  "/products/:id",
-  protect,
+  "/:id",
   authorizeRoles("company", "manager"),
   getCompanyProduct
 );
 
 /* ==========================================================
-   CREATE PRODUCT (company only)
+   ➕ CREATE PRODUCT
+   POST /api/company/products
 ========================================================== */
 router.post(
-  "/products",
-  protect,
+  "/",
   authorizeRoles("company"),
+  uploadProductImage.array("images", 5),
   createCompanyProduct
 );
 
 /* ==========================================================
-   UPDATE PRODUCT (company only)
+   ✏ UPDATE PRODUCT
+   PUT /api/company/products/:id
 ========================================================== */
 router.put(
-  "/products/:id",
-  protect,
+  "/:id",
   authorizeRoles("company"),
+  uploadProductImage.array("images", 5),
   updateCompanyProduct
 );
 
 /* ==========================================================
-   TOGGLE ACTIVE (company only)
+   🔄 TOGGLE ACTIVE
+   PATCH /api/company/products/:id/toggle
 ========================================================== */
-router.put(
-  "/products/:id/toggle",
-  protect,
+router.patch(
+  "/:id/toggle",
   authorizeRoles("company"),
   toggleCompanyProductActive
 );
 
 /* ==========================================================
-   STOCK ADJUSTMENT (company only)
+   📦 ADJUST STOCK
+   PATCH /api/company/products/:id/stock
 ========================================================== */
-router.post(
-  "/products/:id/stock",
-  protect,
+router.patch(
+  "/:id/stock",
   authorizeRoles("company"),
   adjustCompanyProductStock
 );

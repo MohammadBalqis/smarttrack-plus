@@ -1,265 +1,214 @@
-@import "./_baseOwner.module.css";
-
 /* ==========================================================
-   SYSTEM OWNER — SETTINGS (PREMIUM)
+   PAGE — SAME GLOBAL BACKGROUND
 ========================================================== */
-
-/* ================= PAGE ================= */
 .page {
   padding: 28px;
-  max-width: 1200px;
-  margin: 0 auto;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, #020617 0%, #020617 40%, #020617 100%),
+    linear-gradient(180deg, #020617, #020617);
+  color: #e5e7eb;
 }
 
-/* ================= HEADER ================= */
+/* ==========================================================
+   HEADER
+========================================================== */
 .headerRow {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 26px;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
 }
 
 .title {
-  font-size: 30px;
+  font-size: 26px;
   font-weight: 800;
-  color: var(--text-main);
-  margin-bottom: 6px;
+  color: #f8fafc;
+  margin: 0;
 }
 
 .subtitle {
-  font-size: 14px;
-  color: var(--text-muted);
+  margin-top: 6px;
+  font-size: 13px;
+  color: #94a3b8;
+  max-width: 720px;
+  line-height: 1.45;
 }
 
-/* ================= ACTION BTN ================= */
+/* ==========================================================
+   REFRESH
+========================================================== */
 .refreshBtn {
-  padding: 10px 18px;
-  border-radius: 999px;
-  border: none;
-  background: linear-gradient(
-    135deg,
-    rgba(56, 189, 248, 0.95),
-    rgba(14, 165, 233, 0.95)
-  );
-  color: #020617;
-  font-size: 14px;
-  font-weight: 700;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(15, 23, 42, 0.85);
+  color: #e5e7eb;
   cursor: pointer;
-  box-shadow: 0 14px 30px rgba(56, 189, 248, 0.35);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition: all 0.15s ease;
 }
 
 .refreshBtn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 20px 40px rgba(56, 189, 248, 0.45);
+  background: rgba(59, 130, 246, 0.18);
+  border-color: rgba(59, 130, 246, 0.6);
 }
 
-/* ================= ALERTS ================= */
+.refreshBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ==========================================================
+   FEEDBACK
+========================================================== */
 .errorBox {
-  margin-bottom: 18px;
-  padding: 12px 14px;
-  border-radius: 12px;
   background: rgba(239, 68, 68, 0.15);
-  color: #f87171;
-  border: 1px solid rgba(239, 68, 68, 0.4);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #fecaca;
+  padding: 12px 14px;
+  border-radius: 10px;
+  margin-bottom: 14px;
   font-size: 14px;
 }
 
 .successBox {
-  margin-bottom: 18px;
-  padding: 12px 14px;
-  border-radius: 12px;
   background: rgba(34, 197, 94, 0.15);
-  color: #22c55e;
   border: 1px solid rgba(34, 197, 94, 0.35);
+  color: #86efac;
+  padding: 12px 14px;
+  border-radius: 10px;
+  margin-bottom: 14px;
   font-size: 14px;
 }
 
-/* ================= FORM ================= */
+/* ==========================================================
+   FORM (GLASS CARD)
+========================================================== */
 .form {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-/* ================= GRID ================= */
-.grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 24px;
-}
-
-/* ================= CARD ================= */
-.card {
-  background: var(--bg-card);
+  background: rgba(2, 6, 23, 0.85);
+  border: 1px solid rgba(148, 163, 184, 0.18);
   border-radius: 18px;
   padding: 22px;
-  border: 1px solid var(--border-soft);
-  box-shadow: 0 18px 40px rgba(2, 6, 23, 0.45);
+  max-width: 760px;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.25);
 }
 
-.cardTitle {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--text-main);
-  margin-bottom: 4px;
-}
-
-.cardHint {
-  font-size: 13px;
-  color: var(--text-muted);
-  margin-bottom: 16px;
-}
-
-/* ================= FIELDS ================= */
-.formRow {
-  margin-bottom: 14px;
+/* ==========================================================
+   FIELDS
+========================================================== */
+.fieldRow {
+  margin-bottom: 18px;
 }
 
 .label {
   display: block;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-muted);
+  font-size: 12px;
+  color: #94a3b8;
   margin-bottom: 6px;
 }
 
 .input,
-.select,
-.textarea {
+.select {
   width: 100%;
-  padding: 11px 14px;
-  border-radius: 12px;
-  border: 1px solid var(--border-soft);
+  padding: 11px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(15, 23, 42, 0.85);
+  color: #e5e7eb;
   font-size: 14px;
   outline: none;
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--text-main);
-  transition: border 0.15s ease, box-shadow 0.15s ease,
-    background 0.15s ease;
+  transition: all 0.15s ease;
 }
 
-.input::placeholder,
-.textarea::placeholder {
-  color: #94a3b8;
+.input::placeholder {
+  color: #64748b;
 }
 
 .input:focus,
-.select:focus,
-.textarea:focus {
-  border-color: #38bdf8;
-  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.45);
-  background: rgba(255, 255, 255, 0.06);
+.select:focus {
+  border-color: rgba(59, 130, 246, 0.8);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18);
 }
 
-.textarea {
-  min-height: 90px;
-  resize: vertical;
-}
-
-.helpText {
+/* ==========================================================
+   HINT
+========================================================== */
+.hint {
+  margin-top: 6px;
   font-size: 12px;
   color: #94a3b8;
-  margin-top: 6px;
+  line-height: 1.4;
 }
 
-/* ================= SWITCHES ================= */
-.switchRow {
+/* ==========================================================
+   CHECKBOX
+========================================================== */
+.checkboxRow {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.checkboxLabel {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 10px;
-}
-
-.switchRow input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
-  accent-color: #38bdf8;
-  cursor: pointer;
-}
-
-.switchLabel {
+  gap: 10px;
   font-size: 14px;
-  font-weight: 500;
-  color: var(--text-main);
+  color: #e5e7eb;
 }
 
-/* ================= TIERS ================= */
-.tiersGrid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  margin-top: 10px;
+.checkboxLabel input {
+  accent-color: #3b82f6;
+  transform: scale(1.05);
 }
 
-.tierCard {
-  border-radius: 14px;
-  border: 1px solid var(--border-soft);
-  padding: 14px;
-  background: rgba(255, 255, 255, 0.03);
-}
-
-.tierTitle {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--text-main);
-  margin-bottom: 4px;
-}
-
-.tierPrice {
-  font-size: 18px;
-  font-weight: 800;
-  color: #38bdf8;
-  margin-bottom: 2px;
-}
-
-.tierMeta {
-  font-size: 12px;
-  color: var(--text-muted);
-}
-
-.notice {
-  font-size: 12px;
-  color: #94a3b8;
-  margin-top: 8px;
-}
-
-/* ================= FOOTER ================= */
-.footerBar {
+/* ==========================================================
+   ACTIONS
+========================================================== */
+.actionsRow {
   display: flex;
   justify-content: flex-end;
-  margin-top: 6px;
+  margin-top: 16px;
 }
 
 .saveBtn {
-  padding: 12px 22px;
-  border-radius: 999px;
-  border: none;
-  background: linear-gradient(
-    135deg,
-    rgba(56, 189, 248, 0.95),
-    rgba(14, 165, 233, 0.95)
-  );
-  color: #020617;
-  font-weight: 700;
-  font-size: 14px;
+  padding: 12px 18px;
+  border-radius: 12px;
+  border: 1px solid rgba(59, 130, 246, 0.55);
+  background: rgba(59, 130, 246, 0.18);
+  color: #e0f2fe;
+  font-weight: 800;
   cursor: pointer;
-  box-shadow: 0 14px 30px rgba(56, 189, 248, 0.35);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition: all 0.15s ease;
 }
 
 .saveBtn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 20px 40px rgba(56, 189, 248, 0.45);
+  background: rgba(59, 130, 246, 0.28);
+  border-color: #3b82f6;
 }
 
-/* ================= RESPONSIVE ================= */
-@media (max-width: 900px) {
-  .grid {
-    grid-template-columns: 1fr;
-  }
+.saveBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
 
+/* ==========================================================
+   RESPONSIVE
+========================================================== */
+@media (max-width: 900px) {
   .page {
     padding: 16px;
+  }
+
+  .title {
+    font-size: 22px;
+  }
+
+  .form {
+    padding: 18px;
   }
 }

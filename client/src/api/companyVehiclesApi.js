@@ -1,31 +1,27 @@
 // client/src/api/companyVehiclesApi.js
 import api from "./axiosConfig";
 
-// List vehicles with filters
+/* ==========================================================
+   🚗 COMPANY VEHICLES — READ ONLY
+========================================================== */
+
+// GET /api/company/vehicles
 export const getCompanyVehiclesApi = (params = {}) =>
   api.get("/company/vehicles", { params });
 
-// Create vehicle (company only)
-export const createCompanyVehicleApi = (data) =>
-  api.post("/company/vehicles", data);
+/* ==========================================================
+   🔄 UPDATE VEHICLE STATUS
+   allowed: available | maintenance
+========================================================== */
 
-// Update vehicle (company only)
-export const updateCompanyVehicleApi = (vehicleId, data) =>
-  api.put(`/company/vehicles/${vehicleId}`, data);
-
-// Assign / remove driver
-export const assignCompanyVehicleDriverApi = (vehicleId, driverId) =>
-  api.put(`/company/vehicles/${vehicleId}/assign-driver`, {
-    driverId: driverId || null,
-  });
-
-// Update status
+// PUT /api/company/vehicles/:id/status
 export const updateCompanyVehicleStatusApi = (vehicleId, status) =>
   api.put(`/company/vehicles/${vehicleId}/status`, { status });
 
-// Trip history
+/* ==========================================================
+   📜 VEHICLE TRIP HISTORY
+========================================================== */
+
+// GET /api/company/vehicles/:id/trips
 export const getCompanyVehicleTripsApi = (vehicleId) =>
   api.get(`/company/vehicles/${vehicleId}/trips`);
-// For Manager Toggle Active (wrapper around your status API)
-export const toggleCompanyVehicleActiveApi = (vehicleId) =>
-  updateCompanyVehicleStatusApi(vehicleId, "toggle");

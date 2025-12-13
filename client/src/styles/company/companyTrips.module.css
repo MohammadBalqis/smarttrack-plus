@@ -1,164 +1,268 @@
+/* ================================
+   PAGE
+================================ */
 .container {
-  padding: 20px;
+  padding: 24px;
+  background: #f8fafc;
+  min-height: 100vh;
 }
 
 .title {
-  font-size: 24px;
+  font-size: 26px;
   font-weight: 700;
-  margin-bottom: 18px;
+  margin-bottom: 20px;
+  color: #0f172a;
 }
 
-/* Filters */
+/* ================================
+   FILTERS
+================================ */
 .filters {
   display: flex;
-  gap: 10px;
-  margin-bottom: 18px;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
 }
 
 .filters select,
 .filters input {
-  padding: 6px 10px;
-  border-radius: 6px;
+  padding: 8px 12px;
+  border-radius: 8px;
   border: 1px solid #d1d5db;
   font-size: 14px;
+  background: #fff;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
-/* Table */
+.filters select:focus,
+.filters input:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
+}
+
+/* ================================
+   TABLE CARD
+================================ */
 .tableWrapper {
-  background: white;
-  padding: 12px;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  background: #ffffff;
+  padding: 16px;
+  border-radius: 14px;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
 }
 
+/* ================================
+   TABLE
+================================ */
 .table {
   width: 100%;
   border-collapse: collapse;
 }
 
-.table th,
-.table td {
-  padding: 10px 8px;
-  border-bottom: 1px solid #e5e7eb;
-  font-size: 14px;
+.table th {
+  text-align: left;
+  padding: 12px 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+  background: #f1f5f9;
 }
 
-/* Status badges */
+.table td {
+  padding: 12px 10px;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 14px;
+  color: #0f172a;
+}
+
+/* ✅ LIGHT hover (NO BLACK) */
+.table tbody tr:hover {
+  background: #f8fafc;
+}
+
+/* ================================
+   STATUS BADGES
+================================ */
+.badge_pending,
+.badge_assigned,
+.badge_in_progress,
+.badge_delivered,
+.badge_cancelled {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  display: inline-block;
+}
+
 .badge_pending {
   background: #fef9c3;
-  color: #b45309;
-  padding: 4px 8px;
-  border-radius: 12px;
+  color: #92400e;
 }
 
 .badge_assigned {
   background: #dbeafe;
-  color: #1d4ed8;
-  padding: 4px 8px;
-  border-radius: 12px;
+  color: #1e40af;
 }
 
 .badge_in_progress {
-  background: #fce7f3;
-  color: #be185d;
-  padding: 4px 8px;
-  border-radius: 12px;
+  background: #ede9fe;
+  color: #5b21b6;
 }
 
 .badge_delivered {
   background: #dcfce7;
-  color: #15803d;
-  padding: 4px 8px;
-  border-radius: 12px;
+  color: #166534;
 }
 
 .badge_cancelled {
   background: #fee2e2;
-  color: #b91c1c;
-  padding: 4px 8px;
-  border-radius: 12px;
+  color: #991b1b;
 }
 
+/* ================================
+   ACTION BUTTON
+================================ */
 .viewBtn {
-  padding: 6px 12px;
+  padding: 6px 14px;
   background: #2563eb;
   color: white;
-  border-radius: 6px;
+  border-radius: 8px;
   border: none;
+  font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
+  transition: background 0.2s, transform 0.15s;
 }
 
-/* Pagination */
+.viewBtn:hover {
+  background: #1d4ed8; /* ✅ blue hover */
+  transform: translateY(-1px);
+}
+
+.viewBtn:active {
+  transform: translateY(0);
+}
+
+/* ================================
+   EMPTY STATE
+================================ */
+.empty {
+  padding: 24px;
+  text-align: center;
+  color: #64748b;
+  font-size: 14px;
+}
+
+/* ================================
+   PAGINATION
+================================ */
 .pagination {
   display: flex;
-  gap: 10px;
-  margin-top: 14px;
+  gap: 12px;
+  margin-top: 18px;
   align-items: center;
+  justify-content: center;
 }
 
 .pagination button {
-  padding: 6px 12px;
-  background: #e5e7eb;
-  border: none;
-  border-radius: 6px;
+  padding: 6px 14px;
+  background: #f1f5f9;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
   cursor: pointer;
+  font-size: 13px;
+  transition: background 0.2s;
 }
 
-/* Drawer */
+.pagination button:hover {
+  background: #e2e8f0;
+}
+
+.pagination button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ================================
+   DRAWER OVERLAY
+================================ */
 .drawerOverlay {
   position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  background: rgba(0,0,0,0.4);
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45); /* soft dark, NOT black */
   display: flex;
   justify-content: flex-end;
   z-index: 2000;
 }
 
+/* ================================
+   DRAWER
+================================ */
 .drawer {
-  width: 550px;
-  background: white;
+  width: 560px;
+  max-width: 100%;
+  background: #ffffff;
   height: 100%;
-  padding: 20px;
+  padding: 24px;
   overflow-y: auto;
-  box-shadow: -2px 0 10px rgba(0,0,0,0.2);
+  box-shadow: -8px 0 24px rgba(15, 23, 42, 0.15);
   position: relative;
 }
 
+/* ================================
+   DRAWER HEADER
+================================ */
 .closeBtn {
   position: absolute;
-  right: 14px;
-  top: 14px;
-  background: none;
+  right: 18px;
+  top: 18px;
+  background: #f1f5f9;
   border: none;
-  font-size: 24px;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  font-size: 18px;
   cursor: pointer;
+  transition: background 0.2s;
+}
+
+.closeBtn:hover {
+  background: #e2e8f0;
 }
 
 .drawerTitle {
   font-size: 22px;
   font-weight: 700;
-  margin-bottom: 16px;
+  margin-bottom: 18px;
+  color: #0f172a;
 }
 
+/* ================================
+   DRAWER CONTENT
+================================ */
 .section {
-  margin-bottom: 18px;
+  margin-bottom: 20px;
 }
 
 .section h4 {
-  font-size: 16px;
-  margin-bottom: 6px;
+  font-size: 15px;
+  margin-bottom: 8px;
+  color: #334155;
 }
 
 .itemRow {
   display: flex;
   justify-content: space-between;
+  font-size: 14px;
+  margin-bottom: 6px;
 }
 
+/* ================================
+   TOTAL
+================================ */
 .totalAmount {
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 700;
   color: #2563eb;
 }

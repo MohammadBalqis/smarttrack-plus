@@ -1,21 +1,22 @@
-// client/src/api/companyOrdersApi.js
-import api from "./axiosConfig";
+import api from "./apiClient";
 
-// 1️⃣ List orders with filters
+
+/* ============================
+   COMPANY ORDERS API
+============================ */
+
+// List orders
 export const getCompanyOrdersApi = (params = {}) =>
   api.get("/company/orders", { params });
 
-// 2️⃣ Get single order details
+// Single order details
 export const getCompanyOrderDetailsApi = (orderId) =>
   api.get(`/company/orders/${orderId}`);
 
-// 3️⃣ Update order status
+// Update order status
 export const updateCompanyOrderStatusApi = (orderId, newStatus) =>
   api.patch(`/company/orders/${orderId}/status`, { newStatus });
 
-// 4️⃣ Get order stats for dashboard
-export const getCompanyOrderStatsApi = () =>
-  api.get(`/company/orders/stats`);
-
-// 🔥 Compatibility alias for old frontend code
-export const getCompanyOrdersStatsApi = getCompanyOrderStatsApi;
+// Orders statistics
+export const getCompanyOrdersStatsApi = () =>
+  api.get("/company/orders/stats");

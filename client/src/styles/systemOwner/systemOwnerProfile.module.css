@@ -1,28 +1,49 @@
-@import "./_baseOwner.module.css";
-
 /* ==========================================================
-   PAGE
+   PAGE — SAME GLOBAL BACKGROUND
 ========================================================== */
 .page {
   padding: 28px;
-  max-width: 1200px;
-  margin: 0 auto;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, #020617 0%, #020617 40%, #020617 100%),
+    linear-gradient(180deg, #020617, #020617);
+  color: #e5e7eb;
 }
 
-/* ==========================================================
-   HEADER
-========================================================== */
 .title {
-  font-size: 30px;
+  font-size: 26px;
   font-weight: 800;
-  color: var(--text-main);
+  color: #f8fafc;
   margin-bottom: 6px;
 }
 
 .subtitle {
-  font-size: 15px;
-  color: var(--text-muted);
-  margin-bottom: 26px;
+  font-size: 13px;
+  color: #94a3b8;
+  margin-bottom: 20px;
+}
+
+/* ==========================================================
+   FEEDBACK
+========================================================== */
+.errorBox {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #fecaca;
+  padding: 12px 14px;
+  border-radius: 10px;
+  margin-bottom: 14px;
+  font-size: 14px;
+}
+
+.successBox {
+  background: rgba(34, 197, 94, 0.15);
+  border: 1px solid rgba(34, 197, 94, 0.35);
+  color: #86efac;
+  padding: 12px 14px;
+  border-radius: 10px;
+  margin-bottom: 14px;
+  font-size: 14px;
 }
 
 /* ==========================================================
@@ -31,117 +52,88 @@
 .grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 24px;
+  gap: 20px;
 }
 
 /* ==========================================================
-   CARD
+   CARD (GLASS)
 ========================================================== */
 .card {
-  background: var(--bg-card);
+  background: rgba(2, 6, 23, 0.85);
+  border: 1px solid rgba(148, 163, 184, 0.18);
   border-radius: 18px;
-  padding: 22px 22px 24px;
-  border: 1px solid var(--border-soft);
-  box-shadow: 0 18px 40px rgba(2, 6, 23, 0.45);
+  padding: 20px;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.25);
 }
 
 .cardTitle {
   font-size: 18px;
-  font-weight: 700;
-  color: var(--text-main);
-  margin-bottom: 18px;
+  font-weight: 800;
+  color: #f8fafc;
+  margin-bottom: 14px;
 }
 
 /* ==========================================================
    FORM
 ========================================================== */
 .label {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-muted);
-  margin-top: 14px;
+  font-size: 12px;
+  color: #94a3b8;
+  margin-bottom: 6px;
+  display: block;
 }
 
 .input {
   width: 100%;
-  padding: 11px 14px;
+  padding: 11px 12px;
+  margin-bottom: 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(15, 23, 42, 0.85);
+  color: #e5e7eb;
   font-size: 14px;
-  border-radius: 12px;
-  border: 1px solid var(--border-soft);
-  background: rgba(255, 255, 255, 0.03);
-  color: var(--text-main);
-  margin-top: 6px;
   outline: none;
-  transition: border 0.15s ease, box-shadow 0.15s ease,
-    background 0.15s ease;
+  transition: all 0.15s ease;
 }
 
 .input::placeholder {
-  color: #94a3b8;
+  color: #64748b;
 }
 
 .input:focus {
-  border-color: #38bdf8;
-  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.45);
-  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(59, 130, 246, 0.8);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18);
+}
+
+.input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 /* ==========================================================
-   BUTTONS
+   BUTTON
 ========================================================== */
 .saveBtn {
-  margin-top: 20px;
-  padding: 12px 18px;
-  background: linear-gradient(
-    135deg,
-    rgba(56, 189, 248, 0.95),
-    rgba(14, 165, 233, 0.95)
-  );
-  color: #020617;
-  font-size: 15px;
-  font-weight: 700;
-  border: none;
+  margin-top: 8px;
+  padding: 12px 16px;
   border-radius: 12px;
+  border: 1px solid rgba(59, 130, 246, 0.55);
+  background: rgba(59, 130, 246, 0.18);
+  color: #e0f2fe;
+  font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 14px 30px rgba(56, 189, 248, 0.35);
-  transition: transform 0.15s ease, box-shadow 0.15s ease,
-    filter 0.15s ease;
+  transition: all 0.15s ease;
 }
 
 .saveBtn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 20px 40px rgba(56, 189, 248, 0.45);
-  filter: brightness(1.05);
+  background: rgba(59, 130, 246, 0.28);
+  border-color: #3b82f6;
 }
 
 .saveBtn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
-  box-shadow: none;
-  transform: none;
-}
-
-/* ==========================================================
-   ALERTS
-========================================================== */
-.errorBox {
-  background: rgba(239, 68, 68, 0.15);
-  color: #f87171;
-  padding: 12px 14px;
-  border-radius: 12px;
-  border: 1px solid rgba(239, 68, 68, 0.4);
-  margin-bottom: 18px;
-  font-size: 14px;
-}
-
-.successBox {
-  background: rgba(34, 197, 94, 0.15);
-  color: #22c55e;
-  padding: 12px 14px;
-  border-radius: 12px;
-  border: 1px solid rgba(34, 197, 94, 0.35);
-  margin-bottom: 18px;
-  font-size: 14px;
 }
 
 /* ==========================================================
@@ -151,10 +143,12 @@
   .grid {
     grid-template-columns: 1fr;
   }
-}
 
-@media (max-width: 640px) {
   .page {
     padding: 16px;
+  }
+
+  .title {
+    font-size: 22px;
   }
 }

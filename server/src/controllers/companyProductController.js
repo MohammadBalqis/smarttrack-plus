@@ -1,7 +1,11 @@
-// server/src/controllers/companyProductController.js
 import Product from "../models/Product.js";
+import BranchStock from "../models/BranchStock.js";
+import Shop from "../models/Shop.js";
 import { notifyAllManagersInCompany } from "../utils/notify.js";
 
+/* ==========================================================
+   🔧 HELPERS
+========================================================== */
 const resolveCompanyId = (user) => {
   if (!user) return null;
   if (user.role === "company") return user._id;
@@ -15,8 +19,9 @@ const resolveCompanyId = (user) => {
 export const getCompanyProducts = async (req, res) => {
   try {
     const companyId = resolveCompanyId(req.user);
-    if (!companyId)
+    if (!companyId) {
       return res.status(400).json({ error: "Unable to resolve company" });
+    }
 
     const {
       category,
@@ -26,6 +31,7 @@ export const getCompanyProducts = async (req, res) => {
       maxPrice,
       page = 1,
       limit = 20,
+      shopId,
     } = req.query;
 
     const filters = { companyId };
@@ -33,7 +39,6 @@ export const getCompanyProducts = async (req, res) => {
     if (category) filters.category = category;
     if (active === "true") filters.isActive = true;
     if (active === "false") filters.isActive = false;
-
     if (search) filters.name = { $regex: search.trim(), $options: "i" };
 
     if (minPrice || maxPrice) {
@@ -46,13 +51,36 @@ export const getCompanyProducts = async (req, res) => {
     const limitNum = Number(limit);
     const skip = (pageNum - 1) * limitNum;
 
-    const [products, total] = await Promise.all([
-      Product.find(filters)
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limitNum),
-      Product.countDocuments(filters),
-    ]);
+    const products = await Product.find(filters)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limitNum)
+      .lean();
+
+    const total = await Product.countDocuments(filters);
+
+    /* ------------------------------------------
+       🏪 SHOP-SPECIFIC STOCK (OPTIONAL)
+    ------------------------------------------ */
+    if (shopId) {
+      const branchStocks = await BranchStock.find({
+        shopId,
+        productId: { $in: products.map((p) => p._id) },
+      }).lean();
+
+      const stockMap = new Map(
+        branchStocks.map((s) => [String(s.productId), s.quantity])
+      );
+
+      products.forEach((p) => {
+        p.shopStock = stockMap.get(String(p._id)) ?? 0;
+        p.isLowStock = p.shopStock <= (p.lowStockThreshold ?? 5);
+      });
+    } else {
+      products.forEach((p) => {
+        p.isLowStock = p.stock <= (p.lowStockThreshold ?? 5);
+      });
+    }
 
     res.json({
       ok: true,
@@ -62,7 +90,7 @@ export const getCompanyProducts = async (req, res) => {
       products,
     });
   } catch (err) {
-    console.error("❌ getCompanyProducts error:", err.message);
+    console.error("❌ getCompanyProducts error:", err);
     res.status(500).json({ error: "Server error loading products" });
   }
 };
@@ -76,18 +104,28 @@ export const getCompanyProduct = async (req, res) => {
     const { id } = req.params;
 
     const product = await Product.findOne({ _id: id, companyId });
+    if (!product) {
+      return res.status(404).json({ error: "Product not found" });
+    }
 
-    if (!product) return res.status(404).json({ error: "Product not found" });
+    const branchStocks = await BranchStock.find({ productId: id })
+      .populate("shopId", "name city")
+      .lean();
 
-    res.json({ ok: true, product });
+    res.json({
+      ok: true,
+      product,
+      branchStocks,
+    });
   } catch (err) {
-    console.error("❌ getCompanyProduct error:", err.message);
+    console.error("❌ getCompanyProduct error:", err);
     res.status(500).json({ error: "Server error loading product" });
   }
 };
 
 /* ==========================================================
    ➕ CREATE PRODUCT (company only)
+   ✔ Handles uploaded images (req.files)
 ========================================================== */
 export const createCompanyProduct = async (req, res) => {
   try {
@@ -95,55 +133,64 @@ export const createCompanyProduct = async (req, res) => {
 
     const {
       name,
-      description,
+      description = "",
       price,
-      category,
-      attributes,
-      images,
-      stock,
-      lowStockThreshold,
+      category = "",
+      attributes = {},
+      stock = 0,
+      lowStockThreshold = 5,
     } = req.body;
 
-    if (!name || price === undefined)
+    if (!name || price === undefined) {
       return res.status(400).json({ error: "Name and price are required" });
+    }
+
+    /* 📸 IMAGES FROM UPLOAD */
+    const images =
+      req.files?.map((f) => `/uploads/products/${f.filename}`) || [];
 
     const product = await Product.create({
       companyId,
       name,
-      description: description || "",
+      description,
       price: Number(price),
-      category: category || "general",
-      attributes: attributes || {},
-      images: Array.isArray(images) ? images : [],
-      stock: stock ? Number(stock) : 0,
-      lowStockThreshold: lowStockThreshold ? Number(lowStockThreshold) : 5,
+      category,
+      attributes,
+      images,
+      stock: Number(stock),
+      lowStockThreshold: Number(lowStockThreshold),
       stockHistory: [
         {
-          change: stock ? Number(stock) : 0,
+          change: Number(stock),
           reason: "Initial stock",
-          createdAt: new Date(),
           userId: req.user._id,
         },
       ],
     });
 
-    // 🔔 Notify managers — NEW PRODUCT
+    /* 🏪 INIT BRANCH STOCK = 0 */
+    const shops = await Shop.find({ companyId, isActive: true }).select("_id");
+    if (shops.length) {
+      await BranchStock.insertMany(
+        shops.map((s) => ({
+          shopId: s._id,
+          productId: product._id,
+          quantity: 0,
+        }))
+      );
+    }
+
     await notifyAllManagersInCompany(req, companyId, {
       type: "product",
       title: "New Product Added",
-      message: `A new product "${product.name}" has been added to the company catalog.`,
-      priority: "normal",
+      message: `New product "${product.name}" added.`,
       actionUrl: "/manager/products",
       meta: { productId: product._id },
     });
 
-    res.status(201).json({
-      ok: true,
-      message: "Product created",
-      product,
-    });
+    res.status(201).json({ ok: true, product });
   } catch (err) {
-    console.error("❌ createCompanyProduct error:", err.message);
+    console.error("❌ createCompanyProduct error:", err);
     res.status(500).json({ error: "Server error creating product" });
   }
 };
@@ -156,81 +203,50 @@ export const updateCompanyProduct = async (req, res) => {
     const companyId = req.user._id;
     const { id } = req.params;
 
+    const product = await Product.findOne({ _id: id, companyId });
+    if (!product) {
+      return res.status(404).json({ error: "Product not found" });
+    }
+
     const {
       name,
       description,
       price,
       category,
       attributes,
-      images,
-      stock,
       lowStockThreshold,
     } = req.body;
-
-    const product = await Product.findOne({ _id: id, companyId });
-
-    if (!product) return res.status(404).json({ error: "Product not found" });
-
-    // Detect changes for notifications
-    const changes = [];
-
-    if (price !== undefined && price !== product.price)
-      changes.push(`Price: ${product.price} → ${price}`);
-
-    if (category && category !== product.category)
-      changes.push(`Category: ${product.category} → ${category}`);
-
-    if (lowStockThreshold !== undefined &&
-        lowStockThreshold !== product.lowStockThreshold)
-      changes.push(`Low-stock alert updated.`);
 
     if (name !== undefined) product.name = name;
     if (description !== undefined) product.description = description;
     if (price !== undefined) product.price = Number(price);
     if (category !== undefined) product.category = category;
     if (attributes !== undefined) product.attributes = attributes;
-    if (Array.isArray(images)) product.images = images;
-
-    if (lowStockThreshold !== undefined)
+    if (lowStockThreshold !== undefined) {
       product.lowStockThreshold = Number(lowStockThreshold);
+    }
 
-    // Stock as absolute
-    if (stock !== undefined) {
-      const prev = product.stock || 0;
-      const next = Number(stock);
-      const delta = next - prev;
-
-      product.stock = next;
-
-      product.stockHistory.push({
-        change: delta,
-        reason: "Manual stock update",
-        createdAt: new Date(),
-        userId: req.user._id,
-      });
-
-      changes.push(`Stock updated (${prev} → ${next})`);
+    /* 📸 APPEND NEW IMAGES IF UPLOADED */
+    if (req.files?.length) {
+      const newImages = req.files.map(
+        (f) => `/uploads/products/${f.filename}`
+      );
+      product.images.push(...newImages);
     }
 
     await product.save();
 
-    // 🔔 Notify managers — PRODUCT UPDATED
     await notifyAllManagersInCompany(req, companyId, {
       type: "product",
-      title: `Product Updated: ${product.name}`,
-      message: changes.length > 0 ? changes.join(" | ") : "Product updated.",
-      priority: "normal",
+      title: "Product Updated",
+      message: `Product "${product.name}" was updated.`,
       actionUrl: "/manager/products",
       meta: { productId: product._id },
     });
 
-    res.json({
-      ok: true,
-      message: "Product updated",
-      product,
-    });
+    res.json({ ok: true, product });
   } catch (err) {
-    console.error("❌ updateCompanyProduct error:", err.message);
+    console.error("❌ updateCompanyProduct error:", err);
     res.status(500).json({ error: "Server error updating product" });
   }
 };
@@ -244,77 +260,94 @@ export const toggleCompanyProductActive = async (req, res) => {
     const { id } = req.params;
 
     const product = await Product.findOne({ _id: id, companyId });
-    if (!product) return res.status(404).json({ error: "Product not found" });
+    if (!product) {
+      return res.status(404).json({ error: "Product not found" });
+    }
 
     product.isActive = !product.isActive;
     await product.save();
 
-    // 🔔 Notify managers
     await notifyAllManagersInCompany(req, companyId, {
       type: "product",
-      title: "Product Status Updated",
-      message: `"${product.name}" is now ${product.isActive ? "ACTIVE" : "INACTIVE"}.`,
+      title: "Product Status Changed",
+      message: `"${product.name}" is now ${
+        product.isActive ? "ACTIVE" : "INACTIVE"
+      }.`,
       actionUrl: "/manager/products",
-      meta: { productId: product._id, active: product.isActive },
     });
 
-    res.json({
-      ok: true,
-      message: `Product is now ${product.isActive ? "active" : "inactive"}`,
-      product,
-    });
+    res.json({ ok: true, product });
   } catch (err) {
-    console.error("❌ toggleCompanyProductActive error:", err.message);
+    console.error("❌ toggleCompanyProductActive error:", err);
     res.status(500).json({ error: "Server error toggling product" });
   }
 };
 
 /* ==========================================================
-   📦 ADJUST STOCK
+   📦 ADJUST STOCK (Company-wide OR Per Shop)
 ========================================================== */
 export const adjustCompanyProductStock = async (req, res) => {
   try {
     const companyId = req.user._id;
     const { id } = req.params;
-    const { change, reason } = req.body;
+    const { amount, reason = "", shopId } = req.body;
 
-    const delta = Number(change);
-    if (!delta)
-      return res.status(400).json({ error: "Stock change must be non-zero" });
+    const delta = Number(amount);
+    if (!delta) {
+      return res.status(400).json({ error: "Stock amount must be non-zero" });
+    }
 
     const product = await Product.findOne({ _id: id, companyId });
-    if (!product) return res.status(404).json({ error: "Product not found" });
+    if (!product) {
+      return res.status(404).json({ error: "Product not found" });
+    }
 
-    const prev = product.stock || 0;
-    const next = prev + delta;
+    /* 🏪 SHOP STOCK */
+    if (shopId) {
+      const stock = await BranchStock.findOneAndUpdate(
+        { shopId, productId: id },
+        {
+          $inc: { quantity: delta },
+          $push: {
+            history: {
+              change: delta,
+              reason,
+              userId: req.user._id,
+            },
+          },
+        },
+        { new: true, upsert: true }
+      );
 
-    product.stock = next;
+      return res.json({
+        ok: true,
+        message: "Shop stock adjusted",
+        shopStock: stock.quantity,
+      });
+    }
+
+    /* 🏢 COMPANY STOCK */
+    const prev = product.stock;
+    product.stock += delta;
 
     product.stockHistory.push({
       change: delta,
-      reason: reason || "Stock adjustment",
-      createdAt: new Date(),
+      reason,
       userId: req.user._id,
     });
 
     await product.save();
 
-    // 🔔 Notify managers
     await notifyAllManagersInCompany(req, companyId, {
       type: "product",
       title: "Stock Updated",
-      message: `Stock updated: ${product.name} (${prev} → ${next})`,
+      message: `Stock updated for "${product.name}" (${prev} → ${product.stock})`,
       actionUrl: "/manager/products",
-      meta: { productId: product._id },
     });
 
-    res.json({
-      ok: true,
-      message: "Stock adjusted",
-      product,
-    });
+    res.json({ ok: true, product });
   } catch (err) {
-    console.error("❌ adjustCompanyProductStock error:", err.message);
+    console.error("❌ adjustCompanyProductStock error:", err);
     res.status(500).json({ error: "Server error adjusting stock" });
   }
 };

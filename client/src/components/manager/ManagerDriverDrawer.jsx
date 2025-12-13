@@ -1,186 +1,219 @@
-// client/src/components/manager/ManagerDriverDrawer.jsx
 import React, { useEffect, useState } from "react";
-import { updateManagerDriverApi } from "../../api/managerDriversApi";
+import {
+  updateManagerDriverProfileApi,
+  submitDriverVerificationApi,
+  verifyDriverApi,
+  rejectDriverApi,
+  createDriverAccountApi,
+} from "../../api/managerDriversApi";
+
 import styles from "../../styles/manager/managerDrivers.module.css";
 
 const ManagerDriverDrawer = ({ open, onClose, driver, onUpdated }) => {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phoneNumber, setPhoneNumber] = useState("");
+  const [profile, setProfile] = useState({
+    name: "",
+    phone: "",
+    address: "",
+  });
+
+  const [verification, setVerification] = useState({
+    idNumber: "",
+    vehiclePlateNumber: "",
+  });
+
+  const [account, setAccount] = useState({
+    email: "",
+    password: "",
+  });
+
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (driver) {
-      setName(driver.name || "");
-      setEmail(driver.email || "");
-      setPhoneNumber(driver.phoneNumber || driver.phone || "");
-    }
+    if (!driver) return;
+
+    setProfile({
+      name: driver.name || "",
+      phone: driver.phone || "",
+      address: driver.address || "",
+    });
+
+    setVerification({
+      idNumber: driver.driverVerification?.idNumber || "",
+      vehiclePlateNumber:
+        driver.driverVerification?.vehiclePlateNumber || "",
+    });
   }, [driver]);
 
   if (!open || !driver) return null;
 
-  const handleSave = async () => {
+  const isVerified = driver.driverVerificationStatus === "verified";
+  const isAccountCreated =
+    driver.driverOnboardingStage === "account_created";
+
+  /* ================================
+     PROFILE
+  ================================= */
+  const saveProfile = async () => {
+    setSaving(true);
     try {
-      setSaving(true);
-      await updateManagerDriverApi(driver._id, {
-        name,
-        email,
-        phoneNumber,
-      });
-      if (onUpdated) onUpdated();
-      onClose();
-    } catch (err) {
-      console.error("Failed to update driver:", err);
-      alert("Failed to update driver. Please try again.");
+      await updateManagerDriverProfileApi(driver._id, profile);
+      onUpdated();
     } finally {
       setSaving(false);
     }
   };
 
-  const statusBadgeClass =
-    driver.isActive !== false
-      ? styles.badgeActive
-      : styles.badgeInactive;
+  /* ================================
+     VERIFICATION
+  ================================= */
+  const saveVerification = async () => {
+    setSaving(true);
+    try {
+      await submitDriverVerificationApi(driver._id, verification);
+      onUpdated();
+    } finally {
+      setSaving(false);
+    }
+  };
 
-  const driverStatusLabel = driver.driverStatus
-    ? driver.driverStatus.replace("_", " ")
-    : "—";
+  const verifyDriver = async () => {
+    await verifyDriverApi(driver._id);
+    onUpdated();
+  };
+
+  const rejectDriver = async () => {
+    const reason = prompt("Reason for rejection?");
+    if (!reason) return;
+    await rejectDriverApi(driver._id, reason);
+    onUpdated();
+  };
+
+  /* ================================
+     ACCOUNT
+  ================================= */
+  const createAccount = async () => {
+    setSaving(true);
+    try {
+      await createDriverAccountApi(driver._id, account);
+      onUpdated();
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div className={styles.drawerOverlay}>
       <div className={styles.drawer}>
-        {/* Header */}
-        <div className={styles.drawerHeader}>
-          <h2>Driver Details</h2>
-          <button className={styles.closeBtn} onClick={onClose}>
-            ✕
-          </button>
-        </div>
+        <header className={styles.drawerHeader}>
+          <h2>Driver Onboarding</h2>
+          <button onClick={onClose}>✕</button>
+        </header>
 
-        {/* Top info */}
-        <div className={styles.driverTop}>
-          {driver.profileImage ? (
-            <img
-              src={driver.profileImage}
-              alt={driver.name}
-              className={styles.avatarLarge}
-            />
-          ) : (
-            <div className={styles.avatarLargeFallback}>
-              {driver.name?.charAt(0) || "D"}
+        {/* PROFILE */}
+        <section className={styles.section}>
+          <h4>Profile</h4>
+          <input
+            placeholder="Full name"
+            value={profile.name}
+            onChange={(e) =>
+              setProfile({ ...profile, name: e.target.value })
+            }
+          />
+          <input
+            placeholder="Phone"
+            value={profile.phone}
+            onChange={(e) =>
+              setProfile({ ...profile, phone: e.target.value })
+            }
+          />
+          <input
+            placeholder="Address"
+            value={profile.address}
+            onChange={(e) =>
+              setProfile({ ...profile, address: e.target.value })
+            }
+          />
+          <button onClick={saveProfile} disabled={saving}>
+            Save Profile
+          </button>
+        </section>
+
+        {/* VERIFICATION */}
+        <section className={styles.section}>
+          <h4>Verification</h4>
+          <input
+            placeholder="ID Number"
+            value={verification.idNumber}
+            onChange={(e) =>
+              setVerification({
+                ...verification,
+                idNumber: e.target.value,
+              })
+            }
+          />
+          <input
+            placeholder="Vehicle Plate Number"
+            value={verification.vehiclePlateNumber}
+            onChange={(e) =>
+              setVerification({
+                ...verification,
+                vehiclePlateNumber: e.target.value,
+              })
+            }
+          />
+
+          <button onClick={saveVerification} disabled={saving}>
+            Save Verification
+          </button>
+
+          {!isVerified && (
+            <div className={styles.row}>
+              <button
+                className={styles.successBtn}
+                onClick={verifyDriver}
+              >
+                Verify Driver
+              </button>
+              <button
+                className={styles.dangerBtn}
+                onClick={rejectDriver}
+              >
+                Reject
+              </button>
             </div>
           )}
+        </section>
 
-          <div className={styles.driverMainInfo}>
-            <div className={styles.driverNameRow}>
-              <h3>{driver.name || "Unnamed driver"}</h3>
-              <span className={statusBadgeClass}>
-                {driver.isActive !== false ? "Active" : "Inactive"}
-              </span>
-            </div>
-            <p className={styles.driverRole}>Driver</p>
-
-            <div className={styles.driverMetaRow}>
-              <span className={styles.metaLabel}>Status:</span>
-              <span className={styles.metaValue}>
-                {driverStatusLabel}
-              </span>
-            </div>
-
-            {driver.shop && (
-              <div className={styles.driverMetaRow}>
-                <span className={styles.metaLabel}>Shop:</span>
-                <span className={styles.metaValue}>
-                  {driver.shop.name} {driver.shop.city && `(${driver.shop.city})`}
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Editable fields */}
-        <div className={styles.section}>
-          <h4 className={styles.sectionTitle}>Contact Info</h4>
-          <div className={styles.formGroup}>
-            <label>Name</label>
+        {/* ACCOUNT */}
+        {isVerified && !isAccountCreated && (
+          <section className={styles.section}>
+            <h4>Create Driver Account</h4>
             <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              placeholder="Email"
+              value={account.email}
+              onChange={(e) =>
+                setAccount({ ...account, email: e.target.value })
+              }
             />
-          </div>
-
-          <div className={styles.formGroup}>
-            <label>Email</label>
             <input
-              type="email"
-              value={email || ""}
-              onChange={(e) => setEmail(e.target.value)}
+              type="password"
+              placeholder="Password"
+              value={account.password}
+              onChange={(e) =>
+                setAccount({ ...account, password: e.target.value })
+              }
             />
-          </div>
+            <button onClick={createAccount} disabled={saving}>
+              Create Account
+            </button>
+          </section>
+        )}
 
-          <div className={styles.formGroup}>
-            <label>Phone</label>
-            <input
-              type="text"
-              value={phoneNumber}
-              onChange={(e) => setPhoneNumber(e.target.value)}
-            />
-          </div>
-        </div>
-
-        {/* Performance */}
-        <div className={styles.section}>
-          <h4 className={styles.sectionTitle}>Performance</h4>
-          <div className={styles.statsRow}>
-            <div className={styles.statBox}>
-              <span className={styles.statLabel}>Trips Completed</span>
-              <span className={styles.statValue}>
-                {driver.totalTripsCompleted ?? 0}
-              </span>
-            </div>
-            <div className={styles.statBox}>
-              <span className={styles.statLabel}>Score</span>
-              <span className={styles.statValue}>
-                {driver.performanceScore != null
-                  ? driver.performanceScore.toFixed(1)
-                  : "—"}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Location */}
-        <div className={styles.section}>
-          <h4 className={styles.sectionTitle}>Last Known Location</h4>
-          {driver.currentLat != null && driver.currentLng != null ? (
-            <p className={styles.locationText}>
-              Lat: <strong>{driver.currentLat.toFixed(5)}</strong> &nbsp;|&nbsp;
-              Lng: <strong>{driver.currentLng.toFixed(5)}</strong>
-            </p>
-          ) : (
-            <p className={styles.empty}>No location data yet.</p>
-          )}
-        </div>
-
-        {/* Actions */}
-        <div className={styles.drawerActions}>
-          <button
-            type="button"
-            className={styles.secondaryBtn}
-            onClick={onClose}
-          >
-            Close
-          </button>
-          <button
-            type="button"
-            className={styles.primaryBtn}
-            onClick={handleSave}
-            disabled={saving}
-          >
-            {saving ? "Saving…" : "Save Changes"}
-          </button>
-        </div>
+        {isAccountCreated && (
+          <p className={styles.successText}>
+            ✔ Driver account created
+          </p>
+        )}
       </div>
     </div>
   );

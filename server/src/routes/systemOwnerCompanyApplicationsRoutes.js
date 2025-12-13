@@ -6,7 +6,7 @@ import {
   getCompanyApplications,
   approveCompanyApplication,
   rejectCompanyApplication,
-} from "../controllers/systemOwner/companyApplicationController.js";
+} from "../controllers/systemOwner/companyApprovalController.js";
 
 const router = Router();
 

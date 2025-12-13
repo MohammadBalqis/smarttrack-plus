@@ -3,11 +3,12 @@ import bcrypt from "bcryptjs";
 import User from "../models/User.js";
 import Trip from "../models/Trip.js";
 
-
-
 // 🔔 notification helpers
 import { createNotification } from "../controllers/trip/tripHelpers.js";
 
+/* ==========================================================
+   Helpers
+========================================================== */
 const notifyCompanyManagers = async (
   req,
   companyId,
@@ -39,25 +40,43 @@ const resolveCompanyId = (user) => {
 };
 
 /* ==========================================================
-   📌 GET ALL DRIVERS FOR COMPANY
+   📌 GET ALL DRIVERS FOR COMPANY (CLEAN LIST)
+   - NO vehicle info here
+   - NO verification images here
+   - Includes shopId populated (branch)
 ========================================================== */
 export const getCompanyDrivers = async (req, res) => {
   try {
     const companyId = resolveCompanyId(req.user);
-
-    if (!companyId)
+    if (!companyId) {
       return res.status(400).json({ error: "Unable to resolve companyId" });
+    }
 
     const { status } = req.query;
 
     const query = { role: "driver", companyId };
-
     if (status === "active") query.isActive = true;
     if (status === "inactive") query.isActive = false;
 
     const drivers = await User.find(query)
-      .select("-passwordHash")
-      .sort({ createdAt: -1 });
+      .select(
+        [
+          "name",
+          "email",
+          "phone",
+          "phoneNumber",
+          "address",
+          "profileImage",
+          "isActive",
+          "createdAt",
+          "shopId",
+          "driverVerificationStatus",
+          "driverOnboardingStage",
+        ].join(" ")
+      )
+      .populate("shopId", "name city")
+      .sort({ createdAt: -1 })
+      .lean();
 
     res.json({
       ok: true,
@@ -65,40 +84,50 @@ export const getCompanyDrivers = async (req, res) => {
       drivers,
     });
   } catch (err) {
-    console.error("❌ getCompanyDrivers error:", err.message);
+    console.error("❌ getCompanyDrivers error:", err);
     res.status(500).json({ error: "Server error fetching drivers" });
   }
 };
 
 /* ==========================================================
    ➕ CREATE NEW DRIVER (with notification)
+   NOTE:
+   - This creates a login-enabled driver (company creates directly)
+   - Does NOT create/attach a vehicle (vehicle comes from manager verification flow)
 ========================================================== */
 export const createCompanyDriver = async (req, res) => {
   try {
     const companyId = resolveCompanyId(req.user);
-
-    if (!companyId)
+    if (!companyId) {
       return res.status(400).json({ error: "Unable to resolve companyId" });
+    }
 
-    const { name, email, password, phoneNumber } = req.body;
+    const { name, email, password, phoneNumber, phone } = req.body;
 
-    if (!name || !email || !password)
+    if (!name || !email || !password) {
       return res.status(400).json({ error: "Name, email and password required" });
+    }
 
-    const existing = await User.findOne({ email });
-    if (existing)
+    const existing = await User.findOne({ email: String(email).toLowerCase() });
+    if (existing) {
       return res.status(400).json({ error: "Email already in use" });
+    }
 
     const passwordHash = await bcrypt.hash(password, 10);
 
     const driver = await User.create({
       name,
-      email,
+      email: String(email).toLowerCase(),
       passwordHash,
       phoneNumber: phoneNumber || "",
+      phone: phone || "",
       role: "driver",
       companyId,
       isActive: true,
+
+      // keep consistent with your onboarding system
+      driverOnboardingStage: "account_created",
+      driverVerificationStatus: "pending",
     });
 
     const safeDriver = driver.toObject();
@@ -136,43 +165,45 @@ export const createCompanyDriver = async (req, res) => {
       driver: safeDriver,
     });
   } catch (err) {
-    console.error("❌ createCompanyDriver error:", err.message);
+    console.error("❌ createCompanyDriver error:", err);
     res.status(500).json({ error: "Server error creating driver" });
   }
 };
 
 /* ==========================================================
-   ✏ UPDATE DRIVER
+   ✏ UPDATE DRIVER (personal info only)
 ========================================================== */
 export const updateCompanyDriver = async (req, res) => {
   try {
     const companyId = resolveCompanyId(req.user);
     const { id } = req.params;
-    const { name, email, phoneNumber } = req.body;
+    const { name, email, phoneNumber, phone, address, profileImage, shopId } = req.body;
 
-    if (!companyId)
+    if (!companyId) {
       return res.status(400).json({ error: "Unable to resolve companyId" });
+    }
 
     const driver = await User.findOne({ _id: id, role: "driver", companyId });
-
     if (!driver) return res.status(404).json({ error: "Driver not found" });
 
-    if (email && email !== driver.email) {
-      const exists = await User.findOne({ email });
-      if (exists)
-        return res.status(400).json({ error: "Email already in use" });
-      driver.email = email;
+    if (email && String(email).toLowerCase() !== driver.email) {
+      const exists = await User.findOne({ email: String(email).toLowerCase() });
+      if (exists) return res.status(400).json({ error: "Email already in use" });
+      driver.email = String(email).toLowerCase();
     }
 
     if (name) driver.name = name;
     if (phoneNumber !== undefined) driver.phoneNumber = phoneNumber;
+    if (phone !== undefined) driver.phone = phone;
+    if (address !== undefined) driver.address = address;
+    if (profileImage !== undefined) driver.profileImage = profileImage;
+    if (shopId !== undefined) driver.shopId = shopId || null;
 
     await driver.save();
 
     const safeDriver = driver.toObject();
     delete safeDriver.passwordHash;
 
-    // OPTIONAL Notification
     await notifyCompanyManagers(
       req,
       companyId,
@@ -180,7 +211,7 @@ export const updateCompanyDriver = async (req, res) => {
         title: "Driver Updated",
         message: `Driver ${driver.name} information was updated.`,
         type: "update",
-        actionUrl: `/company/drivers/${driver._id}`,
+        actionUrl: `/company/drivers`,
       },
       { driver: safeDriver }
     );
@@ -191,7 +222,7 @@ export const updateCompanyDriver = async (req, res) => {
       driver: safeDriver,
     });
   } catch (err) {
-    console.error("❌ updateCompanyDriver error:", err.message);
+    console.error("❌ updateCompanyDriver error:", err);
     res.status(500).json({ error: "Server error updating driver" });
   }
 };
@@ -204,11 +235,11 @@ export const toggleCompanyDriverStatus = async (req, res) => {
     const companyId = resolveCompanyId(req.user);
     const { id } = req.params;
 
-    if (!companyId)
+    if (!companyId) {
       return res.status(400).json({ error: "Unable to resolve companyId" });
+    }
 
     const driver = await User.findOne({ _id: id, role: "driver", companyId });
-
     if (!driver) return res.status(404).json({ error: "Driver not found" });
 
     driver.isActive = !driver.isActive;
@@ -267,28 +298,32 @@ export const toggleCompanyDriverStatus = async (req, res) => {
       driver: safeDriver,
     });
   } catch (err) {
-    console.error("❌ toggleCompanyDriverStatus error:", err.message);
+    console.error("❌ toggleCompanyDriverStatus error:", err);
     res.status(500).json({ error: "Server error updating driver status" });
   }
 };
 
 /* ==========================================================
    📊 DRIVER STATS (analytics for one driver)
-   GET /api/company/drivers/:id/stats
 ========================================================== */
 export const getCompanyDriverStats = async (req, res) => {
   try {
     const companyId = resolveCompanyId(req.user);
-    const { id } = req.params; // driverId
+    const { id } = req.params;
 
-    if (!companyId)
+    if (!companyId) {
       return res.status(400).json({ error: "Unable to resolve companyId" });
+    }
 
     const driver = await User.findOne({
       _id: id,
       role: "driver",
       companyId,
-    }).select("name email profileImage isActive createdAt");
+    })
+      .select(
+        "name email profileImage isActive createdAt driverStatus driverVerificationStatus driverOnboardingStage shopId"
+      )
+      .populate("shopId", "name city");
 
     if (!driver) return res.status(404).json({ error: "Driver not found" });
 
@@ -298,10 +333,7 @@ export const getCompanyDriverStats = async (req, res) => {
     }).sort({ createdAt: -1 });
 
     const totalTrips = trips.length;
-    const totalRevenue = trips.reduce(
-      (sum, t) => sum + (t.deliveryFee || 0),
-      0
-    );
+    const totalRevenue = trips.reduce((sum, t) => sum + (t.deliveryFee || 0), 0);
 
     const avgDeliveryTimeMin =
       totalTrips > 0
@@ -310,7 +342,7 @@ export const getCompanyDriverStats = async (req, res) => {
               if (!t.startTime || !t.endTime) return sum;
               const start = new Date(t.startTime).getTime();
               const end = new Date(t.endTime).getTime();
-              return sum + (end - start) / 60000; // minutes
+              return sum + (end - start) / 60000;
             }, 0) / totalTrips
           )
         : 0;
@@ -325,32 +357,32 @@ export const getCompanyDriverStats = async (req, res) => {
       },
     });
   } catch (err) {
-    console.error("❌ getCompanyDriverStats error:", err.message);
+    console.error("❌ getCompanyDriverStats error:", err);
     res.status(500).json({ error: "Server error fetching driver stats" });
   }
 };
 
 /* ==========================================================
    🕒 RECENT TRIPS FOR DRIVER
-   GET /api/company/drivers/:id/recent-trips
 ========================================================== */
 export const getCompanyDriverRecentTrips = async (req, res) => {
   try {
     const companyId = resolveCompanyId(req.user);
-    const { id } = req.params; // driverId
+    const { id } = req.params;
 
-    if (!companyId)
+    if (!companyId) {
       return res.status(400).json({ error: "Unable to resolve companyId" });
+    }
 
-    // Ensure driver belongs to this company
     const driverExists = await User.exists({
       _id: id,
       role: "driver",
       companyId,
     });
 
-    if (!driverExists)
+    if (!driverExists) {
       return res.status(404).json({ error: "Driver not found" });
+    }
 
     const recentTrips = await Trip.find({
       driverId: id,
@@ -365,7 +397,7 @@ export const getCompanyDriverRecentTrips = async (req, res) => {
       recentTrips,
     });
   } catch (err) {
-    console.error("❌ getCompanyDriverRecentTrips error:", err.message);
+    console.error("❌ getCompanyDriverRecentTrips error:", err);
     res.status(500).json({ error: "Server error fetching recent trips" });
   }
 };

@@ -9,17 +9,53 @@ export const getCompanyProductsApi = (params = {}) => {
 };
 
 /* ==========================================================
-   ➕ CREATE PRODUCT
+   ➕ CREATE PRODUCT (WITH IMAGE FILES)
 ========================================================== */
 export const createCompanyProductApi = (data) => {
-  return api.post("/company/products", data);
+  const formData = new FormData();
+
+  Object.entries(data).forEach(([key, value]) => {
+    if (key === "images" && Array.isArray(value)) {
+      value.forEach((file) => {
+        if (file instanceof File) {
+          formData.append("images", file);
+        }
+      });
+    } else {
+      formData.append(key, value);
+    }
+  });
+
+  return api.post("/company/products", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
 };
 
 /* ==========================================================
-   ✏️ UPDATE PRODUCT
+   ✏️ UPDATE PRODUCT (WITH IMAGE FILES)
 ========================================================== */
 export const updateCompanyProductApi = (productId, data) => {
-  return api.put(`/company/products/${productId}`, data);
+  const formData = new FormData();
+
+  Object.entries(data).forEach(([key, value]) => {
+    if (key === "images" && Array.isArray(value)) {
+      value.forEach((file) => {
+        if (file instanceof File) {
+          formData.append("images", file);
+        }
+      });
+    } else {
+      formData.append(key, value);
+    }
+  });
+
+  return api.put(`/company/products/${productId}`, formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
 };
 
 /* ==========================================================

@@ -1,12 +1,15 @@
 // server/src/models/Shop.js
 import mongoose from "mongoose";
 
+/* ==========================================================
+   🏪 SHOP / BRANCH
+========================================================== */
 const shopSchema = new mongoose.Schema(
   {
-    /* ==========================================================
-       🔗 RELATION TO COMPANY
-       (company user with role: "company")
-    ========================================================== */
+    /* ======================================================
+       🔗 COMPANY RELATION
+       (User with role: "company")
+    ====================================================== */
     companyId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -14,49 +17,87 @@ const shopSchema = new mongoose.Schema(
       index: true,
     },
 
-    /* ==========================================================
-       🏪 BASIC SHOP INFO
-    ========================================================== */
-    name: { type: String, required: true, trim: true },
-    city: { type: String, required: true, trim: true },
-    address: { type: String, required: true, trim: true },
-    phone: { type: String, default: null },
+    /* ======================================================
+       🏪 BASIC INFO
+    ====================================================== */
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+      index: true,
+    },
 
-    /* ==========================================================
-       📍 LOCATION (FOR MAPS + NEAREST DRIVER LATER)
-    ========================================================== */
+    city: {
+      type: String,
+      required: true,
+      trim: true,
+      index: true,
+    },
+
+    address: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
+    phone: {
+      type: String,
+      default: null,
+    },
+
+    /* ======================================================
+       📍 GEO LOCATION
+       (used for nearest shop / driver later)
+    ====================================================== */
     location: {
       lat: { type: Number, default: null },
       lng: { type: Number, default: null },
     },
 
-    /* ==========================================================
-       🕒 SHOP WORKING HOURS
-       (optional override per shop)
-    ========================================================== */
+    /* ======================================================
+       🕒 WORKING HOURS (OPTIONAL OVERRIDE)
+    ====================================================== */
     workingHours: {
       open: { type: String, default: "08:00" },
       close: { type: String, default: "22:00" },
       timezone: { type: String, default: "Asia/Beirut" },
     },
 
-    /* ==========================================================
-       💰 DELIVERY SETTINGS (OPTIONAL PER SHOP)
-       If null → use company.settings.deliveryFeeDefault
-    ========================================================== */
-    deliveryFeeOverride: { type: Number, default: null },
-    maxDeliveryDistanceKm: { type: Number, default: null },
+    /* ======================================================
+       💰 DELIVERY SETTINGS (PER SHOP)
+    ====================================================== */
+    deliveryFeeOverride: {
+      type: Number,
+      default: null,
+      min: 0,
+    },
 
-    /* ==========================================================
+    maxDeliveryDistanceKm: {
+      type: Number,
+      default: null,
+      min: 0,
+    },
+
+    /* ======================================================
        ⚙️ STATUS
-    ========================================================== */
-    isActive: { type: Boolean, default: true },
+    ====================================================== */
+    isActive: {
+      type: Boolean,
+      default: true,
+      index: true,
+    },
   },
   { timestamps: true }
 );
 
-// Index to quickly fetch company shops
+/* ==========================================================
+   🔎 INDEXES (PERFORMANCE)
+========================================================== */
 shopSchema.index({ companyId: 1, isActive: 1 });
+shopSchema.index({ companyId: 1, city: 1 });
 
+/* ==========================================================
+   EXPORT
+========================================================== */
 const Shop = mongoose.model("Shop", shopSchema);
 export default Shop;
