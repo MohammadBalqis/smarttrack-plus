@@ -1,20 +1,36 @@
+/* ======================================================
+   PAGE LAYOUT — FULL WIDTH (REAL LAPTOP FIT)
+====================================================== */
 .page {
-  padding: 24px;
-  max-width: 900px;
-  margin: auto;
+  width: 100%;
+  padding: 24px 32px;
+  box-sizing: border-box;
+
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
 }
 
-/* Welcome Card */
+/* Extra comfort on large screens */
+@media (min-width: 1600px) {
+  .page {
+    padding-left: 64px;
+    padding-right: 64px;
+  }
+}
+
+/* ======================================================
+   WELCOME CARD
+====================================================== */
 .welcomeCard {
-  background: white;
-  padding: 22px;
-  border-radius: 14px;
-  box-shadow: 0 3px 8px rgba(0,0,0,0.06);
-  text-align: center;
+  background: #ffffff;
+  padding: 28px;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
 }
 
 .title {
-  font-size: 28px;
+  font-size: 30px;
   font-weight: 700;
   margin-bottom: 6px;
 }
@@ -24,36 +40,42 @@
   font-size: 15px;
 }
 
-/* Company Card */
+/* ======================================================
+   COMPANY CARD
+====================================================== */
 .companyCard {
   background: #f9fafb;
-  padding: 18px;
-  border-radius: 14px;
-  margin-top: 18px;
+  padding: 22px;
+  border-radius: 16px;
   border: 1px solid #e5e7eb;
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
 }
 
 .companyHeader {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 16px;
 }
 
 .companyLogo {
-  width: 60px;
-  height: 60px;
+  width: 64px;
+  height: 64px;
   object-fit: contain;
+  border-radius: 12px;
 }
 
 .companyLogoPlaceholder {
-  width: 60px;
-  height: 60px;
+  width: 64px;
+  height: 64px;
   background: #e5e7eb;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  border-radius: 14px;
-  font-size: 24px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  font-size: 26px;
   font-weight: 700;
 }
 
@@ -69,8 +91,34 @@
 }
 
 .changeCompanyBtn {
-  margin-top: 12px;
-  padding: 8px 14px;
+  padding: 10px 18px;
+  border-radius: 999px;
+  border: none;
+  background: #2563eb;
+  color: white;
+  font-size: 14px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.changeCompanyBtn:hover {
+  background: #1d4ed8;
+}
+
+/* ======================================================
+   NO COMPANY
+====================================================== */
+.noCompanyBox {
+  background: #ffffff;
+  padding: 28px;
+  border-radius: 16px;
+  border: 1px dashed #e5e7eb;
+  text-align: center;
+}
+
+.primaryBtn {
+  margin-top: 14px;
+  padding: 10px 18px;
   border-radius: 999px;
   border: none;
   background: #2563eb;
@@ -79,32 +127,46 @@
   cursor: pointer;
 }
 
-/* Sections */
+.primaryBtn:hover {
+  background: #1d4ed8;
+}
+
+/* ======================================================
+   SECTIONS
+====================================================== */
 .section {
-  margin-top: 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .sectionTitle {
   font-size: 20px;
   font-weight: 600;
-  margin-bottom: 10px;
 }
 
 .info {
   color: #6b7280;
 }
 
-/* Trip List */
+/* ======================================================
+   ACTIVE TRIPS — RESPONSIVE GRID
+====================================================== */
 .tripList {
   display: grid;
-  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
 }
 
 .tripCard {
   background: white;
-  padding: 18px;
-  border-radius: 14px;
+  padding: 22px;
+  border-radius: 16px;
   border: 1px solid #e5e7eb;
+
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .tripTitle {
@@ -113,46 +175,76 @@
 }
 
 .tripStatus {
-  color: #2563eb;
+  font-size: 14px;
   font-weight: 600;
-  margin-top: 4px;
+  color: #2563eb;
 }
 
 .trackBtn {
-  margin-top: 10px;
-  padding: 8px 14px;
+  margin-top: auto;
+  padding: 10px 16px;
+  border-radius: 10px;
   border: none;
-  border-radius: 8px;
   background: #2563eb;
   color: white;
+  font-size: 14px;
   cursor: pointer;
 }
 
-/* Quick Actions */
+.trackBtn:hover {
+  background: #1d4ed8;
+}
+
+/* ======================================================
+   QUICK ACTIONS — FULL WIDTH GRID
+====================================================== */
 .actionsGrid {
-  margin-top: 30px;
   display: grid;
-  gap: 16px;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 20px;
 }
 
 .actionCard {
   background: white;
-  padding: 18px;
+  padding: 24px;
   text-align: center;
-  border-radius: 14px;
+  border-radius: 16px;
   border: 1px solid #e5e7eb;
   font-size: 16px;
   cursor: pointer;
-  transition: background 0.2s ease;
+
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .actionCard:hover {
-  background: #f3f4f6;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgba(0,0,0,0.08);
 }
 
+/* ======================================================
+   LOADING
+====================================================== */
 .loading {
-  padding: 40px;
+  padding: 60px;
   text-align: center;
+  font-size: 15px;
   color: #6b7280;
+}
+
+/* ======================================================
+   MOBILE
+====================================================== */
+@media (max-width: 768px) {
+  .page {
+    padding: 16px;
+  }
+
+  .companyCard {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .title {
+    font-size: 24px;
+  }
 }

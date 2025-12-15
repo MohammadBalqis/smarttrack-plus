@@ -1,9 +1,9 @@
 import React, { useEffect, useState, useRef } from "react";
 import styles from "../../styles/manager/managerTopbar.module.css";
 import {
-  getNotificationsApi,
-  markNotificationReadApi,
-  markAllNotificationsApi,
+  getManagerNotificationsApi,
+  markManagerNotificationReadApi,
+  markAllManagerNotificationsApi,
 } from "../../api/notificationsApi";
 import NotificationsDropdown from "./NotificationsDropdown";
 import { io } from "socket.io-client";
@@ -15,9 +15,12 @@ const ManagerTopbar = () => {
 
   const socketRef = useRef(null);
 
+  /* ==========================================================
+     LOAD NOTIFICATIONS
+  ========================================================== */
   const loadNotifications = async () => {
     try {
-      const res = await getNotificationsApi({ limit: 20 });
+      const res = await getManagerNotificationsApi({ limit: 20 });
       const list = res.data.notifications || [];
 
       setNotifications(list);
@@ -27,12 +30,16 @@ const ManagerTopbar = () => {
     }
   };
 
-  // Click to toggle dropdown
+  /* ==========================================================
+     DROPDOWN TOGGLE
+  ========================================================== */
   const toggleDropdown = () => {
     setDropdownOpen((prev) => !prev);
   };
 
-  // REAL-TIME SOCKET CONNECTION
+  /* ==========================================================
+     REAL-TIME SOCKET CONNECTION
+  ========================================================== */
   useEffect(() => {
     socketRef.current = io(import.meta.env.VITE_API_URL, {
       transports: ["websocket"],
@@ -43,23 +50,42 @@ const ManagerTopbar = () => {
       setUnreadCount((c) => c + 1);
     });
 
-    return () => socketRef.current.disconnect();
+    return () => {
+      socketRef.current?.disconnect();
+    };
   }, []);
 
+  /* ==========================================================
+     INITIAL LOAD
+  ========================================================== */
   useEffect(() => {
     loadNotifications();
   }, []);
 
+  /* ==========================================================
+     ACTIONS
+  ========================================================== */
   const handleMarkRead = async (id) => {
-    await markNotificationReadApi(id);
-    loadNotifications();
+    try {
+      await markManagerNotificationReadApi(id);
+      loadNotifications();
+    } catch (err) {
+      console.error("Failed to mark notification as read:", err);
+    }
   };
 
   const handleMarkAll = async () => {
-    await markAllNotificationsApi();
-    loadNotifications();
+    try {
+      await markAllManagerNotificationsApi();
+      loadNotifications();
+    } catch (err) {
+      console.error("Failed to mark all notifications:", err);
+    }
   };
 
+  /* ==========================================================
+     UI
+  ========================================================== */
   return (
     <header className={styles.topbar}>
       <h3 className={styles.title}>Manager Dashboard</h3>

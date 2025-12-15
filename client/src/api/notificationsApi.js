@@ -1,31 +1,25 @@
-// client/src/api/notificationsApi.js
-import api from "./axiosConfig";
+import apiClient from "./apiClient";
 
 /* ==========================================================
-   🔔 GLOBAL NOTIFICATIONS API (Works for ALL roles)
+   🔔 MANAGER NOTIFICATIONS API
 ========================================================== */
 
-/** Fetch notifications with filters */
-export const getNotificationsApi = (params = {}) => {
-  return api.get("/notifications/list", { params });
-};
+// Get manager notifications
+export const getManagerNotificationsApi = (params = {}) =>
+  apiClient.get("/manager/notifications/list", { params });
 
-/** Mark single notification as read */
-export const markNotificationReadApi = (id) => {
-  return api.patch(`/notifications/mark-read/${id}`);
-};
+// Mark single notification as read
+export const markManagerNotificationReadApi = (id) =>
+  apiClient.patch(`/manager/notifications/mark-read/${id}`);
 
-/** Mark ALL notifications as read  */
-export const markAllNotificationsApi = () => {
-  return api.patch(`/notifications/mark-all`);
-};
+// Mark ALL notifications as read
+export const markAllManagerNotificationsApi = () =>
+  apiClient.patch("/manager/notifications/mark-all");
 
-/** Delete a single notification */
-export const deleteNotificationApi = (id) => {
-  return api.delete(`/notifications/delete/${id}`);
-};
+// Delete single notification
+export const deleteManagerNotificationApi = (id) =>
+  apiClient.delete(`/manager/notifications/delete/${id}`);
 
-/** Delete ALL notifications */
-export const deleteAllNotificationsApi = () => {
-  return api.delete(`/notifications/delete-all`);
-};
+// Delete ALL notifications
+export const deleteAllManagerNotificationsApi = () =>
+  apiClient.delete("/manager/notifications/delete-all");

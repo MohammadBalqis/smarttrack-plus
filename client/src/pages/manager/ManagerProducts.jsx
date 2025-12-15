@@ -1,11 +1,11 @@
-// client/src/pages/manager/ManagerProducts.jsx
 import React, { useEffect, useState } from "react";
 import {
-  getManagerProductsApi,
-  getManagerProductApi,
-} from "../../api/managerProductsApi";
+  getShopProductsApi,
+} from "../../api/managerShopProductsApi";
+
 import ManagerProductDrawer from "../../components/manager/ManagerProductDrawer";
 import ManagerProductCatalogDrawer from "../../components/manager/ManagerProductCatalogDrawer";
+
 import styles from "../../styles/manager/managerProducts.module.css";
 
 const ManagerProducts = () => {
@@ -14,10 +14,8 @@ const ManagerProducts = () => {
 
   // Filters
   const [categoryFilter, setCategoryFilter] = useState("");
-  const [activeFilter, setActiveFilter] = useState(""); // "", "true", "false"
+  const [activeFilter, setActiveFilter] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-  const [minPrice, setMinPrice] = useState("");
-  const [maxPrice, setMaxPrice] = useState("");
 
   // Pagination
   const [page, setPage] = useState(1);
@@ -27,35 +25,31 @@ const ManagerProducts = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Drawer (product details)
+  // Drawers
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
-
-  // Drawer (company catalog)
   const [catalogOpen, setCatalogOpen] = useState(false);
 
+  /* ==========================================================
+     LOAD SHOP PRODUCTS (CORRECT SOURCE)
+  ========================================================== */
   const loadProducts = async () => {
     try {
       setLoading(true);
       setError("");
 
-      const params = {
+      const res = await getShopProductsApi({
         page,
         limit,
-      };
+        search: searchTerm || undefined,
+        category: categoryFilter || undefined,
+        active: activeFilter || undefined,
+      });
 
-      if (categoryFilter) params.category = categoryFilter;
-      if (activeFilter) params.active = activeFilter;
-      if (searchTerm) params.search = searchTerm.trim();
-      if (minPrice) params.minPrice = minPrice;
-      if (maxPrice) params.maxPrice = maxPrice;
-
-      const res = await getManagerProductsApi(params);
-
-      setProducts(res.data.products || []);
-      setTotal(res.data.total || 0);
+      setProducts(res.data.items || []);
+      setTotal(res.data.count || 0);
     } catch (err) {
-      console.error("Error loading products:", err);
+      console.error("❌ Failed to load shop products:", err);
       setError("Failed to load products.");
     } finally {
       setLoading(false);
@@ -65,7 +59,7 @@ const ManagerProducts = () => {
   useEffect(() => {
     loadProducts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, categoryFilter, activeFilter, minPrice, maxPrice]);
+  }, [page, categoryFilter, activeFilter]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -73,14 +67,8 @@ const ManagerProducts = () => {
     loadProducts();
   };
 
-  const openDrawer = async (product) => {
-    try {
-      const res = await getManagerProductApi(product._id);
-      setSelectedProduct(res.data.product || product);
-    } catch (err) {
-      console.error("Error loading product:", err);
-      setSelectedProduct(product);
-    }
+  const openDrawer = (shopProduct) => {
+    setSelectedProduct(shopProduct);
     setDrawerOpen(true);
   };
 
@@ -98,14 +86,13 @@ const ManagerProducts = () => {
   };
 
   const formatPrice = (v) => {
-    if (typeof v === "number") return `$${v.toFixed(2)}`;
-    const num = Number(v || 0);
-    return `$${num.toFixed(2)}`;
+    const n = Number(v || 0);
+    return `$${n.toFixed(2)}`;
   };
 
   return (
     <div className={styles.page}>
-      {/* Header */}
+      {/* HEADER */}
       <div className={styles.header}>
         <div>
           <h1>Products</h1>
@@ -122,17 +109,17 @@ const ManagerProducts = () => {
         </div>
       </div>
 
-      {/* Summary */}
+      {/* SUMMARY */}
       <div className={styles.headerInfoRow}>
         <span>
           Total products: <strong>{total}</strong>
         </span>
         <span>
-          Page: <strong>{page}</strong> / {Math.max(totalPages, 1)}
+          Page: <strong>{page}</strong> / {totalPages}
         </span>
       </div>
 
-      {/* Filters */}
+      {/* FILTERS */}
       <div className={styles.filtersRow}>
         <select
           value={categoryFilter}
@@ -164,26 +151,10 @@ const ManagerProducts = () => {
           <option value="false">Inactive</option>
         </select>
 
-        <input
-          type="number"
-          min="0"
-          placeholder="Min price"
-          value={minPrice}
-          onChange={(e) => setMinPrice(e.target.value)}
-        />
-
-        <input
-          type="number"
-          min="0"
-          placeholder="Max price"
-          value={maxPrice}
-          onChange={(e) => setMaxPrice(e.target.value)}
-        />
-
         <form onSubmit={handleSearchSubmit} className={styles.searchForm}>
           <input
             type="text"
-            placeholder="Search by name..."
+            placeholder="Search by product name..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -191,19 +162,17 @@ const ManagerProducts = () => {
         </form>
       </div>
 
-      {/* Table */}
+      {/* TABLE */}
       <div className={styles.tableCard}>
         <div className={styles.tableHeaderRow}>
           <h3>Products List</h3>
-          {loading && (
-            <span className={styles.smallInfo}>Loading products...</span>
-          )}
+          {loading && <span className={styles.smallInfo}>Loading...</span>}
         </div>
 
         {error && <p className={styles.error}>{error}</p>}
 
         {!loading && products.length === 0 ? (
-          <p className={styles.empty}>No products found.</p>
+          <p className={styles.empty}>No products in this shop yet.</p>
         ) : (
           <div className={styles.tableWrapper}>
             <table className={styles.table}>
@@ -215,30 +184,31 @@ const ManagerProducts = () => {
                   <th>Price</th>
                   <th>Stock</th>
                   <th>Status</th>
-                  <th>Created</th>
                   <th></th>
                 </tr>
               </thead>
               <tbody>
                 {products.map((p) => (
-                  <tr key={p._id}>
+                  <tr key={p.id}>
                     <td>
-                      {Array.isArray(p.images) && p.images.length > 0 ? (
+                      {p.product?.image ? (
                         <img
-                          src={p.images[0]}
-                          alt={p.name}
+                          src={p.product.image}
+                          alt={p.product.name}
                           className={styles.thumbnail}
                         />
                       ) : (
                         <div className={styles.noImage}>No Image</div>
                       )}
                     </td>
-                    <td className={styles.nameCell}>{p.name}</td>
-                    <td>{p.category || "general"}</td>
+                    <td className={styles.nameCell}>
+                      {p.product?.name}
+                    </td>
+                    <td>{p.product?.category || "general"}</td>
                     <td>{formatPrice(p.price)}</td>
                     <td>
                       <span className={getStockBadgeClass(p)}>
-                        {p.stock ?? 0}
+                        {p.stock}
                       </span>
                     </td>
                     <td>
@@ -251,11 +221,6 @@ const ManagerProducts = () => {
                       >
                         {p.isActive ? "Active" : "Inactive"}
                       </span>
-                    </td>
-                    <td>
-                      {p.createdAt
-                        ? new Date(p.createdAt).toLocaleDateString()
-                        : "—"}
                     </td>
                     <td>
                       <button
@@ -273,13 +238,12 @@ const ManagerProducts = () => {
           </div>
         )}
 
-        {/* Pagination */}
+        {/* PAGINATION */}
         {totalPages > 1 && (
           <div className={styles.paginationRow}>
             <button
-              type="button"
-              onClick={() => setPage((prev) => Math.max(1, prev - 1))}
               disabled={page === 1}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
             >
               Previous
             </button>
@@ -287,11 +251,10 @@ const ManagerProducts = () => {
               Page {page} / {totalPages}
             </span>
             <button
-              type="button"
-              onClick={() =>
-                setPage((prev) => (prev < totalPages ? prev + 1 : prev))
-              }
               disabled={page >= totalPages}
+              onClick={() =>
+                setPage((p) => Math.min(totalPages, p + 1))
+              }
             >
               Next
             </button>
@@ -299,7 +262,7 @@ const ManagerProducts = () => {
         )}
       </div>
 
-      {/* Product Details Drawer */}
+      {/* DRAWERS */}
       <ManagerProductDrawer
         open={drawerOpen}
         onClose={closeDrawer}
@@ -307,7 +270,6 @@ const ManagerProducts = () => {
         onUpdated={loadProducts}
       />
 
-      {/* Company Catalog Drawer */}
       <ManagerProductCatalogDrawer
         open={catalogOpen}
         onClose={() => setCatalogOpen(false)}

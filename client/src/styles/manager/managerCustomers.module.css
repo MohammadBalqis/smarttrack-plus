@@ -1,82 +1,75 @@
+/* =========================================================
+   PAGE
+========================================================= */
 .page {
   padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
+/* =========================================================
+   HEADER
+========================================================= */
 .headerRow {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 16px;
-  margin-bottom: 16px;
 }
 
 .title {
-  font-size: 24px;
-  font-weight: 600;
+  font-size: 26px;
+  font-weight: 700;
 }
 
 .subtitle {
-  font-size: 14px;
   color: #64748b;
+  font-size: 14px;
 }
 
 .headerStats {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 4px;
+  gap: 16px;
   font-size: 14px;
-  color: #0f172a;
+  color: #475569;
 }
 
+/* =========================================================
+   FILTERS
+========================================================= */
 .filtersRow {
   display: flex;
   justify-content: space-between;
-  align-items: center;
   gap: 12px;
-  margin-bottom: 16px;
+  flex-wrap: wrap;
 }
 
 .searchForm {
   display: flex;
   gap: 8px;
-  flex: 1;
 }
 
 .searchForm input {
-  flex: 1;
-  padding: 6px 10px;
-  border-radius: 6px;
-  border: 1px solid #cbd5e1;
-  font-size: 14px;
+  padding: 8px 12px;
+  border: 1px solid #cbd5f5;
+  border-radius: 8px;
 }
 
 .searchForm button {
-  padding: 6px 12px;
-  border-radius: 6px;
   border: none;
-  background-color: #2563eb;
   color: #fff;
-  font-size: 14px;
+  padding: 8px 14px;
+  border-radius: 8px;
   cursor: pointer;
 }
 
-.searchForm button:hover {
-  background-color: #1d4ed8;
-}
-
-.filtersRight select {
-  padding: 6px 10px;
-  border-radius: 6px;
-  border: 1px solid #cbd5e1;
-  font-size: 14px;
-}
-
-/* Table */
+/* =========================================================
+   TABLE
+========================================================= */
 .tableCard {
-  background-color: #ffffff;
+  background: #fff;
   border-radius: 12px;
-  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
   padding: 16px;
 }
 
@@ -84,11 +77,9 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
 }
 
 .tableWrapper {
-  width: 100%;
   overflow-x: auto;
 }
 
@@ -98,221 +89,218 @@
   font-size: 14px;
 }
 
-.table thead {
-  background-color: #f8fafc;
-}
-
 .table th,
 .table td {
-  padding: 10px 8px;
-  border-bottom: 1px solid #e2e8f0;
+  padding: 12px;
+  border-bottom: 1px solid #e5e7eb;
   text-align: left;
 }
 
-.table th {
-  font-weight: 500;
-  color: #475569;
-}
-
-.empty {
-  padding: 16px 4px;
-  text-align: center;
-  color: #64748b;
-}
-
-.error {
-  margin-bottom: 8px;
-  color: #b91c1c;
-  font-size: 14px;
-}
-
-.smallInfo {
-  font-size: 12px;
-  color: #64748b;
-}
-
-/* Customer cell */
 .customerCell {
   min-width: 220px;
 }
 
 .customerInfo {
   display: flex;
+  gap: 10px;
   align-items: center;
-  gap: 8px;
 }
 
 .avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 999px;
-  object-fit: cover;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
 }
 
 .avatarFallback {
-  width: 32px;
-  height: 32px;
-  border-radius: 999px;
-  background-color: #e2e8f0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #e5e7eb;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
   font-weight: 600;
-  color: #1e293b;
-}
-
-.statusBadgeActive,
-.statusBadgeInactive {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-size: 11px;
-  margin-top: 2px;
 }
 
 .statusBadgeActive {
-  background-color: #dcfce7;
-  color: #166534;
+  font-size: 11px;
+  color: #065f46;
 }
 
 .statusBadgeInactive {
-  background-color: #fee2e2;
-  color: #b91c1c;
+  font-size: 11px;
+  color: #991b1b;
 }
 
-/* Pagination */
-.paginationRow {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 12px;
-  padding-top: 12px;
-  margin-top: 12px;
-  border-top: 1px solid #e2e8f0;
-}
-
-.paginationRow button {
-  padding: 6px 10px;
-  border-radius: 6px;
-  border: 1px solid #cbd5e1;
-  background-color: #f8fafc;
-  font-size: 13px;
-  cursor: pointer;
-}
-
-.paginationRow button:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
-/* View button */
 .viewButton {
-  padding: 4px 10px;
-  border-radius: 6px;
   border: none;
-  background-color: #0f172a;
   color: #fff;
-  font-size: 13px;
+  padding: 6px 12px;
+  border-radius: 8px;
   cursor: pointer;
 }
 
-.viewButton:hover {
-  background-color: #020617;
-}
-
-/* Drawer */
+/* =========================================================
+   DRAWER OVERLAY
+========================================================= */
 .drawerOverlay {
   position: fixed;
   inset: 0;
-  background-color: rgba(15, 23, 42, 0.45);
-  display: flex;
-  justify-content: flex-end;
-  z-index: 40;
+  background: rgba(15, 23, 42, 0.45);
+  z-index: 50;
 }
 
+/* =========================================================
+   DRAWER
+========================================================= */
 .drawer {
+  position: absolute;
+  right: 0;
+  top: 0;
   width: 420px;
-  max-width: 100%;
-  background-color: #ffffff;
   height: 100%;
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
+  background: #fff;
+  padding: 20px;
   overflow-y: auto;
+  animation: slideIn 0.25s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
 }
 
 .drawerHeader {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
 }
 
 .closeBtn {
   border: none;
-  background: transparent;
-  font-size: 18px;
+  background: none;
+  font-size: 20px;
   cursor: pointer;
 }
 
+/* =========================================================
+   PROFILE
+========================================================= */
 .drawerProfile {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: 14px;
+  margin-top: 20px;
 }
 
 .drawerAvatar {
-  width: 48px;
-  height: 48px;
-  border-radius: 999px;
-  object-fit: cover;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
 }
 
 .drawerAvatarFallback {
-  width: 48px;
-  height: 48px;
-  border-radius: 999px;
-  background-color: #e2e8f0;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  color: #fff;
+  font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
-  font-weight: 600;
-  color: #1e293b;
 }
 
-/* Stats grid */
+.drawerProfileInfo h3 {
+  margin: 0;
+}
+
+.drawerEmail,
+.drawerPhone {
+  font-size: 13px;
+  color: #475569;
+}
+
+/* =========================================================
+   STATS
+========================================================= */
 .statsGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 10px;
-  margin-bottom: 16px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin: 20px 0;
 }
 
 .statCard {
-  padding: 10px;
+  background: #f8fafc;
   border-radius: 10px;
-  border: 1px solid #e2e8f0;
-  background-color: #f8fafc;
+  padding: 12px;
 }
 
 .statLabel {
-  font-size: 11px;
+  font-size: 12px;
   color: #64748b;
 }
 
 .statNumber {
-  font-size: 16px;
-  font-weight: 600;
-  color: #0f172a;
+  font-size: 18px;
+  font-weight: 700;
 }
 
+/* =========================================================
+   BADGES
+========================================================= */
+.badge {
+  padding: 4px 8px;
+  font-size: 11px;
+  border-radius: 6px;
+  color: #fff;
+}
+
+.badgeStatus_assigned {
+  background: #6366f1;
+}
+.badgeStatus_in_progress {
+  background: #f59e0b;
+}
+.badgeStatus_delivered {
+  background: #16a34a;
+}
+.badgeStatus_cancelled {
+  background: #dc2626;
+}
+
+/* =========================================================
+   MISC
+========================================================= */
 .subTitle {
-  font-size: 15px;
+  margin-top: 12px;
+  font-size: 16px;
   font-weight: 600;
-  margin-bottom: 8px;
-  margin-top: 8px;
+}
+
+.empty {
+  color: #64748b;
+  font-size: 14px;
+}
+
+.error {
+  color: #dc2626;
+}
+
+.smallInfo {
+  font-size: 13px;
+  color: #64748b;
+}
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+@media (max-width: 768px) {
+  .drawer {
+    width: 100%;
+  }
 }

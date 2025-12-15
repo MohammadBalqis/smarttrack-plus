@@ -24,16 +24,15 @@ const ManagerCustomers = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Drawer States
+  /* Drawer */
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [selectedCustomerId, setSelectedCustomerId] = useState(null);
   const [selectedDetails, setSelectedDetails] = useState(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
 
   const totalPages = Math.ceil(total / limit) || 1;
 
   /* ============================================================
-     LOAD CUSTOMERS
+     LOAD CUSTOMERS (LIST ONLY)
   ============================================================ */
   const loadCustomers = async () => {
     try {
@@ -49,7 +48,7 @@ const ManagerCustomers = () => {
       setCustomers(res.data.customers || []);
       setTotal(res.data.total || 0);
     } catch (err) {
-      console.error("Error loading customers:", err);
+      console.error(err);
       setError(
         err.response?.data?.error ||
           "Failed to load customers. Please try again."
@@ -70,11 +69,10 @@ const ManagerCustomers = () => {
   };
 
   /* ============================================================
-     OPEN DRAWER (LOAD DETAILS)
+     OPEN DRAWER (DETAILS)
   ============================================================ */
   const openDrawer = async (customerId) => {
     setDrawerOpen(true);
-    setSelectedCustomerId(customerId);
     setSelectedDetails(null);
     setLoadingDetails(true);
 
@@ -91,7 +89,6 @@ const ManagerCustomers = () => {
 
   const closeDrawer = () => {
     setDrawerOpen(false);
-    setSelectedCustomerId(null);
     setSelectedDetails(null);
   };
 
@@ -99,12 +96,6 @@ const ManagerCustomers = () => {
     if (!v) return "—";
     const d = new Date(v);
     return isNaN(d) ? "—" : d.toLocaleDateString();
-  };
-
-  const formatMoney = (v) => {
-    if (typeof v === "number") return `$${v.toFixed(2)}`;
-    const num = Number(v || 0);
-    return `$${num.toFixed(2)}`;
   };
 
   return (
@@ -116,7 +107,7 @@ const ManagerCustomers = () => {
             Customers
           </h1>
           <p className={styles.subtitle}>
-            Customers who placed trips or orders with your company.
+            Customers interacting with your trips.
           </p>
         </div>
 
@@ -144,29 +135,23 @@ const ManagerCustomers = () => {
           </button>
         </form>
 
-        <div className={styles.filtersRight}>
-          <select
-            value={minTrips}
-            onChange={(e) => {
-              setMinTrips(e.target.value);
-              setPage(1);
-            }}
-          >
-            <option value="">All customers</option>
-            <option value="1">At least 1 trip</option>
-            <option value="3">At least 3 trips</option>
-            <option value="5">At least 5 trips</option>
-          </select>
-        </div>
+        <select
+          value={minTrips}
+          onChange={(e) => {
+            setMinTrips(e.target.value);
+            setPage(1);
+          }}
+        >
+          <option value="">All customers</option>
+          <option value="1">At least 1 trip</option>
+          <option value="3">At least 3 trips</option>
+          <option value="5">At least 5 trips</option>
+        </select>
       </div>
 
       {/* TABLE */}
       <div className={styles.tableCard}>
-        <div className={styles.tableHeaderRow}>
-          <h3>Customers List</h3>
-          {loading && <span className={styles.smallInfo}>Loading...</span>}
-        </div>
-
+        {loading && <p className={styles.smallInfo}>Loading...</p>}
         {error && <p className={styles.error}>{error}</p>}
 
         {!loading && customers.length === 0 ? (
@@ -177,68 +162,53 @@ const ManagerCustomers = () => {
               <thead>
                 <tr>
                   <th>Customer</th>
-                  <th>Email</th>
                   <th>Phone</th>
+                  <th>Status</th>
                   <th>Total Trips</th>
-                  <th>Delivered</th>
-                  <th>Cancelled</th>
                   <th>Last Trip</th>
-                  <th>Total Spent</th>
-                  <th></th>
                 </tr>
               </thead>
 
               <tbody>
                 {customers.map((c) => (
-                  <tr key={c.customerId}>
+                  <tr
+                    key={c.customerId}
+                    className={styles.clickableRow}
+                    onClick={() => openDrawer(c.customerId)}
+                  >
                     <td className={styles.customerCell}>
                       <div className={styles.customerInfo}>
                         {c.avatar ? (
                           <img
                             src={c.avatar}
                             className={styles.avatar}
-                            alt="avatar"
+                            alt={c.name}
                           />
                         ) : (
                           <div className={styles.avatarFallback}>
                             {c.name?.charAt(0) || "C"}
                           </div>
                         )}
-                        <div>
-                          <div>{c.name}</div>
-                          <span
-                            className={
-                              c.isActive
-                                ? styles.statusBadgeActive
-                                : styles.statusBadgeInactive
-                            }
-                          >
-                            {c.isActive ? "Active" : "Inactive"}
-                          </span>
-                        </div>
+                        <div>{c.name}</div>
                       </div>
                     </td>
 
-                    <td>{c.email}</td>
                     <td>{c.phone || "—"}</td>
 
-                    <td>{c.totalTrips}</td>
-                    <td>{c.deliveredTrips}</td>
-                    <td>{c.cancelledTrips}</td>
-
-                    <td>{formatDate(c.lastTripAt)}</td>
-                    <td>{formatMoney(c.totalAmount)}</td>
-
                     <td>
-                      <button
-                        type="button"
-                        className={styles.viewButton}
-                        onClick={() => openDrawer(c.customerId)}
-                        style={{ background: branding.primaryColor }}
+                      <span
+                        className={
+                          c.isActive
+                            ? styles.statusBadgeActive
+                            : styles.statusBadgeInactive
+                        }
                       >
-                        View
-                      </button>
+                        {c.isActive ? "Active" : "Inactive"}
+                      </span>
                     </td>
+
+                    <td>{c.totalTrips}</td>
+                    <td>{formatDate(c.lastTripAt)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -250,7 +220,6 @@ const ManagerCustomers = () => {
         {totalPages > 1 && (
           <div className={styles.paginationRow}>
             <button
-              type="button"
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page === 1}
             >
@@ -260,7 +229,6 @@ const ManagerCustomers = () => {
               Page {page} / {totalPages}
             </span>
             <button
-              type="button"
               onClick={() =>
                 setPage((p) => (p < totalPages ? p + 1 : p))
               }
@@ -277,15 +245,7 @@ const ManagerCustomers = () => {
         open={drawerOpen}
         onClose={closeDrawer}
         loading={loadingDetails}
-        details={
-          loadingDetails
-            ? null
-            : selectedDetails || {
-                customer: null,
-                stats: null,
-                trips: [],
-              }
-        }
+        details={selectedDetails}
       />
     </div>
   );

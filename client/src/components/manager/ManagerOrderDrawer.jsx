@@ -3,32 +3,54 @@ import React, { useEffect, useState } from "react";
 import {
   getManagerOrderDetailsApi,
   getManagerOrderTimelineApi,
+  getAvailableDriversForOrdersApi,
+  assignDriverToOrderApi,
+  generateOrderDeliveryQrApi,
 } from "../../api/managerOrdersApi";
+
+import QRCode from "react-qr-code";
 import styles from "../../styles/manager/managerOrders.module.css";
 import { useBranding } from "../../context/BrandingContext";
 
 const TABS = ["overview", "items", "timeline", "trip"];
 
-const ManagerOrderDrawer = ({ open, onClose, order }) => {
+const ManagerOrderDrawer = ({ open, onClose, order, onUpdated }) => {
   const { branding } = useBranding();
   const primaryColor = branding?.primaryColor || "#2563EB";
 
   const [activeTab, setActiveTab] = useState("overview");
   const [details, setDetails] = useState(null);
   const [timeline, setTimeline] = useState([]);
+
+  const [drivers, setDrivers] = useState([]);
+  const [assigning, setAssigning] = useState(false);
+  const [selectedDriverId, setSelectedDriverId] = useState("");
+
+  const [qrData, setQrData] = useState(null);
+  const [qrLoading, setQrLoading] = useState(false);
+  const [qrError, setQrError] = useState("");
+
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [loadingTimeline, setLoadingTimeline] = useState(false);
+  const [loadingDrivers, setLoadingDrivers] = useState(false);
   const [error, setError] = useState("");
 
+  /* ==========================================================
+     LOAD DATA
+  ========================================================== */
   useEffect(() => {
-    if (open && order?._id) {
-      setActiveTab("overview");
-      loadDetails(order._id);
-      loadTimeline(order._id);
-    } else {
-      setDetails(null);
-      setTimeline([]);
-      setError("");
+    if (!open || !order?._id) return;
+
+    setActiveTab("overview");
+    setError("");
+    setQrData(null);
+    setQrError("");
+
+    loadDetails(order._id);
+    loadTimeline(order._id);
+
+    if (order.status === "pending") {
+      loadAvailableDrivers();
     }
   }, [open, order]);
 
@@ -37,7 +59,6 @@ const ManagerOrderDrawer = ({ open, onClose, order }) => {
       setLoadingDetails(true);
       const res = await getManagerOrderDetailsApi(orderId);
       if (res.data?.ok) setDetails(res.data.order);
-      else setError("Failed to load order details.");
     } catch {
       setError("Failed to load order details.");
     } finally {
@@ -50,34 +71,77 @@ const ManagerOrderDrawer = ({ open, onClose, order }) => {
       setLoadingTimeline(true);
       const res = await getManagerOrderTimelineApi(orderId);
       if (res.data?.ok) setTimeline(res.data.timeline || []);
-      else setTimeline([]);
-    } catch {
-      setTimeline([]);
     } finally {
       setLoadingTimeline(false);
     }
   };
 
-  if (!open || !order) return null;
+  /* ==========================================================
+     AVAILABLE DRIVERS
+  ========================================================== */
+  const loadAvailableDrivers = async () => {
+    try {
+      setLoadingDrivers(true);
+      const res = await getAvailableDriversForOrdersApi();
+      if (res.data?.ok) setDrivers(res.data.drivers || []);
+    } finally {
+      setLoadingDrivers(false);
+    }
+  };
 
+  /* ==========================================================
+     ASSIGN DRIVER
+  ========================================================== */
+  const handleAssignDriver = async () => {
+    if (!selectedDriverId) return;
+
+    try {
+      setAssigning(true);
+      await assignDriverToOrderApi(order._id, {
+        driverId: selectedDriverId,
+      });
+
+      onUpdated?.();
+      onClose();
+    } catch {
+      setError("Failed to assign driver.");
+    } finally {
+      setAssigning(false);
+    }
+  };
+
+  /* ==========================================================
+     GENERATE DELIVERY QR
+  ========================================================== */
+  const generateQr = async () => {
+    try {
+      setQrLoading(true);
+      setQrError("");
+
+      const res = await generateOrderDeliveryQrApi(order._id);
+      if (res.data?.ok) setQrData(res.data);
+      else setQrError("Failed to generate QR.");
+    } catch {
+      setQrError("Failed to generate QR.");
+    } finally {
+      setQrLoading(false);
+    }
+  };
+
+  if (!open || !order) return null;
   const d = details || order;
 
   const formatMoney = (v) => (typeof v === "number" ? v.toFixed(2) : "0.00");
-  const formatDateTime = (v) => {
-    if (!v) return "—";
-    const date = new Date(v);
-    return isNaN(date) ? "—" : date.toLocaleString();
-  };
+  const formatDateTime = (v) => (v ? new Date(v).toLocaleString() : "—");
 
+  /* ==========================================================
+     RENDER
+  ========================================================== */
   return (
     <div className={styles.drawerOverlay}>
       <div className={styles.drawer}>
-        {/* CLOSE BUTTON */}
-        <button className={styles.drawerCloseBtn} onClick={onClose}>
-          ✕
-        </button>
+        <button className={styles.drawerCloseBtn} onClick={onClose}>✕</button>
 
-        {/* TITLE */}
         <h2 className={styles.drawerTitle}>
           Order #{String(order._id).slice(-6)}
         </h2>
@@ -87,236 +151,115 @@ const ManagerOrderDrawer = ({ open, onClose, order }) => {
           {TABS.map((t) => (
             <button
               key={t}
-              className={`${styles.tabBtn} ${
-                activeTab === t ? styles.tabBtnActive : ""
-              }`}
-              style={activeTab === t ? { color: primaryColor } : {}}
+              className={`${styles.tabBtn} ${activeTab === t ? styles.tabBtnActive : ""}`}
               onClick={() => setActiveTab(t)}
+              style={activeTab === t ? { color: primaryColor } : {}}
             >
-              {t === "overview"
-                ? "Overview"
-                : t === "items"
-                ? "Items"
-                : t === "timeline"
-                ? "Timeline"
-                : "Trip / Payment"}
+              {t.toUpperCase()}
             </button>
           ))}
         </div>
 
-        {/* CONTENT */}
         <div className={styles.drawerContent}>
-          {/* ====================== OVERVIEW TAB ====================== */}
+          {/* ================= OVERVIEW ================= */}
           {activeTab === "overview" && (
             <>
-              {loadingDetails ? (
-                <p className={styles.smallInfo}>Loading details...</p>
-              ) : (
-                <>
-                  {/* TOP INFO */}
-                  <div className={styles.overviewHeader}>
-                    <div className={styles.infoBox}>
-                      <span className={styles.label}>Status</span>
-                      <span
-                        className={
-                          styles[`badge_${d.status}`] || styles.badge_default
-                        }
+              {error && <p className={styles.error}>{error}</p>}
+
+              <div className={styles.overviewHeader}>
+                <div className={styles.infoBox}>
+                  <span>Status</span>
+                  <span className={styles[`badge_${d.status}`]}>{d.status}</span>
+                </div>
+                <div className={styles.infoBox}>
+                  <span>Total</span>
+                  <strong>${formatMoney(d.total)}</strong>
+                </div>
+                <div className={styles.infoBox}>
+                  <span>Created</span>
+                  <span>{formatDateTime(d.createdAt)}</span>
+                </div>
+              </div>
+
+              {/* ASSIGN DRIVER */}
+              {d.status === "pending" && (
+                <div className={styles.card}>
+                  <h3 className={styles.cardTitle}>Assign Driver</h3>
+
+                  {loadingDrivers ? (
+                    <p className={styles.smallInfo}>Loading drivers...</p>
+                  ) : drivers.length === 0 ? (
+                    <p className={styles.empty}>No available drivers.</p>
+                  ) : (
+                    <>
+                      <select
+                        value={selectedDriverId}
+                        onChange={(e) => setSelectedDriverId(e.target.value)}
                       >
-                        {d.status}
-                      </span>
-                    </div>
+                        <option value="">Select driver</option>
+                        {drivers.map((d) => (
+                          <option key={d._id} value={d._id}>
+                            {d.name} — {d.vehicle?.plateNumber || "No vehicle"}
+                          </option>
+                        ))}
+                      </select>
 
-                    <div className={styles.infoBox}>
-                      <span className={styles.label}>Total</span>
-                      <span className={styles.value}>
-                        ${formatMoney(d.total)}
-                      </span>
-                    </div>
-
-                    <div className={styles.infoBox}>
-                      <span className={styles.label}>Created</span>
-                      <span className={styles.value}>
-                        {formatDateTime(d.createdAt)}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Customer / Driver */}
-                  <div className={styles.grid2}>
-                    <div className={styles.card}>
-                      <h3 className={styles.cardTitle}>Customer</h3>
-                      <p className={styles.value}>
-                        <strong>{d.customerId?.name || "—"}</strong>
-                      </p>
-                      <p className={styles.muted}>{d.customerId?.email}</p>
-                      <p className={styles.muted}>
-                        {d.customerId?.phone || d.customerPhone}
-                      </p>
-                    </div>
-
-                    <div className={styles.card}>
-                      <h3 className={styles.cardTitle}>Driver / Vehicle</h3>
-                      <p className={styles.value}>
-                        <strong>{d.driverId?.name || "Not assigned"}</strong>
-                      </p>
-                      <p className={styles.muted}>
-                        {d.vehicleId
-                          ? `${d.vehicleId.plateNumber || ""} ${
-                              d.vehicleId.brand || ""
-                            }`
-                          : "No vehicle"}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Route */}
-                  <div className={styles.card}>
-                    <h3 className={styles.cardTitle}>Route</h3>
-                    <div className={styles.routeRow}>
-                      <div>
-                        <span className={styles.routeLabel}>Pickup</span>
-                        <p className={styles.routeAddress}>
-                          {d.pickupLocation?.address || "—"}
-                        </p>
-                      </div>
-                      <span className={styles.routeArrow}>→</span>
-                      <div>
-                        <span className={styles.routeLabel}>Dropoff</span>
-                        <p className={styles.routeAddress}>
-                          {d.dropoffLocation?.address || "—"}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </>
+                      <button
+                        className={styles.primaryBtn}
+                        style={{ background: primaryColor }}
+                        disabled={!selectedDriverId || assigning}
+                        onClick={handleAssignDriver}
+                      >
+                        {assigning ? "Assigning..." : "Assign Driver"}
+                      </button>
+                    </>
+                  )}
+                </div>
               )}
             </>
           )}
 
-          {/* ====================== ITEMS TAB ====================== */}
+          {/* ================= ITEMS ================= */}
           {activeTab === "items" && (
-            <div className={styles.card}>
-              <h3 className={styles.cardTitle}>Items</h3>
-
-              {!d.items || d.items.length === 0 ? (
-                <p className={styles.empty}>No items found.</p>
-              ) : (
-                <div className={styles.tableWrapper}>
-                  <table className={styles.table}>
-                    <thead>
-                      <tr>
-                        <th>Product</th>
-                        <th>Price</th>
-                        <th>Qty</th>
-                        <th>Subtotal</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {d.items.map((i, idx) => (
-                        <tr key={idx}>
-                          <td>{i.name}</td>
-                          <td>${formatMoney(i.price)}</td>
-                          <td>{i.quantity}</td>
-                          <td>${formatMoney(i.subtotal)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-
-              <div className={styles.totalsRow}>
-                <div>
-                  <span className={styles.label}>Subtotal</span>
-                  <span className={styles.value}>
-                    ${formatMoney(d.subtotal)}
-                  </span>
-                </div>
-                <div>
-                  <span className={styles.label}>Delivery Fee</span>
-                  <span className={styles.value}>
-                    ${formatMoney(d.deliveryFee)}
-                  </span>
-                </div>
-                <div>
-                  <span className={styles.label}>Discount</span>
-                  <span className={styles.value}>
-                    -${formatMoney(d.discount)}
-                  </span>
-                </div>
-                <div>
-                  <span className={styles.label}>Tax</span>
-                  <span className={styles.value}>${formatMoney(d.tax)}</span>
-                </div>
-                <div>
-                  <span className={styles.label}>Total</span>
-                  <span className={styles.totalValue}>
-                    ${formatMoney(d.total)}
-                  </span>
-                </div>
-              </div>
-            </div>
+            <pre>{JSON.stringify(d.items, null, 2)}</pre>
           )}
 
-          {/* ====================== TIMELINE TAB ====================== */}
+          {/* ================= TIMELINE ================= */}
           {activeTab === "timeline" && (
-            <div className={styles.card}>
-              <h3 className={styles.cardTitle}>Timeline</h3>
-
-              {loadingTimeline ? (
-                <p className={styles.smallInfo}>Loading timeline...</p>
-              ) : timeline.length === 0 ? (
-                <p className={styles.empty}>No timeline entries.</p>
-              ) : (
-                <ul className={styles.timelineList}>
-                  {timeline.map((t, idx) => (
-                    <li key={idx} className={styles.timelineItem}>
-                      <span className={styles.timelineStatus}>
-                        {t.status}
-                      </span>
-                      <span className={styles.timelineTime}>
-                        {formatDateTime(t.timestamp)}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
+            <ul className={styles.timelineList}>
+              {timeline.map((t, i) => (
+                <li key={i}>
+                  {t.status} — {formatDateTime(t.timestamp)}
+                </li>
+              ))}
+            </ul>
           )}
 
-          {/* ====================== TRIP / PAYMENT TAB ====================== */}
+          {/* ================= TRIP / QR ================= */}
           {activeTab === "trip" && (
             <div className={styles.card}>
-              <h3 className={styles.cardTitle}>Trip & Payment</h3>
+              <h3 className={styles.cardTitle}>Delivery Verification</h3>
 
-              {!details?.tripId && !details?.payment ? (
-                <p className={styles.empty}>No trip or payment info.</p>
+              {!d.driverId ? (
+                <p className={styles.empty}>Driver not assigned yet.</p>
               ) : (
                 <>
-                  {details?.tripId && (
-                    <div className={styles.section}>
-                      <h4>Trip</h4>
-                      <p><strong>Status:</strong> {details.tripId.status}</p>
-                      <p>
-                        <strong>Start:</strong>{" "}
-                        {formatDateTime(details.tripId.startTime)}
-                      </p>
-                      <p>
-                        <strong>End:</strong>{" "}
-                        {formatDateTime(details.tripId.endTime)}
-                      </p>
-                    </div>
-                  )}
+                  <button
+                    className={styles.primaryBtn}
+                    style={{ background: primaryColor }}
+                    onClick={generateQr}
+                    disabled={qrLoading}
+                  >
+                    {qrLoading ? "Generating..." : "Generate Delivery QR"}
+                  </button>
 
-                  {details?.payment && (
-                    <div className={styles.section}>
-                      <h4>Payment</h4>
-                      <p>
-                        <strong>Status:</strong> {details.payment.paymentStatus}
-                      </p>
-                      <p>
-                        <strong>Amount:</strong> $
-                        {formatMoney(details.payment.amount || 0)}
+                  {qrError && <p className={styles.error}>{qrError}</p>}
+
+                  {qrData && (
+                    <div className={styles.qrBox}>
+                      <QRCode value={qrData.qrPayload} size={180} />
+                      <p className={styles.muted}>
+                        Expires at: {new Date(qrData.expiresAt).toLocaleString()}
                       </p>
                     </div>
                   )}

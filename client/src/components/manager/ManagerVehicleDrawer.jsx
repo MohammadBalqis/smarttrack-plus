@@ -6,7 +6,7 @@ import {
   getVehicleTripsApi,
 } from "../../api/managerVehiclesApi";
 
-import { getShopDriversApi } from "../../api/managerDriversApi";
+import { getManagerDriversApi } from "../../api/managerDriversApi";
 
 import styles from "../../styles/manager/managerVehicles.module.css";
 
@@ -16,35 +16,43 @@ const ManagerVehicleDrawer = ({ open, onClose, vehicle, reload }) => {
   const [loading, setLoading] = useState(false);
   const [tripHistory, setTripHistory] = useState([]);
 
+  /* ==========================================================
+     LOAD DATA WHEN VEHICLE CHANGES
+  ========================================================== */
   useEffect(() => {
-    if (vehicle) {
-      setStatus(vehicle.status);
-      loadDrivers();
-      loadTripHistory();
-    }
+    if (!vehicle) return;
+
+    setStatus(vehicle.status || "available");
+    loadDrivers();
+    loadTripHistory();
   }, [vehicle]);
 
   /* ==========================================================
-      LOAD DRIVERS FOR THIS SHOP
+     LOAD DRIVERS (FILTER BY SHOP IF EXISTS)
   ========================================================== */
   const loadDrivers = async () => {
-    if (!vehicle?.shopId) return;
-
     try {
-      const res = await getShopDriversApi(vehicle.shopId);
-      setDrivers(res.data.drivers || []);
+      const res = await getManagerDriversApi();
+      const allDrivers = res.data?.drivers || [];
+
+      // Filter by shop if vehicle has shopId
+      const filteredDrivers = vehicle?.shopId
+        ? allDrivers.filter((d) => d.shopId === vehicle.shopId)
+        : allDrivers;
+
+      setDrivers(filteredDrivers);
     } catch (err) {
       console.error("Error loading drivers:", err);
     }
   };
 
   /* ==========================================================
-      LOAD VEHICLE TRIP HISTORY
+     LOAD VEHICLE TRIP HISTORY
   ========================================================== */
   const loadTripHistory = async () => {
     try {
       const res = await getVehicleTripsApi(vehicle._id);
-      setTripHistory(res.data.trips || []);
+      setTripHistory(res.data?.trips || []);
     } catch (err) {
       console.error("Error loading trips:", err);
     }
@@ -53,7 +61,7 @@ const ManagerVehicleDrawer = ({ open, onClose, vehicle, reload }) => {
   if (!open || !vehicle) return null;
 
   /* ==========================================================
-      ASSIGN DRIVER
+     ASSIGN DRIVER
   ========================================================== */
   const handleAssignDriver = async (driverId) => {
     if (!driverId) return;
@@ -72,7 +80,7 @@ const ManagerVehicleDrawer = ({ open, onClose, vehicle, reload }) => {
   };
 
   /* ==========================================================
-      REMOVE DRIVER
+     REMOVE DRIVER
   ========================================================== */
   const handleRemoveDriver = async () => {
     setLoading(true);
@@ -89,7 +97,7 @@ const ManagerVehicleDrawer = ({ open, onClose, vehicle, reload }) => {
   };
 
   /* ==========================================================
-      UPDATE STATUS
+     UPDATE VEHICLE STATUS
   ========================================================== */
   const handleStatusChange = async () => {
     setLoading(true);
@@ -108,24 +116,29 @@ const ManagerVehicleDrawer = ({ open, onClose, vehicle, reload }) => {
   return (
     <div className={styles.drawer}>
       <div className={styles.content}>
+        {/* ================= HEADER ================= */}
         <div className={styles.header}>
           <h2>Vehicle Details</h2>
-          <button className={styles.closeBtn} onClick={onClose}>✕</button>
+          <button className={styles.closeBtn} onClick={onClose}>
+            ✕
+          </button>
         </div>
 
+        {/* ================= VEHICLE INFO ================= */}
         <div className={styles.vehicleInfo}>
-          <h3>{vehicle.brand} {vehicle.model}</h3>
+          <h3>
+            {vehicle.brand} {vehicle.model}
+          </h3>
           <p>Plate: {vehicle.plateNumber}</p>
         </div>
 
-        {/* =====================================================
-            ASSIGN DRIVER SECTION
-        ===================================================== */}
+        {/* ================= ASSIGN DRIVER ================= */}
         <div className={styles.section}>
           <label>Assign Driver</label>
           <select
-            onChange={(e) => handleAssignDriver(e.target.value)}
             defaultValue=""
+            onChange={(e) => handleAssignDriver(e.target.value)}
+            disabled={loading}
           >
             <option value="">Select driver</option>
             {drivers.map((d) => (
@@ -146,41 +159,42 @@ const ManagerVehicleDrawer = ({ open, onClose, vehicle, reload }) => {
           )}
         </div>
 
-        {/* =====================================================
-            VEHICLE STATUS
-        ===================================================== */}
+        {/* ================= STATUS ================= */}
         <div className={styles.section}>
           <label>Status</label>
           <select
             value={status}
             onChange={(e) => setStatus(e.target.value)}
+            disabled={loading}
           >
             <option value="available">Available</option>
             <option value="in_use">In Use</option>
             <option value="maintenance">Maintenance</option>
           </select>
+
           <button onClick={handleStatusChange} disabled={loading}>
             Update Status
           </button>
         </div>
 
-        {/* =====================================================
-            TRIP HISTORY
-        ===================================================== */}
+        {/* ================= TRIP HISTORY ================= */}
         <div className={styles.section}>
           <h3>Trip History</h3>
           <ul className={styles.tripList}>
+            {tripHistory.length === 0 && <p>No trips.</p>}
+
             {tripHistory.map((t) => (
               <li key={t._id}>
-                <strong>{t.customerId?.name}</strong> — {t.status}
+                <strong>{t.customerId?.name || "Customer"}</strong> —{" "}
+                {t.status}
                 <br />
-                <small>{new Date(t.createdAt).toLocaleString()}</small>
+                <small>
+                  {new Date(t.createdAt).toLocaleString()}
+                </small>
               </li>
             ))}
-            {tripHistory.length === 0 && <p>No trips.</p>}
           </ul>
         </div>
-
       </div>
     </div>
   );

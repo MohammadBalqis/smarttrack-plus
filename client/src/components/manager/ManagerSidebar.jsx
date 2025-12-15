@@ -1,22 +1,28 @@
-// client/src/components/manager/ManagerSidebar.jsx
 import React, { useContext } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { BrandingContext } from "../../context/BrandingContext";
+import { useAuth } from "../../context/AuthContext";
 
 import styles from "../../styles/manager/managerSidebar.module.css";
 
 const ManagerSidebar = () => {
   const { branding } = useContext(BrandingContext);
+  const { logout } = useAuth();
+  const navigate = useNavigate();
 
   const primary = branding?.primaryColor || "#1F2937";
-  const accent = branding?.accentColor || "#2563EB";
 
   const linkClass = ({ isActive }) =>
     isActive ? `${styles.link} ${styles.activeLink}` : styles.link;
 
+  const handleLogout = async () => {
+    await logout();          // clears token + session
+    navigate("/login");      // redirect safely
+  };
+
   return (
     <div className={styles.sidebar}>
-      {/* BRANDING HEADER */}
+      {/* ================= BRANDING HEADER ================= */}
       <div className={styles.branding} style={{ background: primary }}>
         <h2 className={styles.companyName}>
           {branding?.companyDisplayName || "Your Company"}
@@ -26,7 +32,7 @@ const ManagerSidebar = () => {
         </p>
       </div>
 
-      {/* NAVIGATION LINKS */}
+      {/* ================= NAVIGATION ================= */}
       <nav className={styles.nav}>
         <NavLink to="/manager" className={linkClass} end>
           Dashboard
@@ -63,7 +69,30 @@ const ManagerSidebar = () => {
         <NavLink to="/manager/vehicles" className={linkClass}>
           Vehicles
         </NavLink>
+
+        <NavLink to="/manager/chat" className={linkClass}>
+          💬 Chat with Company
+        </NavLink>
+
+        <NavLink to="/manager/profile" className={linkClass}>
+          👤 Profile
+        </NavLink>
+
+        <NavLink to="/manager/settings" className={linkClass}>
+          ⚙️ Settings
+        </NavLink>
       </nav>
+
+      {/* ================= LOGOUT ================= */}
+      <div className={styles.logoutWrapper}>
+        <button
+          type="button"
+          onClick={handleLogout}
+          className={styles.logoutBtn}
+        >
+          🚪 Logout
+        </button>
+      </div>
     </div>
   );
 };

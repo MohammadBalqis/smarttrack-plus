@@ -1,41 +1,70 @@
+/* ======================================================
+   🌐 PAGE WRAPPER
+====================================================== */
 .container {
-  padding: 20px;
+  width: 100%;
+  padding: 24px;
+  box-sizing: border-box;
 }
 
+/* ======================================================
+   🧾 HEADER
+====================================================== */
 .title {
   font-size: 26px;
   font-weight: 700;
-  margin-bottom: 5px;
+  color: #0f172a;
+  margin-bottom: 4px;
 }
 
 .subtitle {
-  color: #555;
-  margin-bottom: 20px;
+  font-size: 14px;
+  color: #64748b;
+  margin-bottom: 24px;
 }
 
+/* ======================================================
+   ⏳ LOADER
+====================================================== */
+.loader {
+  padding: 40px;
+  text-align: center;
+  font-size: 15px;
+  color: #64748b;
+}
+
+/* ======================================================
+   🧩 CARDS GRID
+====================================================== */
 .cardContainer {
   display: grid;
-  gap: 15px;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
 }
 
+/* ======================================================
+   👤 MANAGER CARD
+====================================================== */
 .card {
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 16px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-
-  background: #fff;
-  padding: 15px 18px;
-  border-radius: 10px;
-
-  border: 1px solid #e5e7eb;
-  transition: 0.2s;
+  gap: 16px;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .card:hover {
-  border-color: #2563eb;
-  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.15);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
 }
 
+/* ======================================================
+   ℹ️ INFO SECTION
+====================================================== */
 .info {
   display: flex;
   flex-direction: column;
@@ -43,44 +72,76 @@
 }
 
 .name {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
+  color: #0f172a;
 }
 
 .phone {
-  font-size: 14px;
-  color: #6b7280;
+  font-size: 13px;
+  color: #475569;
 }
 
 .branch {
-  font-size: 14px;
-  color: #4b5563;
+  font-size: 12px;
+  color: #64748b;
 }
 
+/* ======================================================
+   💬 CHAT BUTTON
+====================================================== */
 .chatBtn {
-  background: #2563eb;
-  color: white;
-  padding: 8px 14px;
+  padding: 10px 14px;
+  border-radius: 10px;
   border: none;
-  border-radius: 8px;
+  background: linear-gradient(135deg, #2563eb, #3b82f6);
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
-  font-size: 15px;
-  font-weight: 500;
-  transition: 0.2s;
+  transition: background 0.2s ease, transform 0.1s ease;
+  white-space: nowrap;
 }
 
 .chatBtn:hover {
-  background: #1e4fcf;
+  background: linear-gradient(135deg, #1d4ed8, #2563eb);
+  transform: scale(1.04);
 }
 
+.chatBtn:active {
+  transform: scale(0.98);
+}
+
+/* ======================================================
+   🚫 NO DATA
+====================================================== */
 .noData {
-  font-size: 16px;
+  grid-column: 1 / -1;
+  padding: 32px;
   text-align: center;
-  margin-top: 20px;
-  color: #6b7280;
+  color: #94a3b8;
+  font-size: 14px;
 }
 
-.loader {
-  font-size: 18px;
-  text-align: center;
+/* ======================================================
+   📱 MOBILE RESPONSIVE
+====================================================== */
+@media (max-width: 640px) {
+  .container {
+    padding: 16px;
+  }
+
+  .title {
+    font-size: 22px;
+  }
+
+  .card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .chatBtn {
+    width: 100%;
+    text-align: center;
+  }
 }

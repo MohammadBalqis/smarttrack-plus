@@ -2,7 +2,9 @@ import Trip from "../models/Trip.js";
 import User from "../models/User.js";
 import crypto from "crypto";
 
-/* Generate hash signature for QR */
+/* ==========================================================
+   QR SIGNATURE
+========================================================== */
 const signQR = (data) => {
   return crypto
     .createHash("sha256")
@@ -11,86 +13,114 @@ const signQR = (data) => {
 };
 
 /* ==========================================================
-   🟦 1. GET QR DATA FOR CUSTOMER TRIP
+   🟦 1) CUSTOMER GETS QR FOR HIS TRIP
    GET /api/customer/trip/:tripId/qr
 ========================================================== */
 export const getCustomerTripQR = async (req, res) => {
   try {
     const { tripId } = req.params;
-    const userId = req.user._id;
+    const customerId = req.user._id;
 
-    // must belong to this customer
-    const trip = await Trip.findOne({ _id: tripId, customerId: userId })
+    const trip = await Trip.findOne({
+      _id: tripId,
+      customerId,
+    })
       .populate("driverId", "name phone profileImage")
       .populate("companyId", "name");
 
-    if (!trip) return res.status(404).json({ error: "Trip not found." });
+    if (!trip) {
+      return res.status(404).json({ ok: false, error: "Trip not found." });
+    }
+
+    if (!["assigned", "in_progress"].includes(trip.status)) {
+      return res.status(400).json({
+        ok: false,
+        error: "Trip is not active.",
+      });
+    }
 
     const qrPayload = {
-      tripId: trip._id,
-      customerId: trip.customerId,
-      driverId: trip.driverId?._id,
-      companyId: trip.companyId?._id,
-      amount: trip.totalAmount + trip.deliveryFee,
+      tripId: trip._id.toString(),
+      customerId: trip.customerId.toString(),
+      driverId: trip.driverId?.toString(),
     };
 
     const signature = signQR(qrPayload);
 
     return res.json({
       ok: true,
-      qr: { ...qrPayload, signature },
+      qr: {
+        ...qrPayload,
+        signature,
+      },
       driver: trip.driverId,
       company: trip.companyId,
     });
   } catch (err) {
-    console.error("QR generation error:", err);
-    return res.status(500).json({ error: "QR fetch failed." });
+    console.error("❌ getCustomerTripQR error:", err);
+    return res.status(500).json({ ok: false, error: "QR fetch failed." });
   }
 };
 
 /* ==========================================================
-   🟩 2. DRIVER CONFIRMS DELIVERY BY SCANNING QR
-   POST /api/driver/confirm-qr
+   🟩 2) CUSTOMER CONFIRMS DELIVERY (QR SCAN)
+   POST /api/customer/trip/confirm-qr
 ========================================================== */
 export const confirmDeliveryByQR = async (req, res) => {
   try {
-    const driver = req.user;
-    if (driver.role !== "driver")
-      return res.status(403).json({ error: "Driver only." });
+    const customerId = req.user._id;
+    if (req.user.role !== "customer") {
+      return res.status(403).json({ error: "Customer only." });
+    }
 
     const { qr } = req.body;
-    if (!qr) return res.status(400).json({ error: "QR data missing." });
+    if (!qr) {
+      return res.status(400).json({ error: "QR data missing." });
+    }
 
-    const { tripId, customerId, driverId, amount, signature } = qr;
+    const { tripId, customerId: qrCustomerId, driverId, signature } = qr;
 
     // verify signature
-    const expected = signQR({ tripId, customerId, driverId, amount });
-    if (expected !== signature)
+    const expected = signQR({ tripId, customerId: qrCustomerId, driverId });
+    if (expected !== signature) {
       return res.status(400).json({ error: "Invalid QR signature." });
+    }
 
     // verify trip
     const trip = await Trip.findById(tripId);
-    if (!trip) return res.status(404).json({ error: "Trip not found." });
+    if (!trip) {
+      return res.status(404).json({ error: "Trip not found." });
+    }
 
-    if (trip.driverId.toString() !== driver._id.toString())
-      return res.status(403).json({ error: "Not your delivery." });
+    if (trip.customerId.toString() !== customerId.toString()) {
+      return res.status(403).json({ error: "Not your trip." });
+    }
 
-    if (trip.status !== "in_progress")
-      return res.status(400).json({ error: "Trip not deliverable." });
+    if (!["assigned", "in_progress"].includes(trip.status)) {
+      return res.status(400).json({ error: "Trip already completed." });
+    }
 
-    // confirm
+    /* ✅ FINALIZE TRIP */
     trip.status = "delivered";
     trip.customerConfirmed = true;
     trip.confirmationTime = new Date();
+    trip.liveStatus = "Delivered";
+
     await trip.save();
+
+    /* 🔓 FREE DRIVER */
+    await User.findByIdAndUpdate(trip.driverId, {
+      driverStatus: "online",
+    });
 
     return res.json({
       ok: true,
       message: "Delivery confirmed ✔",
       tripId: trip._id,
+      confirmationTime: trip.confirmationTime,
     });
   } catch (err) {
-    console.error("QR confirm error:", err);
+    console.error("❌ confirmDeliveryByQR error:", err);
     return res.status(500).json({ error: "Confirmation failed." });
   }
 };

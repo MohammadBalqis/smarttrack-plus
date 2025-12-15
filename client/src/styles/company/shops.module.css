@@ -1,291 +1,330 @@
-/* client/src/styles/company/shops.module.css */
-
+/* ======================================================
+   PAGE
+====================================================== */
 .page {
-  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  color: #0f172a;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  background: #f8fafc;
+  min-height: 100vh;
 }
 
+/* ======================================================
+   HEADER
+====================================================== */
 .headerRow {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   gap: 16px;
-  margin-bottom: 18px;
+  flex-wrap: wrap;
 }
 
 .title {
-  font-size: 22px;
+  font-size: 26px;
   font-weight: 700;
-  margin-bottom: 4px;
+  color: #0f172a;
 }
 
 .sub {
-  font-size: 13px;
-  color: #6b7280;
-  max-width: 540px;
+  margin-top: 4px;
+  font-size: 14px;
+  color: #64748b;
+  max-width: 520px;
 }
 
 .newBtn {
+  background: #2563eb;
+  color: white;
   border: none;
-  background: linear-gradient(135deg, #2563eb, #22c55e);
-  color: #f9fafb;
-  padding: 9px 16px;
-  border-radius: 999px;
-  font-size: 13px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
-  box-shadow: 0 10px 25px rgba(37, 99, 235, 0.35);
 }
 
 .newBtn:hover {
-  filter: brightness(1.05);
+  background: #1d4ed8;
 }
 
+/* ======================================================
+   INFO & ERROR
+====================================================== */
 .info {
   font-size: 14px;
-  color: #6b7280;
+  color: #64748b;
 }
 
 .error {
-  background: #fee2e2;
-  color: #b91c1c;
-  padding: 8px 12px;
-  border-radius: 8px;
-  font-size: 13px;
-  margin-bottom: 10px;
+  color: #dc2626;
+  font-size: 14px;
+  font-weight: 500;
 }
 
-/* GRID */
-
+/* ======================================================
+   GRID
+====================================================== */
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 18px;
 }
 
+/* ======================================================
+   SHOP CARD
+====================================================== */
 .card {
   background: #ffffff;
   border-radius: 14px;
-  padding: 14px 14px 12px;
-  border: 1px solid #e5e7eb;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+  padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 12px;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
 }
 
 .cardInactive {
-  opacity: 0.7;
-  background: #f9fafb;
+  opacity: 0.6;
 }
 
+/* ======================================================
+   CARD HEADER
+====================================================== */
 .cardHeader {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 4px;
+  gap: 12px;
 }
 
 .shopName {
-  font-size: 16px;
-  font-weight: 600;
+  font-size: 17px;
+  font-weight: 700;
+  color: #0f172a;
 }
 
 .shopCity {
-  font-size: 12px;
-  color: #6b7280;
+  font-size: 13px;
+  color: #64748b;
 }
 
+/* ======================================================
+   BADGES
+====================================================== */
 .badgeActive,
 .badgeInactive {
-  font-size: 11px;
-  padding: 3px 8px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
   border-radius: 999px;
+  white-space: nowrap;
 }
 
 .badgeActive {
   background: #dcfce7;
-  color: #15803d;
+  color: #166534;
 }
 
 .badgeInactive {
   background: #fee2e2;
-  color: #b91c1c;
+  color: #991b1b;
 }
 
+/* ======================================================
+   CARD ROWS
+====================================================== */
 .cardRow {
   display: flex;
   justify-content: space-between;
-  font-size: 12px;
-  color: #4b5563;
+  gap: 12px;
+  font-size: 13px;
 }
 
 .label {
-  color: #9ca3af;
-  margin-right: 6px;
+  color: #64748b;
+  font-weight: 500;
 }
 
+/* ======================================================
+   CARD FOOTER
+====================================================== */
 .cardFooter {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
   margin-top: 8px;
+  display: flex;
+  gap: 10px;
+}
+
+.editBtn,
+.deactivateBtn {
+  flex: 1;
+  padding: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  border: none;
 }
 
 .editBtn {
-  border: none;
-  background: #e5e7eb;
-  padding: 6px 12px;
-  border-radius: 999px;
-  font-size: 12px;
-  cursor: pointer;
+  background: #e0e7ff;
+  color: #1e3a8a;
+}
+
+.editBtn:hover {
+  background: #c7d2fe;
 }
 
 .deactivateBtn {
-  border: none;
   background: #fee2e2;
-  color: #b91c1c;
-  padding: 6px 12px;
-  border-radius: 999px;
-  font-size: 12px;
-  cursor: pointer;
+  color: #991b1b;
 }
 
-/* DRAWER */
+.deactivateBtn:hover {
+  background: #fecaca;
+}
 
+/* ======================================================
+   DRAWER OVERLAY
+====================================================== */
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.55);
-  backdrop-filter: blur(3px);
+  background: rgba(15, 23, 42, 0.45);
   z-index: 40;
 }
 
+/* ======================================================
+   DRAWER
+====================================================== */
 .drawer {
   position: fixed;
-  right: 0;
   top: 0;
-  bottom: 0;
-  width: 380px;
-  max-width: 100%;
+  right: 0;
+  height: 100vh;
+  width: 420px;
   background: #ffffff;
-  box-shadow: -12px 0 30px rgba(15, 23, 42, 0.35);
-  padding: 18px 18px 16px;
-  z-index: 41;
-  display: flex;
-  flex-direction: column;
-  animation: slideIn 0.25s ease-out;
+  z-index: 50;
+  padding: 20px;
+  overflow-y: auto;
+  box-shadow: -10px 0 30px rgba(15, 23, 42, 0.2);
 }
 
-@keyframes slideIn {
-  from {
-    transform: translateX(40px);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
+@media (max-width: 520px) {
+  .drawer {
+    width: 100%;
   }
 }
 
+/* ======================================================
+   DRAWER HEADER
+====================================================== */
 .drawerHeader {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 10px;
+  margin-bottom: 16px;
 }
 
 .drawerHeader h2 {
-  font-size: 18px;
-  font-weight: 600;
+  font-size: 20px;
+  font-weight: 700;
 }
 
 .closeBtn {
+  background: transparent;
   border: none;
-  background: #e5e7eb;
-  border-radius: 999px;
-  width: 28px;
-  height: 28px;
+  font-size: 20px;
   cursor: pointer;
 }
 
-/* FORM */
-
+/* ======================================================
+   FORM
+====================================================== */
 .form {
-  flex: 1;
-  overflow-y: auto;
-  padding-right: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.fieldRow {
+  display: flex;
+  gap: 12px;
+}
+
+@media (max-width: 520px) {
+  .fieldRow {
+    flex-direction: column;
+  }
 }
 
 .field {
   display: flex;
   flex-direction: column;
-  margin-bottom: 10px;
+  gap: 4px;
+  flex: 1;
 }
 
 .field label {
   font-size: 12px;
-  color: #6b7280;
-  margin-bottom: 3px;
+  font-weight: 600;
+  color: #475569;
 }
 
 .field input {
-  border-radius: 9px;
-  border: 1px solid #d1d5db;
-  padding: 7px 10px;
-  font-size: 13px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  font-size: 14px;
 }
 
-.fieldRow {
-  display: flex;
-  gap: 8px;
+.field input:focus {
+  outline: none;
+  border-color: #2563eb;
 }
 
-.fieldRow .field {
-  flex: 1;
-}
-
+/* ======================================================
+   SECTIONS
+====================================================== */
 .sectionTitle {
-  margin: 10px 0 4px;
-  font-size: 12px;
-  font-weight: 600;
-  color: #4b5563;
+  margin-top: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
 }
 
+/* ======================================================
+   FORM ACTIONS
+====================================================== */
 .actions {
+  margin-top: 16px;
   display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 10px;
+  gap: 10px;
+}
+
+.cancelBtn,
+.saveBtn {
+  flex: 1;
+  padding: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 10px;
+  cursor: pointer;
+  border: none;
 }
 
 .cancelBtn {
-  border: none;
   background: #e5e7eb;
-  padding: 7px 14px;
-  border-radius: 999px;
-  font-size: 13px;
-  cursor: pointer;
+  color: #374151;
 }
 
 .saveBtn {
-  border: none;
   background: #2563eb;
-  color: #f9fafb;
-  padding: 7px 16px;
-  border-radius: 999px;
-  font-size: 13px;
-  cursor: pointer;
+  color: white;
 }
 
-/* RESPONSIVE */
-
-@media (max-width: 640px) {
-  .headerRow {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .drawer {
-    width: 100%;
-  }
+.saveBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }

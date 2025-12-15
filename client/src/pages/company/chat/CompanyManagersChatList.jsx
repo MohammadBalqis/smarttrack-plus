@@ -1,19 +1,17 @@
 import React, { useEffect, useState } from "react";
 import api from "../../../api/apiClient";
 import { useNavigate } from "react-router-dom";
-
 import styles from "../../../styles/company/companyManagersChatList.module.css";
 
 const CompanyManagersChatList = () => {
   const [managers, setManagers] = useState([]);
   const [loading, setLoading] = useState(true);
-
   const navigate = useNavigate();
 
   useEffect(() => {
     const loadManagers = async () => {
       try {
-        const res = await api.get("/manager/list-for-company"); 
+        const res = await api.get("/company/manager/list");
         setManagers(res.data.data || []);
       } catch (err) {
         console.error("Failed to load managers", err);
@@ -38,12 +36,14 @@ const CompanyManagersChatList = () => {
             <div className={styles.info}>
               <div className={styles.name}>{m.fullName}</div>
               <div className={styles.phone}>{m.phone}</div>
-              <div className={styles.branch}>Branch: {m.branchName || "—"}</div>
+              <div className={styles.branch}>
+                Branch: {m.branchName || "—"}
+              </div>
             </div>
 
             <button
               className={styles.chatBtn}
-              onClick={() => navigate(`/company/chat/${m._id}`)}
+              onClick={() => navigate("/company/chat")}
             >
               💬 Chat
             </button>

@@ -1,107 +1,77 @@
 import { Router } from "express";
 import { protect } from "../middleware/authMiddleware.js";
 import { authorizeRoles } from "../middleware/roleMiddleware.js";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
 
 import {
   getManagerDrivers,
-
-  // profile (NO login yet)
-  createManagerDriverProfile,
-  updateManagerDriverProfile,
-
-  // verification
-  upsertManagerDriverVerification,
-  verifyManagerDriver,
-  rejectManagerDriver,
-
-  // account creation (AFTER verification)
-  createManagerDriverAccount,
-
-  // status & stats
-  toggleManagerDriverStatus,
-  getManagerDriverStats,
+  getManagerDriversByShop,
+  createDriverProfile,
+  updateDriverProfile,
+  submitDriverVerification,
+  verifyDriver,
+  rejectDriver,
+  createDriverAccount,
+  toggleDriverSuspend,
+  deleteDriverPermanently,
 } from "../controllers/managerDriversController.js";
 
 const router = Router();
 
-/* ==========================================================
-   🔐 PROTECTION
-========================================================== */
-router.use(protect, authorizeRoles("manager", "company"));
+/* ================= MULTER ================= */
+const ensureDir = (dir) => {
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+};
 
-/* ==========================================================
-   🚗 DRIVERS LIST (cards / table)
-   GET /api/manager/drivers
-========================================================== */
-router.get("/drivers", getManagerDrivers);
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    let dir = "uploads/drivers/misc";
+    if (file.fieldname === "profileImage") dir = "uploads/drivers/profile";
+    if (file.fieldname === "idImage") dir = "uploads/drivers/id";
+    if (file.fieldname === "vehicleImage") dir = "uploads/drivers/vehicle";
+    ensureDir(dir);
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    cb(null, `${file.fieldname}-${Date.now()}${path.extname(file.originalname)}`);
+  },
+});
 
-/* ==========================================================
-   ➕ CREATE DRIVER PROFILE (NO EMAIL / PASSWORD)
-   POST /api/manager/drivers
-========================================================== */
-router.post("/drivers", createManagerDriverProfile);
+const upload = multer({ storage });
 
-/* ==========================================================
-   ✏ UPDATE DRIVER PROFILE
-   PATCH /api/manager/drivers/:driverId/profile
-========================================================== */
+/* ================= AUTH ================= */
+router.use(protect, authorizeRoles("manager"));
+
+/* ================= ROUTES ================= */
+/**
+ * NOTE:
+ * server.js already uses:
+ * app.use("/api/manager/drivers", router)
+ * so DO NOT repeat /drivers here
+ */
+
+router.get("/", getManagerDrivers);
+router.get("/shop/:shopId", getManagerDriversByShop);
+
+router.post("/", createDriverProfile);
+router.patch("/:driverId/profile", updateDriverProfile);
+
 router.patch(
-  "/drivers/:driverId/profile",
-  updateManagerDriverProfile
+  "/:driverId/verification",
+  upload.fields([
+    { name: "profileImage", maxCount: 1 },
+    { name: "idImage", maxCount: 1 },
+    { name: "vehicleImage", maxCount: 1 },
+  ]),
+  submitDriverVerification
 );
 
-/* ==========================================================
-   🛂 SUBMIT / UPDATE VERIFICATION INFO
-   PATCH /api/manager/drivers/:driverId/verification
-========================================================== */
-router.patch(
-  "/drivers/:driverId/verification",
-  upsertManagerDriverVerification
-);
-
-/* ==========================================================
-   ✅ VERIFY DRIVER (MANAGER ACTION)
-   PATCH /api/manager/drivers/:driverId/verify
-========================================================== */
-router.patch(
-  "/drivers/:driverId/verify",
-  verifyManagerDriver
-);
-
-/* ==========================================================
-   ❌ REJECT DRIVER
-   PATCH /api/manager/drivers/:driverId/reject
-========================================================== */
-router.patch(
-  "/drivers/:driverId/reject",
-  rejectManagerDriver
-);
-
-/* ==========================================================
-   🔐 CREATE LOGIN ACCOUNT (ONLY AFTER VERIFIED)
-   POST /api/manager/drivers/:driverId/create-account
-========================================================== */
-router.post(
-  "/drivers/:driverId/create-account",
-  createManagerDriverAccount
-);
-
-/* ==========================================================
-   🔁 ACTIVATE / SUSPEND DRIVER
-   PATCH /api/manager/drivers/:driverId/toggle
-========================================================== */
-router.patch(
-  "/drivers/:driverId/toggle",
-  toggleManagerDriverStatus
-);
-
-/* ==========================================================
-   📊 DRIVER PERFORMANCE STATS
-   GET /api/manager/drivers/:driverId/stats
-========================================================== */
-router.get(
-  "/drivers/:driverId/stats",
-  getManagerDriverStats
-);
+router.patch("/:driverId/verify", verifyDriver);
+router.patch("/:driverId/reject", rejectDriver);
+router.post("/:driverId/create-account", createDriverAccount);
+router.patch("/:driverId/toggle-suspend", toggleDriverSuspend);
+router.delete("/:driverId", deleteDriverPermanently);
 
 export default router;

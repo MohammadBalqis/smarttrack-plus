@@ -77,6 +77,33 @@ const createNotification = async (
     ...extra,
   });
 };
+/* ==========================================================
+   💬 COMPANY — LIST VERIFIED MANAGERS FOR CHAT
+   GET /api/manager/list-for-company
+========================================================== */
+router.get(
+  "/list-for-company",
+  protect,
+  authorizeRoles("company"),
+  async (req, res) => {
+    try {
+      const managers = await User.find({
+        companyId: req.user._id,
+        role: "manager",
+        isActive: true,
+        isVerified: true, // 🔥 CRITICAL
+      }).select("fullName phone branchName profileImage");
+
+      res.json({
+        ok: true,
+        data: managers,
+      });
+    } catch (err) {
+      console.error("❌ List managers for chat error:", err);
+      res.status(500).json({ error: "Failed to load managers" });
+    }
+  }
+);
 
 /* ==========================================================
    1️⃣ MANAGER / COMPANY — Drivers Overview List

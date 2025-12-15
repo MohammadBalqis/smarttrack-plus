@@ -1,19 +1,39 @@
 import React, { useEffect, useState } from "react";
 import {
   getManagerDriversApi,
-  toggleManagerDriverStatusApi,
-  verifyDriverApi,
-  rejectDriverApi,
+  createDriverProfileApi,
+  submitDriverVerificationApi,
   createDriverAccountApi,
+  toggleDriverSuspendApi,
+  deleteDriverApi,
 } from "../../api/managerDriversApi";
 
 import styles from "../../styles/manager/managerDrivers.module.css";
 
+/* ==========================================================
+   CONSTANTS
+========================================================== */
+const emptyForm = {
+  name: "",
+  phone: "",
+  address: "",
+};
+
 const ManagerDrivers = () => {
   const [drivers, setDrivers] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const [showCreate, setShowCreate] = useState(false);
+  const [showVerify, setShowVerify] = useState(null);
+
+  const [form, setForm] = useState(emptyForm);
+  const [verifyData, setVerifyData] = useState({});
+  const [submitting, setSubmitting] = useState(false);
+
+  /* ==========================================================
+     LOAD DRIVERS
+  ========================================================== */
   const loadDrivers = async () => {
     try {
       setLoading(true);
@@ -21,7 +41,7 @@ const ManagerDrivers = () => {
       setDrivers(res.data.drivers || []);
     } catch (err) {
       console.error(err);
-      setError("Failed to load drivers.");
+      setError("Failed to load drivers");
     } finally {
       setLoading(false);
     }
@@ -31,50 +51,95 @@ const ManagerDrivers = () => {
     loadDrivers();
   }, []);
 
-  /* =========================
-     ACTIONS
-  ========================= */
+  /* ==========================================================
+     CREATE DRIVER
+  ========================================================== */
+  const handleCreateDriver = async () => {
+    if (!form.name.trim()) {
+      alert("Driver name is required");
+      return;
+    }
 
-  const handleVerify = async (driverId) => {
-    await verifyDriverApi(driverId);
-    loadDrivers();
+    try {
+      await createDriverProfileApi(form);
+      setForm(emptyForm);
+      setShowCreate(false);
+      loadDrivers();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to create driver");
+    }
   };
 
-  const handleReject = async (driverId) => {
-    const reason = prompt("Rejection reason?");
-    if (!reason) return;
-    await rejectDriverApi(driverId, reason);
-    loadDrivers();
+  /* ==========================================================
+     SUBMIT VERIFICATION
+  ========================================================== */
+  const handleSubmitVerification = async (driverId) => {
+    const d = verifyData[driverId];
+
+    // 🔴 STRICT VALIDATION (MATCHES BACKEND)
+    if (
+      !d?.idNumber ||
+      !d?.plateNumber ||
+      !d?.profileImage ||
+      !d?.idImage ||
+      !d?.vehicleImage
+    ) {
+      alert("Please fill all fields and upload all required images");
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+
+      const fd = new FormData();
+      fd.append("idNumber", d.idNumber);
+      fd.append("plateNumber", d.plateNumber);
+      fd.append("profileImage", d.profileImage);
+      fd.append("idImage", d.idImage);
+      fd.append("vehicleImage", d.vehicleImage);
+
+      await submitDriverVerificationApi(driverId, fd);
+
+      setShowVerify(null);
+      setVerifyData({});
+      loadDrivers();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to submit verification");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const handleCreateAccount = async (driverId) => {
-    const email = prompt("Driver email:");
-    const password = prompt("Temporary password:");
-
-    if (!email || !password) return;
-
-    await createDriverAccountApi(driverId, { email, password });
-    loadDrivers();
+  /* ==========================================================
+     STATUS BADGE
+  ========================================================== */
+  const statusBadge = (s) => {
+    if (s === "online") return styles.online;
+    if (s === "on_trip") return styles.onTrip;
+    if (s === "suspended") return styles.suspended;
+    return styles.offline;
   };
 
-  const renderStatusBadge = (d) => {
-    if (d.driverVerificationStatus === "verified")
-      return <span className={styles.verified}>Verified</span>;
-    if (d.driverVerificationStatus === "rejected")
-      return <span className={styles.rejected}>Rejected</span>;
-    return <span className={styles.pending}>Pending</span>;
-  };
+  if (loading) return <p>Loading drivers…</p>;
 
+  /* ==========================================================
+     RENDER
+  ========================================================== */
   return (
     <div className={styles.page}>
+      {/* HEADER */}
       <div className={styles.header}>
         <h1>Drivers</h1>
-        <p>Driver onboarding & verification</p>
+        <button type="button" onClick={() => setShowCreate(true)}>
+          + Add Driver
+        </button>
       </div>
 
-      {loading && <p>Loading drivers...</p>}
       {error && <p className={styles.error}>{error}</p>}
 
+      {/* ================= DRIVER GRID ================= */}
       <div className={styles.grid}>
         {drivers.map((d) => (
           <div key={d._id} className={styles.card}>
@@ -82,82 +147,195 @@ const ManagerDrivers = () => {
               <img
                 src={d.profileImage || "/placeholder-user.png"}
                 alt="Driver"
-                className={styles.avatar}
               />
-              {renderStatusBadge(d)}
-            </div>
-
-            <h3>{d.name}</h3>
-            <p className={styles.phone}>{d.phone || "—"}</p>
-            <p className={styles.address}>{d.address || "—"}</p>
-
-            <div className={styles.section}>
-              <strong>ID Number:</strong>{" "}
-              {d.driverVerification?.idNumber || "—"}
-            </div>
-
-            <div className={styles.images}>
-              <img
-                src={
-                  d.driverVerification?.vehicleImage ||
-                  "/placeholder-car.png"
-                }
-                alt="Vehicle"
-              />
-              <img
-                src={
-                  d.driverVerification?.idImage ||
-                  "/placeholder-id.png"
-                }
-                alt="ID Card"
-              />
-            </div>
-
-            <div className={styles.footer}>
-              <span>
-                Plate:{" "}
-                {d.driverVerification?.vehiclePlateNumber || "—"}
+              <span className={`${styles.status} ${statusBadge(d.status)}`}>
+                {d.status}
               </span>
             </div>
 
-            {/* ACTIONS */}
+            <h3>{d.name}</h3>
+            <p>{d.phone || "—"}</p>
+            <p>{d.address || "—"}</p>
+
             <div className={styles.actions}>
-              {d.driverVerificationStatus === "pending" && (
-                <>
-                  <button
-                    className={styles.approveBtn}
-                    onClick={() => handleVerify(d._id)}
-                  >
-                    Verify
-                  </button>
-                  <button
-                    className={styles.rejectBtn}
-                    onClick={() => handleReject(d._id)}
-                  >
-                    Reject
-                  </button>
-                </>
+              {d.verification?.status !== "verified" && (
+                <button type="button" onClick={() => setShowVerify(d)}>
+                  Complete Verification
+                </button>
               )}
 
-              {d.driverVerificationStatus === "verified" &&
-                d.driverOnboardingStage !== "account_created" && (
-                  <button
-                    className={styles.createBtn}
-                    onClick={() => handleCreateAccount(d._id)}
-                  >
-                    Create Account
-                  </button>
-                )}
-
-              {d.driverOnboardingStage === "account_created" && (
-                <span className={styles.accountReady}>
-                  Account Ready
-                </span>
+              {d.verification?.status === "verified" && !d.hasAccount && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const email = prompt("Email:");
+                    const password = prompt("Password:");
+                    if (email && password) {
+                      createDriverAccountApi(d._id, { email, password }).then(
+                        loadDrivers
+                      );
+                    }
+                  }}
+                >
+                  Create Account
+                </button>
               )}
+
+              <button
+                type="button"
+                className={styles.suspend}
+                onClick={() =>
+                  toggleDriverSuspendApi(d._id).then(loadDrivers)
+                }
+              >
+                {d.status === "suspended" ? "Unsuspend" : "Suspend"}
+              </button>
+
+              <button
+                type="button"
+                className={styles.delete}
+                onClick={() => {
+                  if (confirm("Delete driver permanently?")) {
+                    deleteDriverApi(d._id).then(loadDrivers);
+                  }
+                }}
+              >
+                Delete
+              </button>
             </div>
           </div>
         ))}
       </div>
+
+      {/* ================= CREATE MODAL ================= */}
+      {showCreate && (
+        <div className={styles.modal}>
+          <div className={styles.modalCard}>
+            <h3>Create Driver</h3>
+
+            <input
+              placeholder="Name"
+              value={form.name}
+              onChange={(e) =>
+                setForm({ ...form, name: e.target.value })
+              }
+            />
+            <input
+              placeholder="Phone"
+              value={form.phone}
+              onChange={(e) =>
+                setForm({ ...form, phone: e.target.value })
+              }
+            />
+            <input
+              placeholder="Address"
+              value={form.address}
+              onChange={(e) =>
+                setForm({ ...form, address: e.target.value })
+              }
+            />
+
+            <div className={styles.modalActions}>
+              <button type="button" onClick={() => setShowCreate(false)}>
+                Cancel
+              </button>
+              <button type="button" onClick={handleCreateDriver}>
+                Create
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= VERIFY MODAL ================= */}
+      {showVerify && (
+        <div className={styles.modal}>
+          <div className={styles.modalCard}>
+            <h3>Verification – {showVerify.name}</h3>
+
+            <input
+              placeholder="ID Number"
+              onChange={(e) =>
+                setVerifyData((v) => ({
+                  ...v,
+                  [showVerify._id]: {
+                    ...v[showVerify._id],
+                    idNumber: e.target.value,
+                  },
+                }))
+              }
+            />
+
+            <input
+              placeholder="Plate Number"
+              onChange={(e) =>
+                setVerifyData((v) => ({
+                  ...v,
+                  [showVerify._id]: {
+                    ...v[showVerify._id],
+                    plateNumber: e.target.value,
+                  },
+                }))
+              }
+            />
+
+            <input
+              type="file"
+              onChange={(e) =>
+                setVerifyData((v) => ({
+                  ...v,
+                  [showVerify._id]: {
+                    ...v[showVerify._id],
+                    profileImage: e.target.files[0],
+                  },
+                }))
+              }
+            />
+
+            <input
+              type="file"
+              onChange={(e) =>
+                setVerifyData((v) => ({
+                  ...v,
+                  [showVerify._id]: {
+                    ...v[showVerify._id],
+                    idImage: e.target.files[0],
+                  },
+                }))
+              }
+            />
+
+            <input
+              type="file"
+              onChange={(e) =>
+                setVerifyData((v) => ({
+                  ...v,
+                  [showVerify._id]: {
+                    ...v[showVerify._id],
+                    vehicleImage: e.target.files[0],
+                  },
+                }))
+              }
+            />
+
+            <div className={styles.modalActions}>
+              <button type="button" onClick={() => setShowVerify(null)}>
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                disabled={submitting}
+                onClick={() =>
+                  handleSubmitVerification(showVerify._id)
+                }
+              >
+                {submitting ? "Submitting..." : "Submit"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

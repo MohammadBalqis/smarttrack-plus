@@ -1,84 +1,61 @@
-// client/src/components/manager/ManagerProductDrawer.jsx
 import React, { useEffect, useState } from "react";
-import { updateManagerProductApi } from "../../api/managerProductsApi";
+import {
+  updateManagerProductStockApi,
+  updateManagerProductPriceApi,
+  toggleManagerProductApi,
+} from "../../api/managerProductsApi";
+
 import styles from "../../styles/manager/managerProductDrawer.module.css";
 
 const ManagerProductDrawer = ({ open, onClose, product, onUpdated }) => {
   const [price, setPrice] = useState("");
   const [stock, setStock] = useState("");
-  const [isActive, setIsActive] = useState(true);
-  const [lowStockThreshold, setLowStockThreshold] = useState("");
-  const [notes, setNotes] = useState("");
-  const [sku, setSku] = useState("");
-  const [unit, setUnit] = useState("");
   const [discount, setDiscount] = useState("");
+  const [isActive, setIsActive] = useState(true);
   const [loading, setLoading] = useState(false);
 
-  // Load initial values whenever product changes
+  /* ==========================================================
+     LOAD INITIAL VALUES (ShopProduct)
+  ========================================================== */
   useEffect(() => {
-    if (product) {
-      setPrice(
-        typeof product.price === "number" ? product.price.toString() : ""
-      );
-      setStock(
-        typeof product.stock === "number" ? product.stock.toString() : ""
-      );
-      setIsActive(product.isActive !== false);
-      setLowStockThreshold(
-        typeof product.lowStockThreshold === "number"
-          ? product.lowStockThreshold.toString()
-          : ""
-      );
-      setNotes(product.notes || "");
-      setSku(product.sku || "");
-      setUnit(product.unit || "");
-      setDiscount(
-        typeof product.discountPercentage === "number"
-          ? product.discountPercentage.toString()
-          : ""
-      );
-    }
+    if (!product) return;
+
+    setPrice(
+      typeof product.price === "number" ? product.price.toString() : ""
+    );
+    setStock(
+      typeof product.stock === "number" ? product.stock.toString() : ""
+    );
+    setDiscount(
+      typeof product.discount === "number"
+        ? product.discount.toString()
+        : ""
+    );
+    setIsActive(product.isActive !== false);
   }, [product]);
 
   if (!open || !product) return null;
 
+  /* ==========================================================
+     SAVE HANDLER
+  ========================================================== */
   const handleSave = async () => {
     try {
       setLoading(true);
 
-      const payload = {};
+      // 1️⃣ Update price / discount
+      await updateManagerProductPriceApi(product.id, {
+        price: Number(price) || 0,
+        discount: Number(discount) || 0,
+      });
 
-      if (price !== "" && !Number.isNaN(Number(price))) {
-        payload.price = Number(price);
+      // 2️⃣ Update stock
+      await updateManagerProductStockApi(product.id, Number(stock) || 0);
+
+      // 3️⃣ Toggle active if changed
+      if (product.isActive !== isActive) {
+        await toggleManagerProductApi(product.id);
       }
-
-      if (stock !== "" && !Number.isNaN(Number(stock))) {
-        payload.stock = Number(stock);
-      }
-
-      payload.isActive = Boolean(isActive);
-
-      if (
-        lowStockThreshold !== "" &&
-        !Number.isNaN(Number(lowStockThreshold))
-      ) {
-        payload.lowStockThreshold = Number(lowStockThreshold);
-      }
-
-      if (notes.trim() !== "") {
-        payload.notes = notes.trim();
-      } else {
-        payload.notes = "";
-      }
-
-      if (sku.trim() !== "") payload.sku = sku.trim();
-      if (unit.trim() !== "") payload.unit = unit.trim();
-
-      if (discount !== "" && !Number.isNaN(Number(discount))) {
-        payload.discountPercentage = Number(discount);
-      }
-
-      await updateManagerProductApi(product._id, payload);
 
       if (typeof onUpdated === "function") {
         await onUpdated();
@@ -86,26 +63,29 @@ const ManagerProductDrawer = ({ open, onClose, product, onUpdated }) => {
 
       onClose();
     } catch (err) {
-      console.error("Update product failed:", err);
-      alert("Failed to update product. Please try again.");
+      console.error("❌ Failed to update shop product:", err);
+      alert("Failed to save changes. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
-  const mainImage =
-    Array.isArray(product.images) && product.images.length > 0
-      ? product.images[0]
-      : null;
+  /* ==========================================================
+     UI
+  ========================================================== */
+  const mainImage = product.product?.image || null;
 
   return (
-    <div className={styles.backdrop}>
-      <div className={styles.drawer}>
+    <div className={styles.backdrop} onClick={onClose}>
+      <div
+        className={styles.drawer}
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* HEADER */}
         <div className={styles.header}>
           <div>
             <h2>Manage Product</h2>
-            <p>Adjust price, stock, status and thresholds for this shop.</p>
+            <p>Adjust price, stock and status for this shop</p>
           </div>
           <button className={styles.closeBtn} onClick={onClose}>
             ✕
@@ -117,7 +97,7 @@ const ManagerProductDrawer = ({ open, onClose, product, onUpdated }) => {
           {mainImage ? (
             <img
               src={mainImage}
-              alt={product.name}
+              alt={product.product?.name}
               className={styles.productImage}
             />
           ) : (
@@ -125,29 +105,16 @@ const ManagerProductDrawer = ({ open, onClose, product, onUpdated }) => {
           )}
 
           <div className={styles.productMeta}>
-            <h3>{product.name}</h3>
+            <h3>{product.product?.name}</h3>
             <p className={styles.category}>
-              Category: {product.category || "general"}
-            </p>
-            <p className={styles.skuLine}>
-              SKU: {product.sku || "—"} | Unit: {product.unit || "—"}
-            </p>
-            <p className={styles.statusLine}>
-              Status:{" "}
-              <span
-                className={
-                  product.isActive ? styles.badgeActive : styles.badgeInactive
-                }
-              >
-                {product.isActive ? "Active" : "Inactive"}
-              </span>
+              Category: {product.product?.category || "general"}
             </p>
           </div>
         </div>
 
-        {/* FORM FIELDS */}
+        {/* FORM */}
         <div className={styles.formSection}>
-          <label>Price ($)</label>
+          <label>Price</label>
           <input
             type="number"
             min="0"
@@ -168,46 +135,14 @@ const ManagerProductDrawer = ({ open, onClose, product, onUpdated }) => {
           />
         </div>
 
-        <div className={styles.formGrid}>
-          <div className={styles.formSection}>
-            <label>Stock</label>
-            <input
-              type="number"
-              min="0"
-              value={stock}
-              onChange={(e) => setStock(e.target.value)}
-            />
-          </div>
-
-          <div className={styles.formSection}>
-            <label>Low Stock Threshold</label>
-            <input
-              type="number"
-              min="0"
-              value={lowStockThreshold}
-              onChange={(e) => setLowStockThreshold(e.target.value)}
-            />
-          </div>
-        </div>
-
-        <div className={styles.formGrid}>
-          <div className={styles.formSection}>
-            <label>SKU</label>
-            <input
-              type="text"
-              value={sku}
-              onChange={(e) => setSku(e.target.value)}
-            />
-          </div>
-
-          <div className={styles.formSection}>
-            <label>Unit (kg, L, piece...)</label>
-            <input
-              type="text"
-              value={unit}
-              onChange={(e) => setUnit(e.target.value)}
-            />
-          </div>
+        <div className={styles.formSection}>
+          <label>Stock</label>
+          <input
+            type="number"
+            min="0"
+            value={stock}
+            onChange={(e) => setStock(e.target.value)}
+          />
         </div>
 
         <div className={styles.formSectionRow}>
@@ -221,20 +156,10 @@ const ManagerProductDrawer = ({ open, onClose, product, onUpdated }) => {
           </label>
         </div>
 
-        <div className={styles.formSection}>
-          <label>Internal notes (only you & company see this)</label>
-          <textarea
-            rows={3}
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-          />
-        </div>
-
-        {/* ACTION BUTTONS */}
+        {/* ACTIONS */}
         <div className={styles.actions}>
           <button
             className={styles.secondary}
-            type="button"
             onClick={onClose}
             disabled={loading}
           >
@@ -243,7 +168,6 @@ const ManagerProductDrawer = ({ open, onClose, product, onUpdated }) => {
 
           <button
             className={styles.primary}
-            type="button"
             onClick={handleSave}
             disabled={loading}
           >

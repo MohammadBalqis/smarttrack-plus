@@ -87,6 +87,8 @@ import companyDriverRoutes from "./src/routes/companyDriverRoutes.js";
 import companyPaymentRoutes from "./src/routes/companyPaymentRoutes.js";
 import companyBrandingRoutes from "./src/routes/companyBrandingRoutes.js";
 import companySettingsRoutes from "./src/routes/companySettingsRoutes.js";
+import companyShopRoutes from "./src/routes/companyShopRoutes.js";
+import companyManagerRoutes from "./src/routes/companyManagerRoutes.js";
 
 /* ===== MANAGER ===== */
 import managerDashboardRoutes from "./src/routes/managerDashboardRoutes.js";
@@ -100,7 +102,7 @@ import managerProfileRoutes from "./src/routes/managerProfileRoutes.js";
 import managerPaymentsRoutes from "./src/routes/managerPaymentsRoutes.js";
 import managerLiveRoutes from "./src/routes/managerLiveRoutes.js";
 import managerShopProductsRoutes from "./src/routes/managerShopProductsRoutes.js";
-
+import managerRoutes from "./src/routes/managerRoutes.js";
 /* ===== DRIVER ===== */
 import driverRoutes from "./src/routes/driverRoutes.js";
 import driverTripRoutes from "./src/routes/driverTripRoutes.js";
@@ -151,7 +153,8 @@ app.use("/api/company/drivers", companyDriverRoutes);
 app.use("/api/company/payments", companyPaymentRoutes);
 app.use("/api/company/branding", companyBrandingRoutes);
 app.use("/api/company/settings", companySettingsRoutes);
-
+app.use("/api/company/shops", companyShopRoutes);
+app.use("/api/company/managers", companyManagerRoutes);
 /* Manager */
 app.use("/api/manager/dashboard", managerDashboardRoutes);
 app.use("/api/manager/drivers", managerDriverRoutes);
@@ -164,7 +167,7 @@ app.use("/api/manager/profile", managerProfileRoutes);
 app.use("/api/manager/payments", managerPaymentsRoutes);
 app.use("/api/manager/live", managerLiveRoutes);
 app.use("/api/manager/shop-products", managerShopProductsRoutes);
-
+app.use ("/api/manager", managerRoutes);
 /* Driver */
 app.use("/api/driver", driverRoutes);
 app.use("/api/driver/trips", driverTripRoutes);

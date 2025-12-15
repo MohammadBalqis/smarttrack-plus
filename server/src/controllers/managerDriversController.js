@@ -1,534 +1,364 @@
-// server/src/controllers/managerDriverController.js
-
 import bcrypt from "bcryptjs";
+import Driver from "../models/Driver.js";
 import User from "../models/User.js";
-import Trip from "../models/Trip.js";
-import Vehicle from "../models/Vehicle.js";
-import { resolveCompanyId } from "../utils/resolveCompanyId.js";
 
 /* ==========================================================
-   Helpers
+   HELPERS
 ========================================================== */
-const sanitizeStr = (v) => (typeof v === "string" ? v.trim() : "");
+const sanitize = (v) => (typeof v === "string" ? v.trim() : v);
 
-const pick = (obj, keys) => {
-  const out = {};
-  keys.forEach((k) => {
-    if (obj[k] !== undefined) out[k] = obj[k];
-  });
-  return out;
-};
+const resolveCompanyId = (user) => user?.companyId || null;
 
-const ensureDriverInCompany = async ({ companyId, driverId }) => {
-  const driver = await User.findOne({
-    _id: driverId,
-    role: "driver",
-    companyId,
-  });
-
-  return driver;
-};
+const ensureDriverInManagerScope = async ({ managerId, companyId, driverId }) =>
+  Driver.findOne({ _id: driverId, managerId, companyId });
 
 /* ==========================================================
-   ✅ GET ALL DRIVERS (manager scope)
-   GET /api/manager/drivers?status=active|inactive&verification=pending|verified|rejected
+   GET DRIVERS
 ========================================================== */
 export const getManagerDrivers = async (req, res) => {
   try {
-    const companyId = resolveCompanyId(req.user);
-    if (!companyId) {
-      return res.status(400).json({ error: "Unable to resolve companyId" });
-    }
-
-    const { status, verification, stage, search = "" } = req.query;
-
-    const filters = {
-      role: "driver",
-      companyId,
-    };
-
-    // Active / inactive filter
-    if (status === "active") filters.isActive = true;
-    if (status === "inactive") filters.isActive = false;
-
-    // Verification status filter
-    if (verification && ["pending", "verified", "rejected"].includes(verification)) {
-      filters.driverVerificationStatus = verification;
-    }
-
-    // Onboarding stage filter
-    if (stage && ["profile_only", "verified", "account_created"].includes(stage)) {
-      filters.driverOnboardingStage = stage;
-    }
-
-    // Basic search (name/phone/email)
-    const q = sanitizeStr(search);
-    if (q) {
-      filters.$or = [
-        { name: { $regex: q, $options: "i" } },
-        { phone: { $regex: q, $options: "i" } },
-        { email: { $regex: q, $options: "i" } },
-      ];
-    }
-
-    // If manager is tied to a shop, you can uncomment to scope to that shop only:
-    // if (req.user.shopId) filters.shopId = req.user.shopId;
-
-    const drivers = await User.find(filters)
-      .select(
-        "name email phone address profileImage isActive driverStatus createdAt shopId " +
-          "driverVerificationStatus driverOnboardingStage driverVerification vehicleAssigned"
-      )
-      .populate("shopId", "name city")
-      .populate("vehicleAssigned", "brand model plateNumber type vehicleImage")
+    const drivers = await Driver.find({
+      managerId: req.user._id,
+      companyId: resolveCompanyId(req.user),
+    })
       .sort({ createdAt: -1 })
       .lean();
 
-    res.json({
-      ok: true,
-      count: drivers.length,
-      drivers,
-    });
+    res.json({ ok: true, drivers });
   } catch (err) {
-    console.error("❌ getManagerDrivers ERROR:", err);
-    res.status(500).json({ error: "Server error loading drivers" });
+    console.error("getManagerDrivers error:", err);
+    res.status(500).json({ ok: false, error: "Server error loading drivers" });
   }
 };
 
 /* ==========================================================
-   ✅ CREATE DRIVER PROFILE ONLY (NO LOGIN YET)
-   POST /api/manager/drivers
-   Body: { name, phone, address, profileImage?, shopId? }
+   CREATE DRIVER PROFILE (✅ vehicle initialized)
 ========================================================== */
-export const createManagerDriverProfile = async (req, res) => {
+export const createDriverProfile = async (req, res) => {
   try {
-    const companyId = resolveCompanyId(req.user);
-    if (!companyId) {
-      return res.status(400).json({ error: "Unable to resolve companyId" });
+    const { name, phone, address } = req.body;
+
+    if (!sanitize(name)) {
+      return res
+        .status(400)
+        .json({ ok: false, error: "Driver name is required." });
     }
 
-    const { name, phone, address, profileImage, shopId } = req.body;
-
-    if (!sanitizeStr(name)) {
-      return res.status(400).json({ error: "Driver full name is required." });
-    }
-
-    const driver = await User.create({
-      role: "driver",
-      companyId,
-      shopId: shopId || req.user.shopId || null,
+    const driver = await Driver.create({
       managerId: req.user._id,
-
-      name: sanitizeStr(name),
-      phone: sanitizeStr(phone),
-      address: sanitizeStr(address),
-      profileImage: sanitizeStr(profileImage),
-
-      // Onboarding defaults (from your new model)
-      driverOnboardingStage: "profile_only",
-      driverVerificationStatus: "pending",
-      isActive: true,
+      companyId: resolveCompanyId(req.user),
+      name: sanitize(name),
+      phone: sanitize(phone) || "",
+      address: sanitize(address) || "",
+      status: "offline",
+      verification: { status: "draft" },
+      vehicle: {}, // ✅ IMPORTANT
     });
 
-    res.status(201).json({
-      ok: true,
-      message: "Driver profile created (no login yet).",
-      driver,
-    });
+    res.status(201).json({ ok: true, driver });
   } catch (err) {
-    console.error("❌ createManagerDriverProfile ERROR:", err);
-    res.status(500).json({ error: "Server error creating driver profile" });
+    console.error("createDriverProfile error:", err);
+    res.status(500).json({ ok: false, error: "Server error creating driver" });
   }
 };
 
 /* ==========================================================
-   ✅ UPDATE DRIVER PROFILE INFO (safe)
-   PATCH /api/manager/drivers/:driverId/profile
-   - allowed anytime: name, phone, address, profileImage, shopId
-   - email/password are NOT set here
+   UPDATE DRIVER PROFILE
 ========================================================== */
-export const updateManagerDriverProfile = async (req, res) => {
+export const updateDriverProfile = async (req, res) => {
   try {
-    const companyId = resolveCompanyId(req.user);
-    const { driverId } = req.params;
+    const driver = await ensureDriverInManagerScope({
+      managerId: req.user._id,
+      companyId: resolveCompanyId(req.user),
+      driverId: req.params.driverId,
+    });
 
-    if (!companyId) {
-      return res.status(400).json({ error: "Unable to resolve companyId" });
-    }
-
-    const driver = await ensureDriverInCompany({ companyId, driverId });
     if (!driver) {
-      return res.status(404).json({ error: "Driver not found" });
+      return res.status(404).json({ ok: false, error: "Driver not found." });
     }
 
-    const allowed = pick(req.body, ["name", "phone", "address", "profileImage", "shopId"]);
+    const { name, phone, address } = req.body;
 
-    if (allowed.name !== undefined) driver.name = sanitizeStr(allowed.name);
-    if (allowed.phone !== undefined) driver.phone = sanitizeStr(allowed.phone);
-    if (allowed.address !== undefined) driver.address = sanitizeStr(allowed.address);
-    if (allowed.profileImage !== undefined) driver.profileImage = sanitizeStr(allowed.profileImage);
-    if (allowed.shopId !== undefined) driver.shopId = allowed.shopId || null;
+    if (name !== undefined) driver.name = sanitize(name);
+    if (phone !== undefined) driver.phone = sanitize(phone) || "";
+    if (address !== undefined) driver.address = sanitize(address) || "";
+
+    await driver.save();
+    res.json({ ok: true, driver });
+  } catch (err) {
+    console.error("updateDriverProfile error:", err);
+    res.status(500).json({ ok: false, error: "Server error updating driver" });
+  }
+};
+
+/* ==========================================================
+   SUBMIT VERIFICATION (✅ FULLY SAFE)
+========================================================== */
+export const submitDriverVerification = async (req, res) => {
+  try {
+    const driver = await ensureDriverInManagerScope({
+      managerId: req.user._id,
+      companyId: resolveCompanyId(req.user),
+      driverId: req.params.driverId,
+    });
+
+    if (!driver) {
+      return res.status(404).json({ ok: false, error: "Driver not found." });
+    }
+
+    const { idNumber, plateNumber, vehicleType } = req.body;
+
+    if (!sanitize(idNumber)) {
+      return res.status(400).json({ ok: false, error: "ID number is required." });
+    }
+
+    if (!sanitize(plateNumber)) {
+      return res.status(400).json({ ok: false, error: "Plate number is required." });
+    }
+
+    if (!req.files?.idImage?.[0]) {
+      return res.status(400).json({ ok: false, error: "ID image is required." });
+    }
+
+    if (!req.files?.vehicleImage?.[0]) {
+      return res.status(400).json({ ok: false, error: "Vehicle image is required." });
+    }
+
+    /* ---------- SAFETY INITIALIZATION ---------- */
+    if (!driver.verification) driver.verification = {};
+    if (!driver.vehicle) driver.vehicle = {};
+
+    /* ---------- FILE PATHS ---------- */
+    const profileImage = req.files?.profileImage?.[0]
+      ? `/uploads/drivers/profile/${req.files.profileImage[0].filename}`
+      : null;
+
+    const idImage = `/uploads/drivers/id/${req.files.idImage[0].filename}`;
+    const vehicleImage = `/uploads/drivers/vehicle/${req.files.vehicleImage[0].filename}`;
+
+    /* ---------- SAVE ---------- */
+    if (profileImage) driver.profileImage = sanitize(profileImage);
+
+    driver.vehicle.plateNumber = sanitize(plateNumber);
+    driver.vehicle.image = sanitize(vehicleImage);
+    if (vehicleType !== undefined) driver.vehicle.type = sanitize(vehicleType);
+
+    driver.verification.idNumber = sanitize(idNumber);
+    driver.verification.idImage = sanitize(idImage);
+    driver.verification.status = "pending";
+    driver.verification.rejectReason = "";
+    driver.verification.verifiedAt = null;
+    driver.verification.verifiedBy = null;
 
     await driver.save();
 
-    res.json({
-      ok: true,
-      message: "Driver profile updated.",
-      driver,
-    });
+    res.json({ ok: true, message: "Verification submitted.", driver });
   } catch (err) {
-    console.error("❌ updateManagerDriverProfile ERROR:", err);
-    res.status(500).json({ error: "Server error updating driver profile" });
+    console.error("submitDriverVerification error:", err);
+    res.status(500).json({ ok: false, error: "Server error submitting verification" });
   }
 };
 
 /* ==========================================================
-   ✅ SUBMIT / UPDATE DRIVER VERIFICATION DATA (manager fills form)
-   PATCH /api/manager/drivers/:driverId/verification
-   Body:
-   {
-     idNumber, idImage,
-     vehicleImage, vehiclePlateNumber,
-     rejectionReason? (optional)
-   }
+   VERIFY DRIVER
 ========================================================== */
-export const upsertManagerDriverVerification = async (req, res) => {
+export const verifyDriver = async (req, res) => {
   try {
-    const companyId = resolveCompanyId(req.user);
-    const { driverId } = req.params;
-
-    if (!companyId) {
-      return res.status(400).json({ error: "Unable to resolve companyId" });
-    }
-
-    const driver = await ensureDriverInCompany({ companyId, driverId });
-    if (!driver) {
-      return res.status(404).json({ error: "Driver not found" });
-    }
-
-    const { idNumber, idImage, vehicleImage, vehiclePlateNumber } = req.body;
-
-    driver.driverVerification = driver.driverVerification || {};
-
-    if (idNumber !== undefined) driver.driverVerification.idNumber = sanitizeStr(idNumber);
-    if (idImage !== undefined) driver.driverVerification.idImage = sanitizeStr(idImage);
-    if (vehicleImage !== undefined) driver.driverVerification.vehicleImage = sanitizeStr(vehicleImage);
-    if (vehiclePlateNumber !== undefined)
-      driver.driverVerification.vehiclePlateNumber = sanitizeStr(vehiclePlateNumber);
-
-    // Anytime verification data is edited -> keep it pending until manager verifies
-    driver.driverVerificationStatus = "pending";
-    driver.driverVerification.verifiedAt = null;
-    driver.driverVerification.verifiedBy = null;
-    driver.driverVerification.rejectionReason = "";
-
-    // still profile_only until verified
-    if (driver.driverOnboardingStage === "account_created") {
-      // if already has account, don’t downgrade stage
-    } else {
-      driver.driverOnboardingStage = "profile_only";
-    }
-
-    await driver.save();
-
-    res.json({
-      ok: true,
-      message: "Driver verification info saved (pending).",
-      driver,
+    const driver = await ensureDriverInManagerScope({
+      managerId: req.user._id,
+      companyId: resolveCompanyId(req.user),
+      driverId: req.params.driverId,
     });
-  } catch (err) {
-    console.error("❌ upsertManagerDriverVerification ERROR:", err);
-    res.status(500).json({ error: "Server error saving verification info" });
-  }
-};
 
-/* ==========================================================
-   🚘 CREATE OR UPDATE VEHICLE FROM DRIVER VERIFICATION
-========================================================== */
-const upsertVehicleFromDriver = async ({ driver }) => {
-  const verification = driver.driverVerification || {};
-
-  const plate = verification.vehiclePlateNumber?.trim();
-  if (!plate) return null;
-
-  const payload = {
-    companyId: driver.companyId,
-    shopId: driver.shopId || null,
-    driverId: driver._id,
-
-    type: "car", // default (can be extended later)
-    brand: verification.vehicleBrand || "Unknown",
-    model: verification.vehicleModel || "Unknown",
-    plateNumber: plate,
-
-    vehicleImage: verification.vehicleImage || null,
-    driverCertificate: verification.idImage,
-
-    status: "active",
-  };
-
-  const vehicle = await Vehicle.findOneAndUpdate(
-    { driverId: driver._id },
-    {
-      $set: payload,
-      $setOnInsert: { createdFromDriver: true },
-    },
-    {
-      new: true,
-      upsert: true,
-    }
-  );
-
-  return vehicle;
-};
-
-
-/* ==========================================================
-   ✅ VERIFY DRIVER (manager action)
-   PATCH /api/manager/drivers/:driverId/verify
-========================================================== */
-export const verifyManagerDriver = async (req, res) => {
-  try {
-    const companyId = resolveCompanyId(req.user);
-    const { driverId } = req.params;
-
-    if (!companyId) {
-      return res.status(400).json({ error: "Unable to resolve companyId" });
-    }
-
-    const driver = await ensureDriverInCompany({ companyId, driverId });
     if (!driver) {
-      return res.status(404).json({ error: "Driver not found" });
+      return res.status(404).json({ ok: false, error: "Driver not found." });
     }
 
-    // Require minimum verification fields
-    const idNum = sanitizeStr(driver.driverVerification?.idNumber);
-    const idImg = sanitizeStr(driver.driverVerification?.idImage);
-    const plate = sanitizeStr(driver.driverVerification?.vehiclePlateNumber);
-
-    if (!idNum || !idImg || !plate) {
+    if (
+      !driver.verification?.idNumber ||
+      !driver.verification?.idImage ||
+      !driver.vehicle?.plateNumber ||
+      !driver.vehicle?.image
+    ) {
       return res.status(400).json({
-        error:
-          "Cannot verify: idNumber, idImage, and vehiclePlateNumber are required.",
+        ok: false,
+        error: "Driver verification is incomplete.",
       });
     }
 
-    driver.driverVerificationStatus = "verified";
-    driver.driverOnboardingStage =
-      driver.driverOnboardingStage === "account_created"
-        ? "account_created"
-        : "verified";
-
-    driver.driverVerification.verifiedAt = new Date();
-    driver.driverVerification.verifiedBy = req.user._id;
-    driver.driverVerification.rejectionReason = "";
-
-await driver.save();
-
-/* ==========================================================
-   🚘 CREATE / UPDATE VEHICLE
-========================================================== */
-const vehicle = await upsertVehicleFromDriver({ driver });
-
-res.json({
-  ok: true,
-  message: "Driver verified successfully.",
-  driver,
-  vehicle, // 👈 returned for frontend if needed
-});
-  } catch (err) {
-    console.error("❌ verifyManagerDriver ERROR:", err);
-    res.status(500).json({ error: "Server error verifying driver" });
-  }
-};
-
-/* ==========================================================
-   ✅ REJECT DRIVER (manager action)
-   PATCH /api/manager/drivers/:driverId/reject
-   Body: { reason }
-========================================================== */
-export const rejectManagerDriver = async (req, res) => {
-  try {
-    const companyId = resolveCompanyId(req.user);
-    const { driverId } = req.params;
-    const { reason = "" } = req.body;
-
-    if (!companyId) {
-      return res.status(400).json({ error: "Unable to resolve companyId" });
-    }
-
-    const driver = await ensureDriverInCompany({ companyId, driverId });
-    if (!driver) {
-      return res.status(404).json({ error: "Driver not found" });
-    }
-
-    driver.driverVerificationStatus = "rejected";
-    driver.driverOnboardingStage =
-      driver.driverOnboardingStage === "account_created"
-        ? "account_created"
-        : "profile_only";
-
-    driver.driverVerification = driver.driverVerification || {};
-    driver.driverVerification.rejectionReason = sanitizeStr(reason);
-    driver.driverVerification.verifiedAt = null;
-    driver.driverVerification.verifiedBy = null;
+    driver.verification.status = "verified";
+    driver.verification.verifiedAt = new Date();
+    driver.verification.verifiedBy = req.user._id;
+    driver.verification.rejectReason = "";
 
     await driver.save();
-
-    res.json({
-      ok: true,
-      message: "Driver rejected.",
-      driver,
-    });
+    res.json({ ok: true, message: "Driver verified.", driver });
   } catch (err) {
-    console.error("❌ rejectManagerDriver ERROR:", err);
-    res.status(500).json({ error: "Server error rejecting driver" });
+    console.error("verifyDriver error:", err);
+    res.status(500).json({ ok: false, error: "Server error verifying driver" });
   }
 };
 
 /* ==========================================================
-   ✅ CREATE DRIVER LOGIN (ONLY AFTER VERIFIED)
-   POST /api/manager/drivers/:driverId/create-account
-   Body: { email, password }
-   - You can later auto-generate password if you want.
+   REJECT DRIVER
 ========================================================== */
-export const createManagerDriverAccount = async (req, res) => {
+export const rejectDriver = async (req, res) => {
   try {
-    const companyId = resolveCompanyId(req.user);
-    const { driverId } = req.params;
+    const driver = await ensureDriverInManagerScope({
+      managerId: req.user._id,
+      companyId: resolveCompanyId(req.user),
+      driverId: req.params.driverId,
+    });
+
+    if (!driver) {
+      return res.status(404).json({ ok: false, error: "Driver not found." });
+    }
+
+    if (!driver.verification) driver.verification = {};
+
+    driver.verification.status = "rejected";
+    driver.verification.rejectReason = sanitize(req.body.reason) || "Rejected";
+    driver.verification.verifiedAt = null;
+    driver.verification.verifiedBy = null;
+
+    await driver.save();
+    res.json({ ok: true, message: "Driver rejected.", driver });
+  } catch (err) {
+    console.error("rejectDriver error:", err);
+    res.status(500).json({ ok: false, error: "Server error rejecting driver" });
+  }
+};
+
+/* ==========================================================
+   CREATE DRIVER ACCOUNT
+========================================================== */
+export const createDriverAccount = async (req, res) => {
+  try {
     const { email, password } = req.body;
 
-    if (!companyId) {
-      return res.status(400).json({ error: "Unable to resolve companyId" });
-    }
-
-    const driver = await ensureDriverInCompany({ companyId, driverId });
-    if (!driver) {
-      return res.status(404).json({ error: "Driver not found" });
-    }
-
-    if (driver.driverVerificationStatus !== "verified") {
-      return res.status(400).json({
-        error: "Driver must be verified before creating an account.",
-      });
-    }
-
-    if (!sanitizeStr(email) || !sanitizeStr(password)) {
-      return res.status(400).json({
-        error: "Email and password are required to create the driver account.",
-      });
-    }
-
-    const newEmail = sanitizeStr(email).toLowerCase();
-
-    const exists = await User.findOne({ email: newEmail });
-    if (exists && String(exists._id) !== String(driver._id)) {
-      return res.status(400).json({ error: "Email is already in use." });
-    }
-
-    const hash = await bcrypt.hash(password, 10);
-
-    driver.email = newEmail;
-    driver.passwordHash = hash;
-    driver.driverOnboardingStage = "account_created";
-
-    await driver.save();
-
-    res.json({
-      ok: true,
-      message: "Driver account created successfully (login enabled).",
-      driver: {
-        _id: driver._id,
-        name: driver.name,
-        email: driver.email,
-        phone: driver.phone,
-        driverOnboardingStage: driver.driverOnboardingStage,
-        driverVerificationStatus: driver.driverVerificationStatus,
-      },
+    const driver = await ensureDriverInManagerScope({
+      managerId: req.user._id,
+      companyId: resolveCompanyId(req.user),
+      driverId: req.params.driverId,
     });
-  } catch (err) {
-    console.error("❌ createManagerDriverAccount ERROR:", err);
-    res.status(500).json({ error: "Server error creating driver account" });
-  }
-};
 
-/* ==========================================================
-   🔁 TOGGLE DRIVER ACTIVE/INACTIVE
-   PATCH /api/manager/drivers/:driverId/toggle
-========================================================== */
-export const toggleManagerDriverStatus = async (req, res) => {
-  try {
-    const companyId = resolveCompanyId(req.user);
-    const { driverId } = req.params;
-
-    if (!companyId) {
-      return res.status(400).json({ error: "Unable to resolve companyId" });
-    }
-
-    const driver = await ensureDriverInCompany({ companyId, driverId });
     if (!driver) {
-      return res.status(404).json({ error: "Driver not found" });
+      return res.status(404).json({ ok: false, error: "Driver not found." });
     }
 
-    driver.isActive = !driver.isActive;
-    await driver.save();
-
-    res.json({
-      ok: true,
-      message: `Driver is now ${driver.isActive ? "active" : "inactive"}`,
-      driver,
-    });
-  } catch (err) {
-    console.error("❌ toggleManagerDriverStatus ERROR:", err);
-    res.status(500).json({ error: "Server error updating driver status" });
-  }
-};
-
-/* ==========================================================
-   📊 DRIVER PERFORMANCE STATS
-   GET /api/manager/drivers/:driverId/stats
-========================================================== */
-export const getManagerDriverStats = async (req, res) => {
-  try {
-    const companyId = resolveCompanyId(req.user);
-    const { driverId } = req.params;
-
-    if (!companyId) {
-      return res.status(400).json({ error: "Unable to resolve companyId" });
+    if (driver.verification?.status !== "verified") {
+      return res
+        .status(400)
+        .json({ ok: false, error: "Driver must be verified first." });
     }
 
-    const driver = await User.findOne({
-      _id: driverId,
+    const normalizedEmail = sanitize(email).toLowerCase();
+
+    const existing = await User.findOne({ email: normalizedEmail });
+    if (existing) {
+      return res.status(400).json({ ok: false, error: "Email already in use." });
+    }
+
+    const user = await User.create({
+      name: driver.name,
+      email: normalizedEmail,
       role: "driver",
-      companyId,
-    }).select("name email profileImage isActive createdAt driverStatus");
+      companyId: driver.companyId,
+      managerId: driver.managerId,
+      isActive: true,
+      passwordHash: await bcrypt.hash(password, 10),
+    });
+
+    driver.userId = user._id;
+    driver.email = normalizedEmail;
+    driver.hasAccount = true;
+
+    await driver.save();
+    res.json({ ok: true, message: "Driver account created.", driver });
+  } catch (err) {
+    console.error("createDriverAccount error:", err);
+    res.status(500).json({ ok: false, error: "Server error creating account" });
+  }
+};
+
+/* ==========================================================
+   TOGGLE SUSPEND
+========================================================== */
+export const toggleDriverSuspend = async (req, res) => {
+  try {
+    const driver = await ensureDriverInManagerScope({
+      managerId: req.user._id,
+      companyId: resolveCompanyId(req.user),
+      driverId: req.params.driverId,
+    });
 
     if (!driver) {
-      return res.status(404).json({ error: "Driver not found" });
+      return res.status(404).json({ ok: false, error: "Driver not found." });
     }
 
-    const deliveredTrips = await Trip.find({ driverId, status: "delivered" });
-    const totalDelivered = deliveredTrips.length;
+    driver.status = driver.status === "suspended" ? "offline" : "suspended";
+    await driver.save();
 
-    const activeTrips = await Trip.countDocuments({
-      driverId,
-      status: { $in: ["assigned", "in_progress", "on_trip"] },
-    });
-
-    const totalDistance =
-      deliveredTrips.reduce((sum, t) => sum + (t.totalDistance || 0), 0) || 0;
-
-    res.json({
-      ok: true,
-      driver,
-      stats: {
-        delivered: totalDelivered,
-        activeTrips,
-        totalDistance,
-      },
-    });
+    res.json({ ok: true, driver });
   } catch (err) {
-    console.error("❌ getManagerDriverStats ERROR:", err);
-    res.status(500).json({ error: "Server error fetching driver stats" });
+    console.error("toggleDriverSuspend error:", err);
+    res.status(500).json({ ok: false, error: "Server error toggling suspend" });
+  }
+};
+
+/* ==========================================================
+   DELETE DRIVER
+========================================================== */
+export const deleteDriverPermanently = async (req, res) => {
+  try {
+    const driver = await ensureDriverInManagerScope({
+      managerId: req.user._id,
+      companyId: resolveCompanyId(req.user),
+      driverId: req.params.driverId,
+    });
+
+    if (!driver) {
+      return res.status(404).json({ ok: false, error: "Driver not found." });
+    }
+
+    if (driver.userId) {
+      await User.deleteOne({ _id: driver.userId });
+    }
+
+    await Driver.deleteOne({ _id: driver._id });
+
+    res.json({ ok: true, message: "Driver deleted permanently." });
+  } catch (err) {
+    console.error("deleteDriverPermanently error:", err);
+    res.status(500).json({ ok: false, error: "Server error deleting driver" });
+  }
+};
+
+/* ==========================================================
+   GET DRIVERS BY SHOP
+========================================================== */
+export const getManagerDriversByShop = async (req, res) => {
+  try {
+    const { shopId } = req.params;
+
+    if (!shopId) {
+      return res.status(400).json({ ok: false, error: "Shop ID is required" });
+    }
+
+    const drivers = await Driver.find({
+      managerId: req.user._id,
+      companyId: resolveCompanyId(req.user),
+      shopId,
+    })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    res.json({ ok: true, count: drivers.length, drivers });
+  } catch (err) {
+    console.error("getManagerDriversByShop error:", err);
+    res.status(500).json({
+      ok: false,
+      error: "Server error loading shop drivers",
+    });
   }
 };

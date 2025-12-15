@@ -1,240 +1,315 @@
-/* ======================================================
+/* ==========================================================
    PAGE
-====================================================== */
+========================================================== */
 .page {
   padding: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
+  background: linear-gradient(180deg, #f8fafc, #f1f5f9);
+  min-height: 100vh;
 }
 
-/* ======================================================
+/* ==========================================================
    HEADER
-====================================================== */
+========================================================== */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
 .header h1 {
   font-size: 26px;
-  font-weight: 700;
-  margin-bottom: 4px;
+  font-weight: 800;
+  color: #020617;
 }
 
-.header p {
-  font-size: 14px;
-  color: #64748b;
+/* Floating Create Button */
+.header button {
+  position: fixed;
+  top: 88px;
+  right: 26px;
+  z-index: 30;
+
+  padding: 10px 16px;
+  border-radius: 12px;
+  border: none;
+
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: #ffffff;
+
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+
+  box-shadow:
+    0 10px 22px rgba(37, 99, 235, 0.35),
+    0 4px 10px rgba(37, 99, 235, 0.25);
+
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-/* ======================================================
-   ERROR
-====================================================== */
-.error {
-  color: #dc2626;
-  background: #fee2e2;
-  padding: 10px 14px;
-  border-radius: 8px;
-  font-size: 14px;
+.header button:hover {
+  transform: translateY(-2px);
 }
 
-/* ======================================================
+/* ==========================================================
    GRID
-====================================================== */
+========================================================== */
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 18px;
 }
 
-/* ======================================================
-   CARD
-====================================================== */
+/* ==========================================================
+   DRIVER CARD (SMALLER & CLEANER)
+========================================================== */
 .card {
   background: #ffffff;
   border-radius: 14px;
-  padding: 16px;
-  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+  padding: 14px;
+
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  gap: 10px;
+
+  border: 1px solid #e5e7eb;
+  box-shadow:
+    0 6px 16px rgba(15, 23, 42, 0.05),
+    0 1px 4px rgba(15, 23, 42, 0.04);
+
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.12);
+  transform: translateY(-3px);
+  box-shadow:
+    0 12px 28px rgba(15, 23, 42, 0.1),
+    0 3px 8px rgba(15, 23, 42, 0.06);
 }
 
-/* ======================================================
-   TOP
-====================================================== */
+/* ==========================================================
+   CARD TOP
+========================================================== */
 .top {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
 }
 
-.avatar {
-  width: 64px;
-  height: 64px;
+.top img {
+  width: 46px;
+  height: 46px;
   border-radius: 50%;
   object-fit: cover;
-  background: #e5e7eb;
+  border: 2px solid #e5e7eb;
+  background: #f1f5f9;
 }
 
-/* ======================================================
-   STATUS BADGES
-====================================================== */
-.verified,
-.pending,
-.rejected {
-  font-size: 12px;
+/* ==========================================================
+   STATUS BADGE
+========================================================== */
+.status {
+  font-size: 10px;
+  font-weight: 800;
   padding: 4px 10px;
   border-radius: 999px;
-  font-weight: 600;
+  text-transform: uppercase;
 }
 
-.verified {
+.online {
   background: #dcfce7;
   color: #166534;
 }
 
-.pending {
-  background: #fef9c3;
-  color: #854d0e;
+.offline {
+  background: #e5e7eb;
+  color: #374151;
 }
 
-.rejected {
-  background: #fee2e2;
-  color: #991b1b;
+.onTrip {
+  background: #dbeafe;
+  color: #1e40af;
 }
 
-/* ======================================================
-   TEXT
-====================================================== */
+.suspended {
+  background: #fde68a;
+  color: #92400e;
+}
+
+/* ==========================================================
+   CARD TEXT
+========================================================== */
 .card h3 {
-  font-size: 18px;
-  font-weight: 600;
+  font-size: 15px;
+  font-weight: 800;
+  color: #020617;
 }
 
-.phone {
-  font-size: 14px;
-  color: #0f172a;
-}
-
-.address {
-  font-size: 13px;
+.card p {
+  font-size: 12px;
   color: #64748b;
+  line-height: 1.3;
 }
 
-/* ======================================================
-   SECTION
-====================================================== */
-.section {
-  font-size: 13px;
-  color: #334155;
-}
-
-/* ======================================================
-   IMAGES
-====================================================== */
-.images {
-  display: flex;
-  gap: 8px;
-}
-
-.images img {
-  width: 100%;
-  max-width: 120px;
-  height: 80px;
-  object-fit: cover;
-  border-radius: 8px;
-  background: #f1f5f9;
-}
-
-/* ======================================================
-   FOOTER
-====================================================== */
-.footer {
-  font-size: 13px;
-  color: #334155;
-  font-weight: 500;
-}
-
-/* ======================================================
-   ACTIONS
-====================================================== */
+/* ==========================================================
+   ACTIONS (COMPACT)
+========================================================== */
 .actions {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
-  margin-top: 8px;
+  margin-top: 6px;
 }
 
 .actions button {
   flex: 1;
   padding: 8px 10px;
-  font-size: 13px;
-  border-radius: 8px;
+  border-radius: 10px;
   border: none;
+
+  font-size: 11px;
+  font-weight: 800;
   cursor: pointer;
-  font-weight: 600;
-  transition: background 0.15s ease, transform 0.1s ease;
+
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
 }
 
 .actions button:hover {
   transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.15);
 }
 
-/* ======================================================
-   BUTTONS
-====================================================== */
-.approveBtn {
-  background: #16a34a;
-  color: #ffffff;
+.actions button:first-child {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: #fff;
 }
 
-.approveBtn:hover {
-  background: #15803d;
+.suspend {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #fff;
 }
 
-.rejectBtn {
-  background: #dc2626;
-  color: #ffffff;
+.delete {
+  background: linear-gradient(135deg, #7f1d1d, #991b1b);
+  color: #fff;
 }
 
-.rejectBtn:hover {
-  background: #b91c1c;
+/* ==========================================================
+   OVERLAY
+========================================================== */
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+
+  background: rgba(2, 6, 23, 0.65);
+  backdrop-filter: blur(6px);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
 }
 
-.createBtn {
-  background: #2563eb;
-  color: #ffffff;
-}
-
-.createBtn:hover {
-  background: #1d4ed8;
-}
-
-/* ======================================================
-   ACCOUNT READY
-====================================================== */
-.accountReady {
-  font-size: 13px;
-  font-weight: 600;
-  color: #16a34a;
-  background: #dcfce7;
-  padding: 8px 12px;
-  border-radius: 8px;
-  text-align: center;
+/* ==========================================================
+   MODAL CARD (BEAUTIFUL)
+========================================================== */
+.modal > div {
+  background: #ffffff;
   width: 100%;
+  max-width: 460px;
+
+  padding: 26px;
+  border-radius: 18px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  box-shadow:
+    0 40px 80px rgba(15, 23, 42, 0.35),
+    0 10px 25px rgba(15, 23, 42, 0.25);
+
+  animation: modalEnter 0.25s ease;
 }
 
-/* ======================================================
+@keyframes modalEnter {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ==========================================================
+   MODAL CONTENT
+========================================================== */
+.modal h3 {
+  font-size: 20px;
+  font-weight: 800;
+  color: #020617;
+}
+
+.modal input {
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  font-size: 14px;
+}
+
+.modal input:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+/* ==========================================================
+   MODAL BUTTONS
+========================================================== */
+.modal button {
+  padding: 12px;
+  border-radius: 12px;
+  border: none;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.modal button:first-of-type {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: #fff;
+}
+
+.modal button:last-of-type {
+  background: #e5e7eb;
+  color: #020617;
+}
+
+/* ==========================================================
+   ERROR
+========================================================== */
+.error {
+  background: #fee2e2;
+  color: #991b1b;
+  padding: 12px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* ==========================================================
    RESPONSIVE
-====================================================== */
+========================================================== */
 @media (max-width: 640px) {
-  .images {
-    flex-direction: column;
+  .grid {
+    grid-template-columns: 1fr;
   }
 
-  .images img {
-    max-width: 100%;
+  .header button {
+    right: 16px;
+    top: 80px;
   }
 }

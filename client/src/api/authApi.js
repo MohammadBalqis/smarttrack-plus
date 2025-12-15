@@ -2,27 +2,53 @@
 import api from "./apiClient";
 
 /* ==========================================================
-   🔐 LOGIN — All Roles
+   🔐 LOGIN — ALL ROLES
    POST /api/auth/login
+   Supports:
+   - email + password
+   - phone + password
 ========================================================== */
-export const loginApi = (email, password) => {
-  return api.post("/auth/login", { email, password });
+export const loginApi = (email, password, phone = null) => {
+  const payload = phone
+    ? { phone, password }
+    : { email, password };
+
+  return api.post("/auth/login", payload);
 };
 
 /* ==========================================================
-   🟢 REGISTER — CUSTOMER SELF SIGNUP ONLY
-   POST /api/auth/register
+   🟢 REGISTER — LEGACY EMAIL REGISTER (KEEP)
 ========================================================== */
 export const registerApi = (name, email, password) => {
-  return api.post("/auth/register", { name, email, password, role: "customer" });
+  return api.post("/auth/register", {
+    name,
+    email,
+    password,
+    role: "customer",
+  });
 };
+
+/* ==========================================================
+   👤 REGISTER — CUSTOMER (PHONE BASED)
+   POST /api/auth/register-customer
+========================================================== */
+export const registerCustomerApi = (formData) => {
+  return api.post("/auth/register-customer", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+};
+
+/* ==========================================================
+   🏢 REGISTER COMPANY
+========================================================== */
 export const registerCompanyApi = (payload) => {
   return api.post("/auth/register-company", payload);
 };
 
 /* ==========================================================
-   👑 SUPERADMIN CREATES COMPANY ACCOUNT
-   POST /api/auth/superadmin/create-company
+   👑 SUPERADMIN CREATES COMPANY
 ========================================================== */
 export const superAdminCreateCompanyApi = ({
   name,
@@ -39,8 +65,7 @@ export const superAdminCreateCompanyApi = ({
 };
 
 /* ==========================================================
-   🟠 COMPANY creates MANAGER or DRIVER
-   POST /api/auth/company/create-user
+   🟠 COMPANY CREATES MANAGER / DRIVER
 ========================================================== */
 export const companyCreateUserApi = ({
   name,

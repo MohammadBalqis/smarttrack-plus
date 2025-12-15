@@ -9,9 +9,10 @@ const router = Router();
 
 /* ==========================================================
    🚗 GET ALL VEHICLES (SHOP FILTER FOR MANAGERS)
+   GET /api/manager/vehicles
 ========================================================== */
 router.get(
-  "/vehicles",
+  "/",
   protect,
   authorizeRoles("manager", "company"),
   async (req, res) => {
@@ -19,7 +20,6 @@ router.get(
       const companyId =
         req.user.role === "company" ? req.user._id : req.user.companyId;
 
-      // Managers must only see their shop
       const shopFilter =
         req.user.role === "manager" ? { shopId: req.user.shopId } : {};
 
@@ -27,7 +27,10 @@ router.get(
         companyId,
         ...shopFilter,
       })
-        .populate("driverId", "name phone email driverStatus currentLat currentLng")
+        .populate(
+          "driverId",
+          "name phone email driverStatus currentLat currentLng"
+        )
         .sort({ createdAt: -1 });
 
       res.json({
@@ -43,18 +46,20 @@ router.get(
 );
 
 /* ==========================================================
-   ➕ CREATE VEHICLE (Manager's shop automatically assigned)
+   ➕ CREATE VEHICLE
+   POST /api/manager/vehicles
 ========================================================== */
 router.post(
-  "/vehicle/create",
+  "/",
   protect,
   authorizeRoles("manager", "company"),
   async (req, res) => {
     try {
       const { type, brand, model, plateNumber, notes, vehicleImage } = req.body;
 
-      if (!type || !brand || !model || !plateNumber)
+      if (!type || !brand || !model || !plateNumber) {
         return res.status(400).json({ error: "Missing required fields" });
+      }
 
       const companyId =
         req.user.role === "company" ? req.user._id : req.user.companyId;
@@ -63,8 +68,9 @@ router.post(
         req.user.role === "manager" ? req.user.shopId : req.body.shopId || null;
 
       const exists = await Vehicle.findOne({ plateNumber, companyId });
-      if (exists)
+      if (exists) {
         return res.status(400).json({ error: "Plate number already exists" });
+      }
 
       const vehicle = await Vehicle.create({
         type,
@@ -90,10 +96,11 @@ router.post(
 );
 
 /* ==========================================================
-   👨‍🔧 ASSIGN / REMOVE DRIVER (Same Shop Only)
+   👨‍🔧 ASSIGN / REMOVE DRIVER
+   PUT /api/manager/vehicles/:vehicleId/assign-driver
 ========================================================== */
 router.put(
-  "/vehicle/:vehicleId/assign-driver",
+  "/:vehicleId/assign-driver",
   protect,
   authorizeRoles("manager", "company"),
   async (req, res) => {
@@ -113,22 +120,17 @@ router.put(
         ...shopFilter,
       });
 
-      if (!vehicle)
+      if (!vehicle) {
         return res.status(404).json({ error: "Vehicle not found" });
+      }
 
-      // Removing driver
       if (!driverId) {
         vehicle.driverId = null;
         vehicle.status = "available";
         await vehicle.save();
-        return res.json({
-          ok: true,
-          message: "Driver removed",
-          vehicle,
-        });
+        return res.json({ ok: true, message: "Driver removed", vehicle });
       }
 
-      // Assign driver (must be from same shop)
       const driver = await User.findOne({
         _id: driverId,
         role: "driver",
@@ -136,20 +138,17 @@ router.put(
         ...shopFilter,
       });
 
-      if (!driver)
+      if (!driver) {
         return res.status(400).json({
           error: "Driver not found in your shop",
         });
+      }
 
       vehicle.driverId = driverId;
       vehicle.status = "in_use";
       await vehicle.save();
 
-      res.json({
-        ok: true,
-        message: "Driver assigned",
-        vehicle,
-      });
+      res.json({ ok: true, message: "Driver assigned", vehicle });
     } catch (err) {
       console.error("❌ Assign driver error:", err.message);
       res.status(500).json({ error: "Error assigning driver" });
@@ -161,7 +160,7 @@ router.put(
    🔄 UPDATE VEHICLE STATUS
 ========================================================== */
 router.put(
-  "/vehicle/:vehicleId/status",
+  "/:vehicleId/status",
   protect,
   authorizeRoles("manager", "company"),
   async (req, res) => {
@@ -170,8 +169,9 @@ router.put(
       const { status } = req.body;
 
       const allowed = ["available", "in_use", "maintenance"];
-      if (!allowed.includes(status))
+      if (!allowed.includes(status)) {
         return res.status(400).json({ error: "Invalid status" });
+      }
 
       const companyId =
         req.user.role === "company" ? req.user._id : req.user.companyId;
@@ -185,22 +185,20 @@ router.put(
         ...shopFilter,
       });
 
-      if (!vehicle)
+      if (!vehicle) {
         return res.status(404).json({ error: "Vehicle not found" });
+      }
 
-      if (vehicle.driverId && status === "available")
+      if (vehicle.driverId && status === "available") {
         return res.status(400).json({
           error: "Cannot set available while driver assigned",
         });
+      }
 
       vehicle.status = status;
       await vehicle.save();
 
-      res.json({
-        ok: true,
-        message: "Status updated",
-        vehicle,
-      });
+      res.json({ ok: true, message: "Status updated", vehicle });
     } catch (err) {
       console.error("❌ Update status error:", err.message);
       res.status(500).json({ error: "Error updating vehicle status" });
@@ -209,10 +207,10 @@ router.put(
 );
 
 /* ==========================================================
-   📜 VEHICLE TRIP HISTORY (Same shop only)
+   📜 VEHICLE TRIP HISTORY
 ========================================================== */
 router.get(
-  "/vehicle/:vehicleId/trips",
+  "/:vehicleId/trips",
   protect,
   authorizeRoles("manager", "company"),
   async (req, res) => {
@@ -231,12 +229,11 @@ router.get(
         ...shopFilter,
       });
 
-      if (!vehicle)
+      if (!vehicle) {
         return res.status(404).json({ error: "Vehicle not found" });
+      }
 
-      const trips = await Trip.find({
-        vehicleId,
-      })
+      const trips = await Trip.find({ vehicleId })
         .sort({ createdAt: -1 })
         .populate("driverId", "name")
         .populate("customerId", "name phone");

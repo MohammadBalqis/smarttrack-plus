@@ -7,24 +7,53 @@ import {
   getManagerTrips,
   getManagerTripDetails,
   getManagerTripTimeline,
-  getManagerTripSummary,
+  getManagerTripStats,
 } from "../controllers/managerTripController.js";
 
 const router = Router();
 
-// manager & company
-router.use(protect, authorizeRoles("manager", "company"));
+/* ==========================================================
+   📦 LIST TRIPS (manager/company)
+   GET /api/manager/trips
+========================================================== */
+router.get(
+  "/",
+  protect,
+  authorizeRoles("manager", "company"),
+  getManagerTrips
+);
 
-// GET all trips
-router.get("/", getManagerTrips);
+/* ==========================================================
+   📊 KPI STATS FOR CARDS
+   GET /api/manager/trips/stats
+========================================================== */
+router.get(
+  "/stats",
+  protect,
+  authorizeRoles("manager", "company"),
+  getManagerTripStats
+);
 
-// single trip details
-router.get("/:id", getManagerTripDetails);
+/* ==========================================================
+   🔎 SINGLE TRIP DETAILS
+   GET /api/manager/trips/:id
+========================================================== */
+router.get(
+  "/:id",
+  protect,
+  authorizeRoles("manager", "company"),
+  getManagerTripDetails
+);
 
-// timeline
-router.get("/:id/timeline", getManagerTripTimeline);
-
-// summary
-router.get("/summary/data", getManagerTripSummary);
+/* ==========================================================
+   📝 TRIP TIMELINE
+   GET /api/manager/trips/:id/timeline
+========================================================== */
+router.get(
+  "/:id/timeline",
+  protect,
+  authorizeRoles("manager", "company"),
+  getManagerTripTimeline
+);
 
 export default router;

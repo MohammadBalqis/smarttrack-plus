@@ -1,0 +1,209 @@
+/* ======================================================
+   OVERLAY
+====================================================== */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+}
+
+/* ======================================================
+   PANEL
+====================================================== */
+.panel {
+  width: 100%;
+  max-width: 500px;
+  background: #ffffff;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  animation: slideUp 0.2s ease-out;
+}
+
+/* ======================================================
+   HEADER
+====================================================== */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header h2 {
+  font-size: 18px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.close {
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  color: #6b7280;
+}
+
+.close:hover {
+  color: #111827;
+}
+
+/* ======================================================
+   SECTION
+====================================================== */
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sectionTitle {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #6b7280;
+  letter-spacing: 0.06em;
+}
+
+/* ======================================================
+   INPUTS
+====================================================== */
+.input,
+.select {
+  width: 100%;
+  padding: 9px 10px;
+  font-size: 14px;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+}
+
+.input:focus,
+.select:focus {
+  outline: none;
+  border-color: #2563eb;
+}
+
+/* ======================================================
+   FILE INPUT
+====================================================== */
+.file {
+  font-size: 13px;
+  border: 1px dashed #d1d5db;
+  padding: 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  background: #f9fafb;
+}
+
+.file:hover {
+  background: #f3f4f6;
+}
+
+/* ======================================================
+   STATUS ROW
+====================================================== */
+.statusRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.status {
+  font-size: 12px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.active {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.inactive {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+/* ======================================================
+   FOOTER ACTIONS
+====================================================== */
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.btn {
+  padding: 8px 14px;
+  font-size: 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  border: none;
+  font-weight: 600;
+}
+
+/* Cancel */
+.cancel {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.cancel:hover {
+  background: #d1d5db;
+}
+
+/* Save */
+.save {
+  background: #2563eb;
+  color: white;
+}
+
+.save:hover {
+  background: #1d4ed8;
+}
+
+.save:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ======================================================
+   ANIMATION
+====================================================== */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ======================================================
+   MOBILE
+====================================================== */
+@media (max-width: 520px) {
+  .panel {
+    margin: 0 12px;
+    padding: 18px;
+  }
+
+  .footer {
+    flex-direction: column-reverse;
+  }
+
+  .btn {
+    width: 100%;
+  }
+}

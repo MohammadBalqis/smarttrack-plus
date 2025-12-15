@@ -14,11 +14,16 @@ const ManagerProductCatalogDrawer = ({ open, onClose, onProductAdded }) => {
   const [addingId, setAddingId] = useState(null);
   const [error, setError] = useState("");
 
+  /* =========================
+     LOAD COMPANY CATALOG
+  ========================= */
   const loadCatalog = async () => {
     if (!open) return;
+
     try {
       setLoading(true);
       setError("");
+
       const params = {};
       if (search.trim()) params.search = search.trim();
       if (category) params.category = category;
@@ -43,25 +48,27 @@ const ManagerProductCatalogDrawer = ({ open, onClose, onProductAdded }) => {
     loadCatalog();
   };
 
+  /* =========================
+     ADD PRODUCT TO SHOP
+  ========================= */
   const handleAddToShop = async (baseProduct) => {
     try {
-      setAddingId(baseProduct._id);
+      setAddingId(baseProduct.id);
       setError("");
 
       const payload = {
-        // Manager can adjust after adding; we start with base price
-        price: baseProduct.price ?? 0,
+        price: baseProduct.basePrice, // ✅ FIXED
         stock: 0,
         isActive: true,
       };
 
       const res = await addManagerProductFromCompanyApi(
-        baseProduct._id,
+        baseProduct.id, // ✅ FIXED
         payload
       );
 
       if (res.data?.ok && onProductAdded) {
-        onProductAdded(res.data.product);
+        onProductAdded(res.data.item);
       }
     } catch (err) {
       console.error("Error adding product to shop:", err);
@@ -75,7 +82,6 @@ const ManagerProductCatalogDrawer = ({ open, onClose, onProductAdded }) => {
   };
 
   const formatPrice = (v) => {
-    if (typeof v === "number") return `$${v.toFixed(2)}`;
     const n = Number(v || 0);
     return `$${n.toFixed(2)}`;
   };
@@ -89,7 +95,7 @@ const ManagerProductCatalogDrawer = ({ open, onClose, onProductAdded }) => {
         className={styles.drawer}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
+        {/* HEADER */}
         <div className={styles.drawerHeader}>
           <h2>Company Catalog</h2>
           <button
@@ -101,8 +107,9 @@ const ManagerProductCatalogDrawer = ({ open, onClose, onProductAdded }) => {
           </button>
         </div>
 
-        {/* Filters */}
+        {/* CONTENT */}
         <div className={styles.drawerContent}>
+          {/* FILTERS */}
           <div className={styles.filtersRow}>
             <select
               value={category}
@@ -119,10 +126,7 @@ const ManagerProductCatalogDrawer = ({ open, onClose, onProductAdded }) => {
               <option value="general">General</option>
             </select>
 
-            <form
-              onSubmit={handleSearchSubmit}
-              className={styles.searchRow}
-            >
+            <form onSubmit={handleSearchSubmit} className={styles.searchRow}>
               <input
                 type="text"
                 placeholder="Search product name..."
@@ -143,11 +147,11 @@ const ManagerProductCatalogDrawer = ({ open, onClose, onProductAdded }) => {
           ) : (
             <div className={styles.list}>
               {products.map((p) => (
-                <div key={p._id} className={styles.productRow}>
+                <div key={p.id} className={styles.productRow}>
                   <div className={styles.productMain}>
-                    {Array.isArray(p.images) && p.images.length > 0 ? (
+                    {p.image ? (
                       <img
-                        src={p.images[0]}
+                        src={p.image}
                         alt={p.name}
                         className={styles.thumbnail}
                       />
@@ -159,7 +163,7 @@ const ManagerProductCatalogDrawer = ({ open, onClose, onProductAdded }) => {
                       <div className={styles.productName}>{p.name}</div>
                       <div className={styles.productMeta}>
                         <span>{p.category || "general"}</span>
-                        <span>{formatPrice(p.price)}</span>
+                        <span>{formatPrice(p.basePrice)}</span>
                       </div>
                     </div>
                   </div>
@@ -168,9 +172,9 @@ const ManagerProductCatalogDrawer = ({ open, onClose, onProductAdded }) => {
                     type="button"
                     className={styles.primaryButton}
                     onClick={() => handleAddToShop(p)}
-                    disabled={addingId === p._id}
+                    disabled={addingId === p.id}
                   >
-                    {addingId === p._id ? "Adding..." : "Add to my shop"}
+                    {addingId === p.id ? "Adding..." : "Add to my shop"}
                   </button>
                 </div>
               ))}

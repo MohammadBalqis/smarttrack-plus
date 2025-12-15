@@ -1,9 +1,9 @@
-// server/src/routes/companyShopRoutes.js
 import { Router } from "express";
 import { protect } from "../middleware/authMiddleware.js";
 import { authorizeRoles } from "../middleware/roleMiddleware.js";
 import GlobalSettings from "../models/GlobalSettings.js";
 import Shop from "../models/Shop.js";
+import User from "../models/User.js";
 
 const router = Router();
 
@@ -23,7 +23,7 @@ const ensureNotInMaintenance = async (req, res) => {
 };
 
 /* ==========================================================
-   🟢 CREATE SHOP (COMPANY ONLY)
+   🟢 CREATE SHOP (COMPANY)
 ========================================================== */
 router.post(
   "/",
@@ -46,16 +46,17 @@ router.post(
       } = req.body;
 
       if (!name || !city || !address) {
-        return res
-          .status(400)
-          .json({ ok: false, error: "name, city and address are required" });
+        return res.status(400).json({
+          ok: false,
+          error: "name, city and address are required",
+        });
       }
 
       const shop = await Shop.create({
         companyId: req.user._id,
-        name,
-        city,
-        address,
+        name: name.trim(),
+        city: city.trim(),
+        address: address.trim(),
         phone: phone || null,
         location: {
           lat: lat ?? null,
@@ -78,14 +79,15 @@ router.post(
 
       res.status(201).json({ ok: true, shop });
     } catch (err) {
-      console.error("❌ Create shop error:", err.message);
+      console.error("❌ Create shop error:", err);
       res.status(500).json({ ok: false, error: "Server error creating shop" });
     }
   }
 );
 
 /* ==========================================================
-   🔵 LIST MY SHOPS (COMPANY)
+   🔵 LIST SHOPS (COMPANY)
+   - includes manager info
 ========================================================== */
 router.get(
   "/",
@@ -97,42 +99,14 @@ router.get(
 
       const shops = await Shop.find({
         companyId: req.user._id,
-      }).sort({ createdAt: -1 });
+      })
+        .populate("managerId", "name phone email isActive")
+        .sort({ createdAt: -1 });
 
       res.json({ ok: true, shops });
     } catch (err) {
-      console.error("❌ List shops error:", err.message);
+      console.error("❌ List shops error:", err);
       res.status(500).json({ ok: false, error: "Server error loading shops" });
-    }
-  }
-);
-
-/* ==========================================================
-   🔍 GET SINGLE SHOP (COMPANY)
-========================================================== */
-router.get(
-  "/:id",
-  protect,
-  authorizeRoles("company"),
-  async (req, res) => {
-    try {
-      if (!(await ensureNotInMaintenance(req, res))) return;
-
-      const shop = await Shop.findOne({
-        _id: req.params.id,
-        companyId: req.user._id,
-      });
-
-      if (!shop) {
-        return res
-          .status(404)
-          .json({ ok: false, error: "Shop not found or unauthorized" });
-      }
-
-      res.json({ ok: true, shop });
-    } catch (err) {
-      console.error("❌ Get shop error:", err.message);
-      res.status(500).json({ ok: false, error: "Server error loading shop" });
     }
   }
 );
@@ -148,79 +122,115 @@ router.patch(
     try {
       if (!(await ensureNotInMaintenance(req, res))) return;
 
-      const {
-        name,
-        city,
-        address,
-        phone,
-        lat,
-        lng,
-        workingHours,
-        deliveryFeeOverride,
-        maxDeliveryDistanceKm,
-        isActive,
-      } = req.body;
-
       const update = {};
+      const fields = [
+        "name",
+        "city",
+        "address",
+        "phone",
+        "deliveryFeeOverride",
+        "maxDeliveryDistanceKm",
+        "isActive",
+      ];
 
-      if (name) update.name = name;
-      if (city) update.city = city;
-      if (address) update.address = address;
-      if (phone !== undefined) update.phone = phone;
+      fields.forEach((f) => {
+        if (req.body[f] !== undefined) update[f] = req.body[f];
+      });
 
-      if (lat !== undefined || lng !== undefined) {
-        update.location = {};
-        if (lat !== undefined) update.location.lat = lat;
-        if (lng !== undefined) update.location.lng = lng;
+      if (req.body.lat !== undefined || req.body.lng !== undefined) {
+        update.location = {
+          lat: req.body.lat ?? null,
+          lng: req.body.lng ?? null,
+        };
       }
 
-      if (workingHours) {
-        update.workingHours = {};
-        if (workingHours.open) update.workingHours.open = workingHours.open;
-        if (workingHours.close) update.workingHours.close = workingHours.close;
-        if (workingHours.timezone)
-          update.workingHours.timezone = workingHours.timezone;
+      if (req.body.workingHours) {
+        update.workingHours = {
+          open: req.body.workingHours.open || "08:00",
+          close: req.body.workingHours.close || "22:00",
+          timezone:
+            req.body.workingHours.timezone || "Asia/Beirut",
+        };
       }
-
-      if (deliveryFeeOverride !== undefined)
-        update.deliveryFeeOverride =
-          deliveryFeeOverride === null
-            ? null
-            : Number(deliveryFeeOverride);
-
-      if (maxDeliveryDistanceKm !== undefined)
-        update.maxDeliveryDistanceKm =
-          maxDeliveryDistanceKm === null
-            ? null
-            : Number(maxDeliveryDistanceKm);
-
-      if (typeof isActive === "boolean") update.isActive = isActive;
 
       const shop = await Shop.findOneAndUpdate(
-        {
-          _id: req.params.id,
-          companyId: req.user._id,
-        },
+        { _id: req.params.id, companyId: req.user._id },
         update,
         { new: true }
-      );
+      ).populate("managerId", "name phone email");
 
       if (!shop) {
         return res
           .status(404)
-          .json({ ok: false, error: "Shop not found or unauthorized" });
+          .json({ ok: false, error: "Shop not found" });
       }
 
       res.json({ ok: true, shop });
     } catch (err) {
-      console.error("❌ Update shop error:", err.message);
+      console.error("❌ Update shop error:", err);
       res.status(500).json({ ok: false, error: "Server error updating shop" });
     }
   }
 );
 
 /* ==========================================================
-   🗑 SOFT DELETE / DEACTIVATE SHOP (COMPANY)
+   👤 ASSIGN / CHANGE MANAGER
+   PATCH /api/company/shops/:id/assign-manager
+========================================================== */
+router.patch(
+  "/:id/assign-manager",
+  protect,
+  authorizeRoles("company"),
+  async (req, res) => {
+    try {
+      const { managerId } = req.body;
+
+      const shop = await Shop.findOne({
+        _id: req.params.id,
+        companyId: req.user._id,
+      });
+
+      if (!shop) {
+        return res.status(404).json({ error: "Shop not found" });
+      }
+
+      if (managerId) {
+        const manager = await User.findOne({
+          _id: managerId,
+          role: "manager",
+          companyId: req.user._id,
+        });
+
+        if (!manager) {
+          return res.status(400).json({
+            error: "Invalid manager",
+          });
+        }
+
+        shop.managerId = manager._id;
+        manager.shopId = shop._id;
+        await manager.save();
+      } else {
+        // remove manager
+        shop.managerId = null;
+      }
+
+      await shop.save();
+
+      res.json({
+        ok: true,
+        message: "Manager assignment updated",
+        shop,
+      });
+    } catch (err) {
+      console.error("❌ Assign manager error:", err);
+      res.status(500).json({ error: "Server error assigning manager" });
+    }
+  }
+);
+
+/* ==========================================================
+   🗑 DEACTIVATE SHOP
 ========================================================== */
 router.delete(
   "/:id",
@@ -228,8 +238,6 @@ router.delete(
   authorizeRoles("company"),
   async (req, res) => {
     try {
-      if (!(await ensureNotInMaintenance(req, res))) return;
-
       const shop = await Shop.findOneAndUpdate(
         { _id: req.params.id, companyId: req.user._id },
         { isActive: false },
@@ -237,19 +245,17 @@ router.delete(
       );
 
       if (!shop) {
-        return res
-          .status(404)
-          .json({ ok: false, error: "Shop not found or unauthorized" });
+        return res.status(404).json({ error: "Shop not found" });
       }
 
       res.json({
         ok: true,
-        message: "Shop deactivated successfully",
+        message: "Shop deactivated",
         shop,
       });
     } catch (err) {
-      console.error("❌ Deactivate shop error:", err.message);
-      res.status(500).json({ ok: false, error: "Server error deactivating" });
+      console.error("❌ Deactivate shop error:", err);
+      res.status(500).json({ error: "Server error" });
     }
   }
 );

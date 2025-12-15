@@ -1,86 +1,87 @@
-import api from "./axiosConfig";
+import api from "./apiClient";
 
 /* ==========================================================
-   🚗 MANAGER → DRIVERS (LIST & FILTERS)
-   GET /api/manager/drivers
+   📋 LIST ALL DRIVERS (MANAGER)
 ========================================================== */
-export const getManagerDriversApi = (params = {}) => {
-  return api.get("/manager/drivers", { params });
-};
+export const getManagerDriversApi = () =>
+  api.get("/manager/drivers");
+
+// /* ==========================================================
+//    🏪 LIST DRIVERS BY SHOP (IMPORTANT)
+// ========================================================== */
+// export const getShopDriversApi = (shopId) => {
+//   if (!shopId) throw new Error("shopId is required");
+//   return api.get(`/manager/drivers/by-shop/${shopId}`);
+// };
 
 /* ==========================================================
-   ➕ CREATE DRIVER PROFILE (NO EMAIL / PASSWORD)
-   POST /api/manager/drivers
+   ➕ CREATE DRIVER PROFILE
 ========================================================== */
-export const createManagerDriverProfileApi = (data) => {
-  return api.post("/manager/drivers", data);
-};
+export const createDriverProfileApi = (data) =>
+  api.post("/manager/drivers", data);
 
 /* ==========================================================
-   ✏ UPDATE DRIVER BASIC PROFILE
-   PATCH /api/manager/drivers/:driverId/profile
+   ✏ UPDATE DRIVER PROFILE
 ========================================================== */
-export const updateManagerDriverProfileApi = (driverId, data) => {
+export const updateDriverProfileApi = (driverId, data) => {
+  if (!driverId) throw new Error("driverId is required");
   return api.patch(`/manager/drivers/${driverId}/profile`, data);
 };
 
 /* ==========================================================
-   🛂 SUBMIT / UPDATE DRIVER VERIFICATION
-   PATCH /api/manager/drivers/:driverId/verification
+   🛂 SUBMIT VERIFICATION (FILES)
 ========================================================== */
-export const submitDriverVerificationApi = (driverId, data) => {
+export const submitDriverVerificationApi = (driverId, formData) => {
+  if (!driverId) throw new Error("driverId is required");
+  if (!(formData instanceof FormData)) {
+    throw new Error("formData must be FormData");
+  }
+
   return api.patch(
     `/manager/drivers/${driverId}/verification`,
-    data
+    formData,
+    {
+      headers: { "Content-Type": "multipart/form-data" },
+    }
   );
 };
 
 /* ==========================================================
-   ✅ VERIFY DRIVER (MANAGER ACTION)
-   PATCH /api/manager/drivers/:driverId/verify
+   ✅ VERIFY DRIVER
 ========================================================== */
 export const verifyDriverApi = (driverId) => {
+  if (!driverId) throw new Error("driverId is required");
   return api.patch(`/manager/drivers/${driverId}/verify`);
 };
 
 /* ==========================================================
    ❌ REJECT DRIVER
-   PATCH /api/manager/drivers/:driverId/reject
 ========================================================== */
 export const rejectDriverApi = (driverId, reason = "") => {
-  return api.patch(`/manager/drivers/${driverId}/reject`, {
-    reason,
-  });
+  if (!driverId) throw new Error("driverId is required");
+  return api.patch(`/manager/drivers/${driverId}/reject`, { reason });
 };
 
 /* ==========================================================
-   🔐 CREATE DRIVER LOGIN ACCOUNT (AFTER VERIFICATION)
-   POST /api/manager/drivers/:driverId/create-account
+   🔐 CREATE LOGIN ACCOUNT
 ========================================================== */
 export const createDriverAccountApi = (driverId, data) => {
-  return api.post(
-    `/manager/drivers/${driverId}/create-account`,
-    data
-  );
+  if (!driverId) throw new Error("driverId is required");
+  return api.post(`/manager/drivers/${driverId}/create-account`, data);
 };
 
 /* ==========================================================
-   🔁 ACTIVATE / SUSPEND DRIVER
-   PATCH /api/manager/drivers/:driverId/toggle
+   ⛔ SUSPEND / UNSUSPEND
 ========================================================== */
-export const toggleManagerDriverStatusApi = (driverId) => {
-  return api.patch(`/manager/drivers/${driverId}/toggle`);
+export const toggleDriverSuspendApi = (driverId) => {
+  if (!driverId) throw new Error("driverId is required");
+  return api.patch(`/manager/drivers/${driverId}/toggle-suspend`);
 };
 
 /* ==========================================================
-   📊 DRIVER PERFORMANCE STATS
-   GET /api/manager/drivers/:driverId/stats
+   🗑 DELETE DRIVER
 ========================================================== */
-export const getManagerDriverStatsApi = (driverId) => {
-  return api.get(`/manager/drivers/${driverId}/stats`);
-};
-// GET drivers for a specific shop
-// GET /api/manager/shops/:shopId/drivers
-export const getShopDriversApi = (shopId) => {
-  return api.get(`/manager/shops/${shopId}/drivers`);
+export const deleteDriverApi = (driverId) => {
+  if (!driverId) throw new Error("driverId is required");
+  return api.delete(`/manager/drivers/${driverId}`);
 };

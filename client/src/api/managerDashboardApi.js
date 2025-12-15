@@ -1,10 +1,11 @@
-import axios from "axios";
+// client/src/api/managerDashboardApi.js
+import apiClient from "./apiClient";
 
-const api = axios.create({
-  baseURL: "http://localhost:5000/api",
-  withCredentials: true,
-});
+/*
+  Manager Dashboard APIs
+  Uses global apiClient (token + session aware)
+*/
 
-export const getManagerDashboardOverviewApi = (params = {}) => {
-  return api.get("/manager/dashboard/overview", { params });
+export const getManagerDashboardStatsApi = () => {
+  return apiClient.get("/manager/dashboard/stats");
 };

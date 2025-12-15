@@ -1,5 +1,5 @@
 // client/src/pages/company/CompanyChat.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { io } from "socket.io-client";
 import api from "../../api/apiClient";
 import styles from "../../styles/company/companyChat.module.css";
@@ -7,66 +7,98 @@ import styles from "../../styles/company/companyChat.module.css";
 const CompanyChat = () => {
   const [managers, setManagers] = useState([]);
   const [activeManager, setActiveManager] = useState(null);
-  const [chat, setChat] = useState([]);
+  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(true);
 
-  const socket = io(import.meta.env.VITE_API_URL, {
-    transports: ["websocket"],
-  });
-
-  /* ------------------------------------------------------------
-     LOAD ALL MANAGERS UNDER THIS COMPANY
-  ------------------------------------------------------------ */
-  useEffect(() => {
-    api.get("/manager/list").then((res) => {
-      setManagers(res.data.data);
+  /* ================= SOCKET ================= */
+  const socket = useMemo(() => {
+    return io(import.meta.env.VITE_API_URL || "http://localhost:5000", {
+      transports: ["websocket"],
+      auth: {
+        token: localStorage.getItem("st_token"),
+        sid: localStorage.getItem("st_sid"),
+      },
     });
   }, []);
 
-  /* ------------------------------------------------------------
-     LOAD CHAT WHEN MANAGER SELECTED
-  ------------------------------------------------------------ */
+  /* ================= LOAD MANAGERS (✅ FIXED) ================= */
+  useEffect(() => {
+    const loadManagers = async () => {
+      try {
+        const res = await api.get("/company/manager/list");
+        setManagers(res.data.data || []);
+      } catch (err) {
+        console.error("❌ Failed to load managers:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadManagers();
+  }, []);
+
+  /* ================= LOAD CHAT ================= */
   useEffect(() => {
     if (!activeManager) return;
 
-    api.get(`/chat/manager-company/${activeManager._id}`).then((res) => {
-      setChat(res.data.data);
-    });
-  }, [activeManager]);
+    const loadChat = async () => {
+      try {
+        const res = await api.get(
+          `/chat/manager-company/${activeManager._id}`
+        );
+        setMessages(res.data.data || []);
+      } catch (err) {
+        console.error("❌ Failed to load chat:", err);
+      }
+    };
 
-  /* ------------------------------------------------------------
-     SOCKET: REAL-TIME RECEIVING
-  ------------------------------------------------------------ */
+    loadChat();
+
+    socket.emit("join", {
+      room: `company_${activeManager._id}`,
+    });
+  }, [activeManager, socket]);
+
+  /* ================= SOCKET RECEIVE ================= */
   useEffect(() => {
-    socket.on("chat:manager-company:newMessage", (msg) => {
+    socket.on("chat:mc:new", (msg) => {
       if (msg.managerId === activeManager?._id) {
-        setChat((prev) => [...prev, msg]);
+        setMessages((prev) => [...prev, msg]);
       }
     });
 
-    return () => socket.disconnect();
-  }, [activeManager]);
+    return () => socket.off("chat:mc:new");
+  }, [socket, activeManager]);
 
-  /* ------------------------------------------------------------
-     SEND MESSAGE
-  ------------------------------------------------------------ */
+  /* ================= SEND MESSAGE ================= */
   const sendMessage = async () => {
     if (!input.trim() || !activeManager) return;
 
-    const res = await api.post("/chat/manager-company/send", {
-      managerId: activeManager._id,
-      message: input,
-    });
+    try {
+      const res = await api.post("/chat/manager-company/send", {
+        managerId: activeManager._id,
+        message: input.trim(),
+      });
 
-    setChat((prev) => [...prev, res.data.data]);
-    setInput("");
+      setMessages((prev) => [...prev, res.data.data]);
+      setInput("");
+    } catch (err) {
+      console.error("❌ Failed to send message:", err);
+    }
   };
+
+  /* ================= UI ================= */
+  if (loading) {
+    return <div className={styles.selectText}>Loading managers…</div>;
+  }
 
   return (
     <div className={styles.chatContainer}>
-      {/* LEFT: MANAGER LIST */}
+      {/* LEFT */}
       <div className={styles.managerList}>
         <h3>Managers</h3>
+
         {managers.map((m) => (
           <div
             key={m._id}
@@ -75,13 +107,17 @@ const CompanyChat = () => {
             }`}
             onClick={() => setActiveManager(m)}
           >
-            <span className={styles.managerName}>{m.fullName}</span>
-            <span className={styles.managerShop}>{m.shopName}</span>
+            <div className={styles.managerName}>{m.fullName}</div>
+            <div className={styles.managerShop}>{m.branchName || "—"}</div>
           </div>
         ))}
+
+        {managers.length === 0 && (
+          <div className={styles.selectText}>No managers found</div>
+        )}
       </div>
 
-      {/* RIGHT: CHAT WINDOW */}
+      {/* RIGHT */}
       <div className={styles.chatWindow}>
         {activeManager ? (
           <>
@@ -90,9 +126,9 @@ const CompanyChat = () => {
             </div>
 
             <div className={styles.messages}>
-              {chat.map((msg, i) => (
+              {messages.map((msg, idx) => (
                 <div
-                  key={i}
+                  key={idx}
                   className={
                     msg.senderType === "company"
                       ? styles.msgCompany
@@ -108,7 +144,8 @@ const CompanyChat = () => {
               <input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Type a message..."
+                placeholder="Type a message…"
+                onKeyDown={(e) => e.key === "Enter" && sendMessage()}
               />
               <button onClick={sendMessage}>Send</button>
             </div>

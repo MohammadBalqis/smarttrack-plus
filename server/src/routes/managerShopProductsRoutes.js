@@ -1,4 +1,3 @@
-// server/src/routes/managerShopProductsRoutes.js
 import { Router } from "express";
 import { protect } from "../middleware/authMiddleware.js";
 import { authorizeRoles } from "../middleware/roleMiddleware.js";
@@ -26,15 +25,16 @@ const ensureNotInMaintenance = async (req, res) => {
   return true;
 };
 
-/* Small constant for low-stock threshold (used later in alerts) */
+/* Small constant for low-stock threshold */
 const LOW_STOCK_THRESHOLD = 3;
 
-/* Helper: get company + shop for this user */
+/* ==========================================================
+   Helper: resolve company + shop
+========================================================== */
 const resolveCompanyAndShop = async (req) => {
   const companyId = resolveCompanyId(req.user);
   if (!companyId) return { error: "Unable to resolve companyId" };
 
-  // Manager: must have shopId
   if (req.user.role === "manager") {
     if (!req.user.shopId) {
       return { error: "Manager does not have a shop assigned yet" };
@@ -42,14 +42,11 @@ const resolveCompanyAndShop = async (req) => {
     return { companyId, shopId: req.user.shopId };
   }
 
-  // Company owner: shopId can come from query/body
   return { companyId, shopId: null };
 };
 
 /* ==========================================================
    1) GET SHOP PRODUCTS (Manager / Company)
-   - Manager: only his shop
-   - Company: all shops, or filter ?shopId=...
 ========================================================== */
 router.get(
   "/",
@@ -60,18 +57,14 @@ router.get(
       if (!(await ensureNotInMaintenance(req, res))) return;
 
       const { companyId, shopId, error } = await resolveCompanyAndShop(req);
-      if (error) {
-        return res.status(400).json({ ok: false, error });
-      }
+      if (error) return res.status(400).json({ ok: false, error });
 
       const filter = { companyId };
 
-      // manager → always own shop
       if (req.user.role === "manager") {
         filter.shopId = shopId;
       }
 
-      // company → optional ?shopId=...
       if (req.user.role === "company" && req.query.shopId) {
         filter.shopId = req.query.shopId;
       }
@@ -80,7 +73,7 @@ router.get(
         .populate("productId")
         .populate("shopId", "name city");
 
-      const mapped = shopProducts.map((sp) => ({
+      const items = shopProducts.map((sp) => ({
         id: sp._id,
         shop: sp.shopId
           ? {
@@ -108,20 +101,21 @@ router.get(
 
       res.json({
         ok: true,
-        count: mapped.length,
-        items: mapped,
+        count: items.length,
+        items,
       });
     } catch (err) {
-      console.error("❌ managerShopProducts GET error:", err.message);
-      res.status(500).json({ ok: false, error: "Server error loading shop products" });
+      console.error("❌ managerShopProducts GET error:", err);
+      res.status(500).json({
+        ok: false,
+        error: "Server error loading shop products",
+      });
     }
   }
 );
 
 /* ==========================================================
-   2) GET AVAILABLE PRODUCTS TO ADD TO THIS SHOP
-   - Manager: products of his company not yet added to his shop
-   - Company: pass ?shopId=...
+   2) GET COMPANY CATALOG (DOES NOT HIDE ADDED PRODUCTS)
 ========================================================== */
 router.get(
   "/available",
@@ -131,44 +125,30 @@ router.get(
     try {
       if (!(await ensureNotInMaintenance(req, res))) return;
 
-      const { companyId, shopId, error } = await resolveCompanyAndShop(req);
-      if (error) {
-        return res.status(400).json({ ok: false, error });
-      }
+      const { companyId, error } = await resolveCompanyAndShop(req);
+      if (error) return res.status(400).json({ ok: false, error });
 
-      let targetShopId = shopId;
-
+      // company must validate shopId (logic only)
       if (req.user.role === "company") {
-        const qsShopId = req.query.shopId;
-        if (!qsShopId) {
+        const shopId = req.query.shopId;
+        if (!shopId) {
           return res.status(400).json({
             ok: false,
-            error: "shopId is required for company when listing available products",
+            error: "shopId is required for company",
           });
         }
-        // validate shop belongs to this company
-        const shop = await Shop.findOne({ _id: qsShopId, companyId });
+
+        const shop = await Shop.findOne({ _id: shopId, companyId });
         if (!shop) {
-          return res
-            .status(404)
-            .json({ ok: false, error: "Shop not found for this company" });
+          return res.status(404).json({
+            ok: false,
+            error: "Shop not found for this company",
+          });
         }
-        targetShopId = shop._id;
       }
 
-      // 1) get products already in this shop
-      const shopProducts = await ShopProduct.find({
-        companyId,
-        shopId: targetShopId,
-      }).select("productId");
-
-      const existingIds = shopProducts.map((sp) => sp.productId);
-
-      // 2) list all company products NOT in shopProducts
-      const products = await Product.find({
-        companyId,
-        _id: { $nin: existingIds },
-      })
+      // ✅ IMPORTANT: return ALL company products
+      const products = await Product.find({ companyId })
         .sort({ createdAt: -1 })
         .select("name image price category isActive");
 
@@ -185,17 +165,17 @@ router.get(
         })),
       });
     } catch (err) {
-      console.error("❌ managerShopProducts /available error:", err.message);
-      res.status(500).json({ ok: false, error: "Server error loading available products" });
+      console.error("❌ managerShopProducts /available error:", err);
+      res.status(500).json({
+        ok: false,
+        error: "Server error loading available products",
+      });
     }
   }
 );
 
 /* ==========================================================
    3) ADD PRODUCT TO SHOP
-   - Body: { productId, price, stock }
-   - Manager: his shop only
-   - Company: must send shopId
 ========================================================== */
 router.post(
   "/add",
@@ -206,12 +186,9 @@ router.post(
       if (!(await ensureNotInMaintenance(req, res))) return;
 
       const { companyId, shopId, error } = await resolveCompanyAndShop(req);
-      if (error) {
-        return res.status(400).json({ ok: false, error });
-      }
+      if (error) return res.status(400).json({ ok: false, error });
 
       const { productId, price, stock = 0, shopId: bodyShopId } = req.body;
-
       if (!productId || price == null) {
         return res.status(400).json({
           ok: false,
@@ -225,9 +202,10 @@ router.post(
         if (!bodyShopId) {
           return res.status(400).json({
             ok: false,
-            error: "shopId is required in body when company adds product",
+            error: "shopId is required",
           });
         }
+
         const shop = await Shop.findOne({ _id: bodyShopId, companyId });
         if (!shop) {
           return res.status(404).json({
@@ -235,15 +213,11 @@ router.post(
             error: "Shop not found for this company",
           });
         }
+
         targetShopId = shop._id;
       }
 
-      // Validate product belongs to this company
-      const product = await Product.findOne({
-        _id: productId,
-        companyId,
-      });
-
+      const product = await Product.findOne({ _id: productId, companyId });
       if (!product) {
         return res.status(404).json({
           ok: false,
@@ -251,24 +225,23 @@ router.post(
         });
       }
 
-      // Check if already exists
-      const existing = await ShopProduct.findOne({
+      const exists = await ShopProduct.findOne({
         companyId,
         shopId: targetShopId,
-        productId: product._id,
+        productId,
       });
 
-      if (existing) {
+      if (exists) {
         return res.status(400).json({
           ok: false,
           error: "This product is already added to this shop",
         });
       }
 
-      const shopProduct = await ShopProduct.create({
+      const item = await ShopProduct.create({
         companyId,
         shopId: targetShopId,
-        productId: product._id,
+        productId,
         price: Number(price),
         stock: Number(stock) || 0,
         isActive: true,
@@ -277,19 +250,20 @@ router.post(
       res.status(201).json({
         ok: true,
         message: "Product added to shop successfully",
-        item: shopProduct,
+        item,
       });
     } catch (err) {
-      console.error("❌ managerShopProducts /add error:", err.message);
-      res.status(500).json({ ok: false, error: "Server error adding product to shop" });
+      console.error("❌ managerShopProducts /add error:", err);
+      res.status(500).json({
+        ok: false,
+        error: "Server error adding product to shop",
+      });
     }
   }
 );
 
 /* ==========================================================
    4) UPDATE STOCK
-   - PUT /:id/stock
-   - Body: { stock }
 ========================================================== */
 router.put(
   "/:id/stock",
@@ -300,51 +274,29 @@ router.put(
       if (!(await ensureNotInMaintenance(req, res))) return;
 
       const { companyId, shopId, error } = await resolveCompanyAndShop(req);
-      if (error) {
-        return res.status(400).json({ ok: false, error });
-      }
+      if (error) return res.status(400).json({ ok: false, error });
 
       const { stock } = req.body;
       if (stock == null) {
-        return res.status(400).json({
-          ok: false,
-          error: "stock is required",
-        });
+        return res.status(400).json({ ok: false, error: "stock is required" });
       }
 
-      const filter = {
-        _id: req.params.id,
-        companyId,
-      };
-
-      if (req.user.role === "manager") {
-        filter.shopId = shopId;
-      }
+      const filter = { _id: req.params.id, companyId };
+      if (req.user.role === "manager") filter.shopId = shopId;
 
       const sp = await ShopProduct.findOne(filter);
       if (!sp) {
-        return res.status(404).json({
-          ok: false,
-          error: "Shop product not found",
-        });
+        return res.status(404).json({ ok: false, error: "Shop product not found" });
       }
 
       sp.stock = Number(stock);
-
-      // reset lowStockAlertSent if stock is now above threshold
-      if (sp.stock > LOW_STOCK_THRESHOLD) {
-        sp.lowStockAlertSent = false;
-      }
+      if (sp.stock > LOW_STOCK_THRESHOLD) sp.lowStockAlertSent = false;
 
       await sp.save();
 
-      res.json({
-        ok: true,
-        message: "Stock updated",
-        item: sp,
-      });
+      res.json({ ok: true, message: "Stock updated", item: sp });
     } catch (err) {
-      console.error("❌ managerShopProducts /:id/stock error:", err.message);
+      console.error("❌ stock update error:", err);
       res.status(500).json({ ok: false, error: "Server error updating stock" });
     }
   }
@@ -352,8 +304,6 @@ router.put(
 
 /* ==========================================================
    5) UPDATE PRICE / DISCOUNT
-   - PUT /:id/price
-   - Body: { price, discount? }
 ========================================================== */
 router.put(
   "/:id/price",
@@ -364,49 +314,29 @@ router.put(
       if (!(await ensureNotInMaintenance(req, res))) return;
 
       const { companyId, shopId, error } = await resolveCompanyAndShop(req);
-      if (error) {
-        return res.status(400).json({ ok: false, error });
-      }
+      if (error) return res.status(400).json({ ok: false, error });
 
       const { price, discount } = req.body;
       if (price == null) {
-        return res.status(400).json({
-          ok: false,
-          error: "price is required",
-        });
+        return res.status(400).json({ ok: false, error: "price is required" });
       }
 
-      const filter = {
-        _id: req.params.id,
-        companyId,
-      };
-
-      if (req.user.role === "manager") {
-        filter.shopId = shopId;
-      }
+      const filter = { _id: req.params.id, companyId };
+      if (req.user.role === "manager") filter.shopId = shopId;
 
       const sp = await ShopProduct.findOne(filter);
       if (!sp) {
-        return res.status(404).json({
-          ok: false,
-          error: "Shop product not found",
-        });
+        return res.status(404).json({ ok: false, error: "Shop product not found" });
       }
 
       sp.price = Number(price);
-      if (discount != null) {
-        sp.discount = Number(discount);
-      }
+      if (discount != null) sp.discount = Number(discount);
 
       await sp.save();
 
-      res.json({
-        ok: true,
-        message: "Price updated",
-        item: sp,
-      });
+      res.json({ ok: true, message: "Price updated", item: sp });
     } catch (err) {
-      console.error("❌ managerShopProducts /:id/price error:", err.message);
+      console.error("❌ price update error:", err);
       res.status(500).json({ ok: false, error: "Server error updating price" });
     }
   }
@@ -414,7 +344,6 @@ router.put(
 
 /* ==========================================================
    6) TOGGLE ACTIVE / INACTIVE
-   - PUT /:id/toggle
 ========================================================== */
 router.put(
   "/:id/toggle",
@@ -425,25 +354,14 @@ router.put(
       if (!(await ensureNotInMaintenance(req, res))) return;
 
       const { companyId, shopId, error } = await resolveCompanyAndShop(req);
-      if (error) {
-        return res.status(400).json({ ok: false, error });
-      }
+      if (error) return res.status(400).json({ ok: false, error });
 
-      const filter = {
-        _id: req.params.id,
-        companyId,
-      };
-
-      if (req.user.role === "manager") {
-        filter.shopId = shopId;
-      }
+      const filter = { _id: req.params.id, companyId };
+      if (req.user.role === "manager") filter.shopId = shopId;
 
       const sp = await ShopProduct.findOne(filter);
       if (!sp) {
-        return res.status(404).json({
-          ok: false,
-          error: "Shop product not found",
-        });
+        return res.status(404).json({ ok: false, error: "Shop product not found" });
       }
 
       sp.isActive = !sp.isActive;
@@ -451,11 +369,11 @@ router.put(
 
       res.json({
         ok: true,
-        message: `Product is now ${sp.isActive ? "active" : "inactive"} in this shop`,
+        message: `Product is now ${sp.isActive ? "active" : "inactive"}`,
         item: sp,
       });
     } catch (err) {
-      console.error("❌ managerShopProducts /:id/toggle error:", err.message);
+      console.error("❌ toggle error:", err);
       res.status(500).json({ ok: false, error: "Server error toggling product" });
     }
   }

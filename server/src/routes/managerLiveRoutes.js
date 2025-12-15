@@ -1,3 +1,4 @@
+// server/src/routes/managerLiveRoutes.js
 import { Router } from "express";
 import { protect } from "../middleware/authMiddleware.js";
 import { authorizeRoles } from "../middleware/roleMiddleware.js";
@@ -9,15 +10,20 @@ import {
 
 const router = Router();
 
+/* ==========================================================
+   📡 LIVE TRACKING — MANAGER / COMPANY
+   Base path: /api/manager/live
+========================================================== */
+
 router.get(
-  "/manager/live/drivers",
+  "/drivers",
   protect,
   authorizeRoles("manager", "company"),
   getManagerLiveDrivers
 );
 
 router.get(
-  "/manager/live/trips",
+  "/trips",
   protect,
   authorizeRoles("manager", "company"),
   getManagerLiveTrips

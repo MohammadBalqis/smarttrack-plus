@@ -1,0 +1,232 @@
+/* ======================================================
+   PAGE LAYOUT
+====================================================== */
+.page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #020617, #020617);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  box-sizing: border-box;
+  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* ======================================================
+   CARD WRAPPER
+====================================================== */
+.cardWrapper {
+  width: 100%;
+  max-width: 980px;
+  min-height: 560px;
+  background: #ffffff;
+  border-radius: 18px;
+  display: grid;
+  grid-template-columns: 1fr 1.1fr;
+  overflow: hidden;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.35);
+}
+
+/* ======================================================
+   LEFT PANEL (BRANDING)
+====================================================== */
+.leftPanel {
+  background: linear-gradient(135deg, #020617, #020617);
+  color: #e5e7eb;
+  padding: 48px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.logoBox {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logoCircle {
+  width: 48px;
+  height: 48px;
+  background: #2563eb;
+  color: #ffffff;
+  border-radius: 50%;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+
+.logoTitle {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.logoSubtitle {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.leftTitle {
+  margin-top: 40px;
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.highlight {
+  color: #60a5fa;
+}
+
+.leftText {
+  margin-top: 16px;
+  font-size: 14px;
+  line-height: 1.7;
+  color: #cbd5f5;
+}
+
+/* ======================================================
+   RIGHT PANEL (FORM)
+====================================================== */
+.rightPanel {
+  padding: 48px 56px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.formHeader {
+  margin-bottom: 24px;
+}
+
+.formTitle {
+  font-size: 26px;
+  font-weight: 800;
+  color: #020617;
+}
+
+.formSubtitle {
+  font-size: 14px;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+/* ======================================================
+   FORM
+====================================================== */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #020617;
+}
+
+.input {
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.input:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+textarea.input {
+  resize: none;
+  min-height: 80px;
+}
+
+/* ======================================================
+   BUTTONS
+====================================================== */
+.submitBtn {
+  margin-top: 10px;
+  padding: 14px;
+  border-radius: 12px;
+  background: #2563eb;
+  color: #ffffff;
+  border: none;
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.1s ease;
+}
+
+.submitBtn:hover {
+  background: #1d4ed8;
+}
+
+.submitBtn:active {
+  transform: translateY(1px);
+}
+
+.submitBtn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* ======================================================
+   FEEDBACK
+====================================================== */
+.errorBox {
+  background: #fee2e2;
+  color: #991b1b;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+
+/* ======================================================
+   FOOTER ACTIONS
+====================================================== */
+.registerBox {
+  margin-top: 22px;
+  text-align: center;
+}
+
+.secondaryGhostBtn {
+  background: transparent;
+  border: none;
+  color: #2563eb;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.secondaryGhostBtn:hover {
+  text-decoration: underline;
+}
+
+/* ======================================================
+   RESPONSIVE
+====================================================== */
+@media (max-width: 900px) {
+  .cardWrapper {
+    grid-template-columns: 1fr;
+  }
+
+  .leftPanel {
+    display: none;
+  }
+
+  .rightPanel {
+    padding: 32px 24px;
+  }
+}

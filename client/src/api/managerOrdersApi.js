@@ -1,36 +1,37 @@
-// client/src/api/managerOrdersApi.js
-import axios from "axios";
+import api from "./apiClient";
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
+/* =========================
+   ORDERS
+========================= */
+export const getManagerOrdersApi = (params) =>
+  api.get("/manager/orders", { params });
 
-// 📦 List orders (with filters + pagination)
-export const getManagerOrdersApi = (params = {}) => {
-  return axios.get(`${API_BASE_URL}/manager/orders`, {
-    params,
-    withCredentials: true,
-  });
-};
+export const getManagerOrderDetailsApi = (orderId) =>
+  api.get(`/manager/orders/${orderId}`);
 
-// 🔎 Single order details (with items, customer, driver, etc.)
-export const getManagerOrderDetailsApi = (orderId) => {
-  return axios.get(`${API_BASE_URL}/manager/orders/${orderId}`, {
-    withCredentials: true,
-  });
-};
+export const getManagerOrderTimelineApi = (orderId) =>
+  api.get(`/manager/orders/${orderId}/timeline`);
 
-// 📝 Order timeline (optional, extra info)
-export const getManagerOrderTimelineApi = (orderId) => {
-  return axios.get(
-    `${API_BASE_URL}/manager/orders/${orderId}/timeline`,
-    { withCredentials: true }
-  );
-};
+/* =========================
+   SUMMARY
+========================= */
+export const getManagerOrdersSummaryApi = (params) =>
+  api.get("/manager/orders-summary", { params });
 
-// 📊 Summary for dashboard cards (today/this week/etc.)
-export const getManagerOrdersSummaryApi = (params = {}) => {
-  return axios.get(`${API_BASE_URL}/manager/orders-summary`, {
-    params,
-    withCredentials: true,
-  });
-};
+/* =========================
+   DRIVERS
+========================= */
+export const getAvailableDriversForOrdersApi = () =>
+  api.get("/manager/orders/available-drivers");
+
+/* =========================
+   ASSIGN DRIVER
+========================= */
+export const assignDriverToOrderApi = (orderId, data) =>
+  api.patch(`/manager/orders/${orderId}/assign-driver`, data);
+
+/* =========================
+   QR
+========================= */
+export const generateOrderDeliveryQrApi = (orderId) =>
+  api.post(`/manager/orders/${orderId}/generate-qr`);

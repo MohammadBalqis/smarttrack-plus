@@ -141,16 +141,45 @@ const orderSchema = new mongoose.Schema(
       lat: Number,
       lng: Number,
     },
-
     /* ------------------------------------------------------
-       📜 TIMELINE
-    ------------------------------------------------------ */
-    timeline: [
-      {
-        status: String,
-        timestamp: { type: Date, default: Date.now },
-      },
-    ],
+   🔐 DELIVERY QR (PROOF OF DELIVERY)
+------------------------------------------------------ */
+deliveryQrTokenHash: {
+  type: String,
+  default: null,
+  index: true,
+},
+
+deliveryQrExpiresAt: {
+  type: Date,
+  default: null,
+},
+
+deliveredAt: {
+  type: Date,
+  default: null,
+},
+
+   /* ------------------------------------------------------
+   📜 TIMELINE
+------------------------------------------------------ */
+timeline: [
+  {
+    status: {
+      type: String,
+      required: true,
+    },
+    note: {
+      type: String,
+      default: "",
+    },
+    timestamp: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+],
+
   },
   { timestamps: true }
 );

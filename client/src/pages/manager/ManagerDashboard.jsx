@@ -1,8 +1,8 @@
 // client/src/pages/manager/ManagerDashboard.jsx
 import React, { useEffect, useState, useContext } from "react";
 
-// APIs (same as company but filtered automatically by token)
-import { getCompanyDashboardStatsApi } from "../../api/companyDashboardApi";
+// ✅ Manager API (CORRECT)
+import { getManagerDashboardStatsApi } from "../../api/managerDashboardApi";
 
 // Branding
 import { BrandingContext } from "../../context/BrandingContext";
@@ -15,15 +15,21 @@ const ManagerDashboard = () => {
   const [recentTrips, setRecentTrips] = useState([]);
   const [recentOrders, setRecentOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   const { branding } = useContext(BrandingContext);
   const primary = branding?.primaryColor || "#1F2937";
   const accent = branding?.accentColor || "#2563EB";
 
+  /* ==============================
+     LOAD DASHBOARD DATA
+  ============================== */
   const loadDashboard = async () => {
     try {
       setLoading(true);
-      const res = await getCompanyDashboardStatsApi(); 
+      setError("");
+
+      const res = await getManagerDashboardStatsApi();
       const data = res.data || {};
 
       setStats(data.stats || {});
@@ -31,6 +37,7 @@ const ManagerDashboard = () => {
       setRecentOrders(data.recentOrders || []);
     } catch (err) {
       console.error("Manager Dashboard error:", err);
+      setError("Failed to load dashboard data.");
     } finally {
       setLoading(false);
     }
@@ -40,10 +47,24 @@ const ManagerDashboard = () => {
     loadDashboard();
   }, []);
 
-  if (loading || !stats) {
-    return <p className={styles.loading}>Loading dashboard...</p>;
+  /* ==============================
+     STATES
+  ============================== */
+  if (loading) {
+    return <p className={styles.loading}>Loading dashboard…</p>;
   }
 
+  if (error) {
+    return <p className={styles.error}>{error}</p>;
+  }
+
+  if (!stats) {
+    return <p className={styles.empty}>No dashboard data available.</p>;
+  }
+
+  /* ==============================
+     RENDER
+  ============================== */
   return (
     <div className={styles.page}>
       {/* HEADER */}
@@ -58,32 +79,32 @@ const ManagerDashboard = () => {
       <div className={styles.kpiGrid}>
         <div className={styles.kpiCard}>
           <h4>Total Trips</h4>
-          <p>{stats.totalTrips}</p>
+          <p>{stats.totalTrips ?? 0}</p>
         </div>
 
         <div className={styles.kpiCard}>
           <h4>Active Drivers</h4>
-          <p>{stats.activeDrivers}</p>
+          <p>{stats.activeDrivers ?? 0}</p>
         </div>
 
         <div className={styles.kpiCard}>
           <h4>Total Revenue</h4>
-          <p>${stats.totalRevenue?.toFixed(2)}</p>
+          <p>${(stats.totalRevenue ?? 0).toFixed(2)}</p>
         </div>
 
         <div className={styles.kpiCard}>
           <h4>Active Orders</h4>
-          <p>{stats.activeOrders}</p>
+          <p>{stats.activeOrders ?? 0}</p>
         </div>
 
         <div className={styles.kpiCard}>
           <h4>Cancelled Orders</h4>
-          <p>{stats.cancelledOrders}</p>
+          <p>{stats.cancelledOrders ?? 0}</p>
         </div>
 
         <div className={styles.kpiCard}>
           <h4>Total Customers</h4>
-          <p>{stats.totalCustomers}</p>
+          <p>{stats.totalCustomers ?? 0}</p>
         </div>
       </div>
 
@@ -109,7 +130,7 @@ const ManagerDashboard = () => {
                   <td>{new Date(t.createdAt).toLocaleString()}</td>
                   <td>{t.status}</td>
                   <td>{t.driverId?.name || "—"}</td>
-                  <td>${t.totalAmount?.toFixed(2) || "0.00"}</td>
+                  <td>${(t.totalAmount ?? 0).toFixed(2)}</td>
                 </tr>
               ))}
             </tbody>
@@ -139,7 +160,7 @@ const ManagerDashboard = () => {
                   <td>{new Date(o.createdAt).toLocaleString()}</td>
                   <td>{o.status}</td>
                   <td>{o.customerId?.name || "—"}</td>
-                  <td>${o.total?.toFixed(2) || "0.00"}</td>
+                  <td>${(o.total ?? 0).toFixed(2)}</td>
                 </tr>
               ))}
             </tbody>

@@ -10,6 +10,72 @@ import { authorizeRoles } from "../middleware/roleMiddleware.js";
 const router = Router();
 
 /* ==========================================================
+   📊 MANAGER DASHBOARD — STATS (FRONTEND ADAPTER)
+   GET /api/manager/dashboard/stats
+========================================================== */
+router.get(
+  "/stats",
+  protect,
+  authorizeRoles("manager", "company"),
+  async (req, res) => {
+    try {
+      const companyId =
+        req.user.role === "company" ? req.user._id : req.user.companyId;
+
+      /* ---------------------------
+         BASIC KPI STATS
+      ----------------------------*/
+      const [
+        totalTrips,
+        activeDrivers,
+        totalRevenueAgg,
+        activeOrders,
+        cancelledOrders,
+        totalCustomers,
+        recentTrips,
+        recentOrders,
+      ] = await Promise.all([
+        Trip.countDocuments({ companyId }),
+        User.countDocuments({ companyId, role: "driver", isActive: true }),
+        Payment.aggregate([
+          { $match: { companyId, status: "paid" } },
+          { $group: { _id: null, total: { $sum: "$amount" } } },
+        ]),
+        Trip.countDocuments({ companyId, status: { $in: ["assigned", "in_progress"] } }),
+        Trip.countDocuments({ companyId, status: "cancelled" }),
+        User.countDocuments({ companyId, role: "customer" }),
+
+        Trip.find({ companyId })
+          .sort({ createdAt: -1 })
+          .limit(5)
+          .populate("driverId", "name"),
+
+        Trip.find({ companyId })
+          .sort({ createdAt: -1 })
+          .limit(5)
+          .populate("customerId", "name"),
+      ]);
+
+      res.json({
+        stats: {
+          totalTrips,
+          activeDrivers,
+          totalRevenue: totalRevenueAgg[0]?.total || 0,
+          activeOrders,
+          cancelledOrders,
+          totalCustomers,
+        },
+        recentTrips,
+        recentOrders,
+      });
+    } catch (err) {
+      console.error("❌ Manager Dashboard Stats Error:", err);
+      res.status(500).json({ error: "Failed to load manager dashboard stats" });
+    }
+  }
+);
+
+/* ==========================================================
    📊 1) MANAGER DASHBOARD — SUMMARY + ALERTS
    ========================================================== */
 router.get(

@@ -18,14 +18,17 @@ export const companyMenu = [
   { label: "Products", icon: "📦", path: "/company/products" },
   { label: "Orders", icon: "🧾", path: "/company/orders" },
   { label: "Drivers", icon: "🚗", path: "/company/drivers" },
+  { label: "Managers", icon: "🧑‍💼", path: "/company/managers" },
   { label: "Customers", icon: "👥", path: "/company/customers" },
   { label: "Trips", icon: "🛣️", path: "/company/trips" },
   { label: "Vehicles", icon: "🚘", path: "/company/vehicles" },
   { label: "Payments", icon: "💳", path: "/company/payments" },
   { label: "Shops / Branches", icon: "🏬", path: "/company/shops" },
-  // 📨 NEW: Support Inbox
+  { label: "Live Tracking", icon: "🛰️", path: "/company/live-tracking" },
   { label: "Support Inbox", icon: "📨", path: "/company/support" },
-  { label: "Chat with Managers", icon: "💬", path: "/company/chat" }
+  { label: "Chat with Managers", icon: "💬", path: "/company/chat" },
+  { label: "Company Profile", icon: "🏢", path: "/company/profile" },
+
 ];
 
 // 🚀 CUSTOMER MENU (GLOBAL CUSTOMER)

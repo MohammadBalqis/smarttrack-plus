@@ -1,6 +1,6 @@
-// client/src/pages/Login.jsx
+// client/src/pages/auth/Login.jsx
 import React, { useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { loginApi } from "../../api/authApi";
 
@@ -9,9 +9,9 @@ import styles from "../../styles/auth/login.module.css";
 const Login = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
 
-  const [email, setEmail] = useState("");
+  const [loginType, setLoginType] = useState("email"); // email | phone
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -23,7 +23,12 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const res = await loginApi(email, password);
+      const res = await loginApi(
+        loginType === "email" ? identifier : null,
+        password,
+        loginType === "phone" ? identifier : null
+      );
+
       const { token, user, sessionId } = res.data;
 
       login(token, user, sessionId);
@@ -80,21 +85,55 @@ const Login = () => {
           <div className={styles.formHeader}>
             <h2 className={styles.formTitle}>Sign in</h2>
             <p className={styles.formSubtitle}>
-              Use your registered email and password
+              {loginType === "email"
+                ? "Use your registered email and password"
+                : "Use your phone number and password"}
             </p>
+          </div>
+
+          {/* LOGIN TYPE SWITCH */}
+          <div className={styles.switchBox}>
+            <button
+              type="button"
+              className={
+                loginType === "email"
+                  ? styles.switchActive
+                  : styles.switchBtn
+              }
+              onClick={() => setLoginType("email")}
+            >
+              Email
+            </button>
+            <button
+              type="button"
+              className={
+                loginType === "phone"
+                  ? styles.switchActive
+                  : styles.switchBtn
+              }
+              onClick={() => setLoginType("phone")}
+            >
+              Phone
+            </button>
           </div>
 
           {error && <div className={styles.errorBox}>{error}</div>}
 
           <form className={styles.form} onSubmit={handleSubmit}>
             <div className={styles.formGroup}>
-              <label className={styles.label}>Email</label>
+              <label className={styles.label}>
+                {loginType === "email" ? "Email" : "Phone Number"}
+              </label>
               <input
-                type="email"
+                type="text"
                 className={styles.input}
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
+                placeholder={
+                  loginType === "email"
+                    ? "you@example.com"
+                    : "+961 70 123 456"
+                }
                 required
               />
             </div>

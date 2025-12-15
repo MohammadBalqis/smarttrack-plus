@@ -55,26 +55,28 @@ const createAuthTokenWithSession = async (req, user) => {
 };
 
 /* ==========================================================
-   🟢 REGISTER CUSTOMER
+   🟢 REGISTER CUSTOMER  ✅ FIXED (PHONE)
 ========================================================== */
 export const register = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, phone, password } = req.body;
 
-    if (!name || !email || !password)
+    if (!name || !phone || !password) {
       return res.status(400).json({ error: "Missing fields" });
+    }
 
-    const exists = await User.findOne({ email: email.toLowerCase().trim() });
-    if (exists) return res.status(409).json({ error: "Email already used" });
+    const exists = await User.findOne({ phone: phone.trim() });
+    if (exists) return res.status(409).json({ error: "Phone already used" });
 
     const passwordHash = await bcrypt.hash(password, 10);
 
     const user = await User.create({
       name: name.trim(),
-      email: email.toLowerCase().trim(),
+      phone: phone.trim(),
       passwordHash,
       role: "customer",
       isActive: true,
+      createdVia: "self",
     });
 
     const { token, session } = await createAuthTokenWithSession(req, user);
@@ -85,7 +87,7 @@ export const register = async (req, res) => {
       user: {
         id: user._id,
         name: user.name,
-        email: user.email,
+        phone: user.phone,
         role: "customer",
       },
       token,
@@ -93,19 +95,28 @@ export const register = async (req, res) => {
     });
   } catch (err) {
     console.error("Register error:", err);
-    res.status(500).json({ error: "Server error" });
+    return res.status(500).json({ error: "Server error" });
   }
 };
 
 /* ==========================================================
-   🟡 LOGIN — ALL ROLES (FIXED & SAFE)
+   🟡 LOGIN — ALL ROLES ✅ FIXED (EMAIL OR PHONE)
 ========================================================== */
 export const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, phone, password } = req.body;
+
+    if ((!email && !phone) || !password) {
+      return res.status(400).json({
+        error: "Email or phone and password are required",
+      });
+    }
 
     const user = await User.findOne({
-      email: email.toLowerCase().trim(),
+      $or: [
+        email ? { email: email.toLowerCase().trim() } : null,
+        phone ? { phone: phone.trim() } : null,
+      ].filter(Boolean),
     }).select("+passwordHash");
 
     if (!user) return res.status(404).json({ error: "User not found" });
@@ -114,7 +125,7 @@ export const login = async (req, res) => {
       return res.status(403).json({ error: "Account suspended" });
 
     /* ===============================
-       🏢 COMPANY APPROVAL GATE
+       🏢 COMPANY APPROVAL GATE (keep your logic)
     ================================ */
     if (user.role === "company") {
       if (user.companyStatus === "pending") {
@@ -142,6 +153,21 @@ export const login = async (req, res) => {
     }
 
     /* ===============================
+       ✅ ROLE LOGIN RULES (from your User model virtuals)
+    ================================ */
+    if (user.role === "customer" && user.canCustomerLogin === false) {
+      return res.status(403).json({ error: "Customer account not ready" });
+    }
+
+    if (user.role === "driver" && user.canDriverLogin === false) {
+      return res.status(403).json({ error: "Driver account not ready" });
+    }
+
+    if (user.role === "manager" && user.canManagerLogin === false) {
+      return res.status(403).json({ error: "Manager account not ready" });
+    }
+
+    /* ===============================
        🔐 PASSWORD CHECK (SINGLE SOURCE)
     ================================ */
     const isMatch = await user.matchPassword(password);
@@ -157,6 +183,7 @@ export const login = async (req, res) => {
         id: user._id,
         name: user.name,
         email: user.email,
+        phone: user.phone,
         role: user.role,
         companyId: user.companyId || null,
         shopId: user.shopId || null,
@@ -168,12 +195,12 @@ export const login = async (req, res) => {
     });
   } catch (err) {
     console.error("Login error:", err);
-    res.status(500).json({ error: "Server error" });
+    return res.status(500).json({ error: "Server error" });
   }
 };
 
 /* ==========================================================
-   👑 SUPERADMIN CREATES COMPANY (manual)
+   👑 SUPERADMIN CREATES COMPANY (manual)  ✅ KEPT
 ========================================================== */
 export const superAdminCreateCompany = async (req, res) => {
   try {
@@ -209,7 +236,7 @@ export const superAdminCreateCompany = async (req, res) => {
 };
 
 /* ==========================================================
-   🟠 COMPANY CREATES MANAGER / DRIVER
+   🟠 COMPANY CREATES MANAGER / DRIVER ✅ KEPT
 ========================================================== */
 export const companyCreateUser = async (req, res) => {
   try {
@@ -248,7 +275,7 @@ export const companyCreateUser = async (req, res) => {
 };
 
 /* ==========================================================
-   👑 CREATE SYSTEM OWNER (dev)
+   👑 CREATE SYSTEM OWNER (dev) ✅ KEPT
 ========================================================== */
 export const createSystemOwner = async (req, res) => {
   try {
@@ -283,7 +310,7 @@ export const createSystemOwner = async (req, res) => {
 };
 
 /* ==========================================================
-   🏢 PUBLIC — COMPANY REGISTRATION REQUEST (PENDING)
+   🏢 PUBLIC — COMPANY REGISTRATION REQUEST (PENDING) ✅ KEPT
 ========================================================== */
 export const registerCompanyRequest = async (req, res) => {
   try {

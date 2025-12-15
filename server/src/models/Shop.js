@@ -1,4 +1,3 @@
-// server/src/models/Shop.js
 import mongoose from "mongoose";
 
 /* ==========================================================
@@ -8,12 +7,23 @@ const shopSchema = new mongoose.Schema(
   {
     /* ======================================================
        🔗 COMPANY RELATION
-       (User with role: "company")
     ====================================================== */
     companyId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: "User", // role: company
       required: true,
+      index: true,
+    },
+
+    /* ======================================================
+       👤 CURRENT MANAGER (EDITABLE)
+       - Can be null
+       - Can be replaced if manager quits
+    ====================================================== */
+    managerId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User", // role: manager
+      default: null,
       index: true,
     },
 
@@ -47,7 +57,7 @@ const shopSchema = new mongoose.Schema(
 
     /* ======================================================
        📍 GEO LOCATION
-       (used for nearest shop / driver later)
+       (for live tracking / nearest logic)
     ====================================================== */
     location: {
       lat: { type: Number, default: null },
@@ -79,6 +89,17 @@ const shopSchema = new mongoose.Schema(
     },
 
     /* ======================================================
+       📊 CACHED STATS (OPTIONAL BUT POWERFUL)
+       - keeps UI fast
+       - updated when drivers are added/removed
+    ====================================================== */
+    driversCount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
+    /* ======================================================
        ⚙️ STATUS
     ====================================================== */
     isActive: {
@@ -95,6 +116,15 @@ const shopSchema = new mongoose.Schema(
 ========================================================== */
 shopSchema.index({ companyId: 1, isActive: 1 });
 shopSchema.index({ companyId: 1, city: 1 });
+shopSchema.index({ companyId: 1, managerId: 1 });
+
+/* ==========================================================
+   🧠 VIRTUALS
+   (optional – useful later)
+========================================================== */
+shopSchema.virtual("hasManager").get(function () {
+  return !!this.managerId;
+});
 
 /* ==========================================================
    EXPORT

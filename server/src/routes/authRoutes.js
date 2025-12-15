@@ -1,21 +1,28 @@
 import { Router } from "express";
 import sanitize from "sanitize-html";
 import Joi from "joi";
+
 import { protect } from "../middleware/authMiddleware.js";
 import { authorizeRoles } from "../middleware/roleMiddleware.js";
 import { loginLimiter, registerLimiter } from "../middleware/rateLimiters.js";
-import { registerCompanyRequest } from "../controllers/authController.js";
+
 import {
   register,
   login,
   superAdminCreateCompany,
   companyCreateUser,
-  createSystemOwner
-  
+  createSystemOwner,
 } from "../controllers/authController.js";
 
-import { logActivity } from "../utils/activityLogger.js";
 import { registerCompany } from "../controllers/auth/companyRegisterController.js";
+import { registerCustomer } from "../controllers/auth/customerRegisterController.js";
+
+import uploadCompanyDoc, {
+  uploadCustomerImage,
+} from "../middleware/uploadMiddleware.js";
+
+import { logActivity } from "../utils/activityLogger.js";
+
 const router = Router();
 
 /* ==========================================================
@@ -28,12 +35,13 @@ const registerSchema = Joi.object({
 });
 
 const loginSchema = Joi.object({
-  email: Joi.string().email().required(),
+  email: Joi.string().email().optional(),
+  phone: Joi.string().min(5).optional(),
   password: Joi.string().required(),
-});
+}).or("email", "phone");
 
 /* ==========================================================
-   🟢 REGISTER
+   🟢 REGISTER (EMAIL BASED — EXISTING)
 ========================================================== */
 router.post("/register", registerLimiter, async (req, res, next) => {
   try {
@@ -50,10 +58,18 @@ router.post("/register", registerLimiter, async (req, res, next) => {
 });
 
 /* ==========================================================
-   🟡 LOGIN — clean (NO extra session creation)
+   🟡 LOGIN (EMAIL BASED)
 ========================================================== */
 router.post("/login", loginLimiter, async (req, res) => {
   try {
+    if (req.body.email) {
+      req.body.email = sanitize(req.body.email);
+    }
+
+    if (req.body.phone) {
+      req.body.phone = sanitize(req.body.phone);
+    }
+
     const { error } = loginSchema.validate(req.body);
     if (error) return res.status(400).json({ error: error.details[0].message });
 
@@ -61,20 +77,31 @@ router.post("/login", loginLimiter, async (req, res) => {
 
     await logActivity({
       action: "LOGIN_SUCCESS",
-      description: `Login: ${req.body.email}`,
+      description: `Login: ${req.body.email || req.body.phone}`,
       ipAddress: req.ip,
       deviceInfo: req.headers["user-agent"],
     });
   } catch (err) {
     await logActivity({
       action: "LOGIN_FAILED",
-      description: `Failed login: ${req.body.email}`,
+      description: `Failed login: ${req.body.email || req.body.phone}`,
       ipAddress: req.ip,
     });
 
     res.status(500).json({ error: "Server error" });
   }
 });
+
+
+/* ==========================================================
+   👤 CUSTOMER REGISTER (PHONE BASED — NEW)
+========================================================== */
+router.post(
+  "/register-customer",
+  registerLimiter,
+  uploadCustomerImage,
+  registerCustomer
+);
 
 /* ==========================================================
    👑 SUPERADMIN CREATES COMPANY
@@ -107,9 +134,9 @@ router.post(
 );
 
 /* ==========================================================
-   🔧 REGISTER SYSTEM OWNER (DEV ONLY)
+   🔧 DEV / SYSTEM ROUTES
 ========================================================== */
 router.post("/register-owner", createSystemOwner);
 router.post("/register-company", registerCompany);
-router.post("/register-company", registerCompanyRequest);
+
 export default router;

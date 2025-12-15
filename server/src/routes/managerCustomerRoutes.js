@@ -10,24 +10,19 @@ import {
 
 const router = Router();
 
-/* ==========================================================
-   📋 MANAGER / COMPANY — CUSTOMERS LIST
-========================================================== */
-router.get(
-  "/customers",
-  protect,
-  authorizeRoles("manager", "company"),
-  getManagerCustomers
-);
+/* 🔐 MANAGER / COMPANY ONLY */
+router.use(protect, authorizeRoles("manager", "company"));
 
 /* ==========================================================
-   📌 MANAGER / COMPANY — SINGLE CUSTOMER DETAILS
+   📋 LIST CUSTOMERS
+   GET /api/manager/customers
 ========================================================== */
-router.get(
-  "/customer/:customerId",
-  protect,
-  authorizeRoles("manager", "company"),
-  getManagerCustomerDetails
-);
+router.get("/", getManagerCustomers);
+
+/* ==========================================================
+   📌 SINGLE CUSTOMER (DRAWER)
+   GET /api/manager/customers/:customerId
+========================================================== */
+router.get("/:customerId", getManagerCustomerDetails);
 
 export default router;
