@@ -57,7 +57,7 @@ router.get(
    📊 ORDER SUMMARY (Dashboard stats)
 ========================================================== */
 router.get(
-  "/orders-summary",
+  "/orders/summary",
   protect,
   authorizeRoles("manager", "company"),
   getManagerOrdersSummary

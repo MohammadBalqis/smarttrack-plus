@@ -61,3 +61,9 @@ export const protect = async (req, res, next) => {
     res.status(401).json({ error: "Not authorized" });
   }
 };
+export const requireDriver = (req, res, next) => {
+  if (!req.user || req.user.role !== "driver") {
+    return res.status(403).json({ error: "Driver access only" });
+  }
+  next();
+};

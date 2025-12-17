@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "../../context/AuthContext";
 import { getCustomerProductsApi } from "../../api/productApi";
-import { getCustomerActiveCompanyApi } from "../../api/customerCompanyApi";
+import { getActiveCustomerCompanyApi } from "../../api/customerCompanyApi"; // ✅ FIX
 import { createCustomerTripApi } from "../../api/customerTripsApi";
 
 import MapPicker from "../../components/customer/MapPicker";
@@ -54,7 +54,7 @@ const CustomerCreateTrip = () => {
       setSuccess("");
 
       // 1) Get active company
-      const companyRes = await getCustomerActiveCompanyApi();
+      const companyRes = await getActiveCustomerCompanyApi();
       if (!companyRes.data.ok || !companyRes.data.company) {
         setCompany(null);
         setError(

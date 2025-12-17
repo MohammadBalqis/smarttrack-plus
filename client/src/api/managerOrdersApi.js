@@ -16,7 +16,8 @@ export const getManagerOrderTimelineApi = (orderId) =>
    SUMMARY
 ========================= */
 export const getManagerOrdersSummaryApi = (params) =>
-  api.get("/manager/orders-summary", { params });
+  api.get("/manager/orders/summary", { params });
+
 
 /* =========================
    DRIVERS
@@ -35,3 +36,4 @@ export const assignDriverToOrderApi = (orderId, data) =>
 ========================= */
 export const generateOrderDeliveryQrApi = (orderId) =>
   api.post(`/manager/orders/${orderId}/generate-qr`);
+

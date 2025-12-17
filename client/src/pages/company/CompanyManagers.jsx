@@ -11,6 +11,7 @@ import {
 import { getCompanyShopsApi } from "../../api/companyShopsApi";
 import styles from "../../styles/company/companyManagers.module.css";
 
+/* ================= DEFAULT FORM ================= */
 const emptyForm = {
   name: "",
   phone: "",
@@ -35,7 +36,6 @@ const CompanyManagers = () => {
         getCompanyManagersApi(),
         getCompanyShopsApi(),
       ]);
-
       setManagers(mRes.data.managers || []);
       setShops(sRes.data.shops || []);
     } catch {
@@ -69,6 +69,7 @@ const CompanyManagers = () => {
   /* ================= SUBMIT VERIFICATION ================= */
   const handleSubmitVerification = async (managerId) => {
     const data = verification[managerId];
+
     if (!data?.idNumber || !data?.idImageFile) {
       alert("ID Number and ID Image are required.");
       return;
@@ -79,27 +80,30 @@ const CompanyManagers = () => {
     formData.append("idImage", data.idImageFile);
 
     await submitManagerVerificationApi(managerId, formData);
-    loadData();
+    await loadData();
   };
 
-  /* ================= ACTIONS ================= */
-  const handleVerify = async (id) => {
-    await verifyManagerApi(id);
-    loadData();
+  /* ================= VERIFY ================= */
+  const handleVerify = async (managerId) => {
+    if (!window.confirm("Verify this manager?")) return;
+    await verifyManagerApi(managerId);
+    await loadData();
   };
 
-  const handleCreateAccount = async (id) => {
+  /* ================= CREATE LOGIN ================= */
+  const handleCreateAccount = async (managerId) => {
     const email = prompt("Manager Email:");
     const password = prompt("Password:");
     if (!email || !password) return;
 
-    await createManagerAccountApi(id, { email, password });
-    loadData();
+    await createManagerAccountApi(managerId, { email, password });
+    await loadData();
   };
 
-  const handleToggle = async (id) => {
-    await toggleManagerStatusApi(id);
-    loadData();
+  /* ================= TOGGLE STATUS ================= */
+  const handleToggle = async (managerId) => {
+    await toggleManagerStatusApi(managerId);
+    await loadData();
   };
 
   if (loading) return <p className={styles.info}>Loading managers…</p>;
@@ -151,88 +155,86 @@ const CompanyManagers = () => {
 
       {/* ================= MANAGERS LIST ================= */}
       <div className={styles.grid}>
-        {managers.map((m) => {
-          const verificationData = verification[m._id] || {};
-          const canVerify =
-            m.managerVerificationStatus === "pending" &&
-            verificationData.idNumber &&
-            verificationData.idImageFile;
+        {managers.map((m) => (
+          <div key={m._id} className={styles.card}>
+            <h3>{m.name}</h3>
+            <p>Phone: {m.phone || "—"}</p>
+            <p>Shop: {m.shopId ? m.shopId.name : "Not assigned"}</p>
 
-          return (
-            <div key={m._id} className={styles.card}>
-              <h3>{m.name}</h3>
-              <p>Phone: {m.phone || "—"}</p>
-              <p>Shop: {m.shopId ? m.shopId.name : "Not assigned"}</p>
-              <p>Status: {m.isActive ? "Active" : "Inactive"}</p>
-              <p>Verification: {m.managerVerificationStatus}</p>
-              <p>Onboarding: {m.managerOnboardingStage}</p>
+            <span className={`${styles.badge} ${styles[m.managerVerificationStatus]}`}>
+              {m.managerVerificationStatus.toUpperCase()}
+            </span>
 
-              {/* 🔐 VERIFICATION */}
-              {m.managerVerificationStatus === "pending" && (
-                <div className={styles.verifyBox}>
-                  <input
-                    placeholder="ID Number"
-                    onChange={(e) =>
-                      setVerification((v) => ({
-                        ...v,
-                        [m._id]: {
-                          ...v[m._id],
-                          idNumber: e.target.value,
-                        },
-                      }))
-                    }
-                  />
+            {/* ================= VERIFICATION ================= */}
+            {m.managerVerificationStatus !== "verified" && (
+              <div className={styles.verifyBox}>
+                <input
+                  placeholder="ID Number"
+                  value={verification[m._id]?.idNumber || ""}
+                  onChange={(e) =>
+                    setVerification((v) => ({
+                      ...v,
+                      [m._id]: {
+                        ...v[m._id],
+                        idNumber: e.target.value,
+                      },
+                    }))
+                  }
+                />
 
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) =>
-                      setVerification((v) => ({
-                        ...v,
-                        [m._id]: {
-                          ...v[m._id],
-                          idImageFile: e.target.files[0],
-                        },
-                      }))
-                    }
-                  />
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) =>
+                    setVerification((v) => ({
+                      ...v,
+                      [m._id]: {
+                        ...v[m._id],
+                        idImageFile: e.target.files[0],
+                      },
+                    }))
+                  }
+                />
 
-                  <button
-                    onClick={() => handleSubmitVerification(m._id)}
-                    className={styles.submitBtn}
-                  >
-                    Submit Verification
-                  </button>
+                <button
+                  className={styles.submitBtn}
+                  onClick={() => handleSubmitVerification(m._id)}
+                >
+                  Save Verification
+                </button>
 
-                  <button
-                    disabled={!canVerify}
-                    onClick={() => handleVerify(m._id)}
-                    className={styles.verifyBtn}
-                  >
-                    Verify
-                  </button>
-                </div>
+                <button
+                  className={styles.verifyBtn}
+                  disabled={
+                    !verification[m._id]?.idNumber ||
+                    !verification[m._id]?.idImageFile
+                  }
+                  onClick={() => handleVerify(m._id)}
+                >
+                  Verify Manager
+                </button>
+              </div>
+            )}
+
+            {/* ================= CREATE LOGIN ================= */}
+            {m.managerVerificationStatus === "verified" &&
+              m.managerOnboardingStage !== "account_created" && (
+                <button
+                  className={styles.createBtn}
+                  onClick={() => handleCreateAccount(m._id)}
+                >
+                  Create Login
+                </button>
               )}
 
-              {m.managerVerificationStatus === "verified" &&
-                m.managerOnboardingStage !== "account_created" && (
-                  <button
-                    className={styles.createBtn}
-                    onClick={() => handleCreateAccount(m._id)}
-                  >
-                    Create Login
-                  </button>
-                )}
-
-              <button
-                className={styles.toggleBtn}
-                onClick={() => handleToggle(m._id)}
-              >
-                {m.isActive ? "Deactivate" : "Activate"}
-              </button>
-            </div>
-          );
-        })}
+            <button
+              className={styles.toggleBtn}
+              onClick={() => handleToggle(m._id)}
+            >
+              {m.isActive ? "Deactivate" : "Activate"}
+            </button>
+          </div>
+        ))}
       </div>
     </div>
   );

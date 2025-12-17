@@ -11,7 +11,8 @@ const CompanyManagersChatList = () => {
   useEffect(() => {
     const loadManagers = async () => {
       try {
-        const res = await api.get("/company/manager/list");
+        const res = await api.get("/manager/list-for-company");
+
         setManagers(res.data.data || []);
       } catch (err) {
         console.error("Failed to load managers", err);

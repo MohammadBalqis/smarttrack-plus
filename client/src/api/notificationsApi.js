@@ -1,25 +1,19 @@
 import apiClient from "./apiClient";
 
 /* ==========================================================
-   🔔 MANAGER NOTIFICATIONS API
+   🔔 MANAGER NOTIFICATIONS API (FIXED)
 ========================================================== */
 
 // Get manager notifications
 export const getManagerNotificationsApi = (params = {}) =>
-  apiClient.get("/manager/notifications/list", { params });
+  apiClient.get("/manager/notifications", { params });
 
 // Mark single notification as read
 export const markManagerNotificationReadApi = (id) =>
-  apiClient.patch(`/manager/notifications/mark-read/${id}`);
+  apiClient.patch(`/manager/notifications/${id}/read`);
 
 // Mark ALL notifications as read
 export const markAllManagerNotificationsApi = () =>
-  apiClient.patch("/manager/notifications/mark-all");
+  apiClient.patch("/manager/notifications/read-all");
 
-// Delete single notification
-export const deleteManagerNotificationApi = (id) =>
-  apiClient.delete(`/manager/notifications/delete/${id}`);
-
-// Delete ALL notifications
-export const deleteAllManagerNotificationsApi = () =>
-  apiClient.delete("/manager/notifications/delete-all");
+// ❌ REMOVE delete endpoints unless backend supports them

@@ -1,38 +1,45 @@
+// server/src/routes/customerCompanyRoutes.js
 import { Router } from "express";
 import { protect } from "../middleware/authMiddleware.js";
 import { authorizeRoles } from "../middleware/roleMiddleware.js";
 import Company from "../models/Company.js";
-import User from "../models/User.js";
 
 const router = Router();
 
 /* ==========================================================
-   🟣 1. GET ALL COMPANIES (Public - Login Required)
-   ========================================================== */
+   🟣 1. GET ALL COMPANIES (Customer can order from)
+   GET /api/customer/companies
+========================================================== */
 router.get(
   "/companies",
   protect,
   authorizeRoles("customer"),
   async (req, res) => {
     try {
-      const companies = await Company.find({})
-        .select("name email phone address");
+      const companies = await Company.find({
+        isActive: true,
+        isApproved: true,
+      }).select("name logo businessCategory");
 
-      res.json({
+      return res.json({
         ok: true,
-        count: companies.length,
         companies,
       });
     } catch (err) {
-      console.error("❌ Error listing companies:", err.message);
-      res.status(500).json({ error: "Error fetching companies" });
+      console.error("❌ getCustomerCompanies error:", err);
+      return res.status(500).json({
+        ok: false,
+        error: "Failed to load companies",
+      });
     }
   }
 );
 
 /* ==========================================================
    🟢 2. CUSTOMER SELECTS COMPANY
-   ========================================================== */
+   POST /api/customer/select-company
+   Body: { companyId }
+========================================================== */
 router.post(
   "/select-company",
   protect,
@@ -41,32 +48,54 @@ router.post(
     try {
       const { companyId } = req.body;
 
-      if (!companyId)
-        return res.status(400).json({ error: "companyId is required" });
+      if (!companyId) {
+        return res.status(400).json({
+          ok: false,
+          error: "companyId is required",
+        });
+      }
 
-      const companyExists = await Company.findById(companyId);
-      if (!companyExists)
-        return res.status(404).json({ error: "Company not found" });
+      const company = await Company.findOne({
+        _id: companyId,
+        isActive: true,
+        isApproved: true,
+      });
 
-      // Update customer profile
-      req.user.companyId = companyId;
+      if (!company) {
+        return res.status(404).json({
+          ok: false,
+          error: "Company not found or not available",
+        });
+      }
+
+      // Save selected company on customer
+      req.user.companyId = company._id;
       await req.user.save();
 
-      res.json({
+      return res.json({
         ok: true,
         message: "Company selected successfully",
-        company: companyExists,
+        company: {
+          _id: company._id,
+          name: company.name,
+          logo: company.logo,
+          businessCategory: company.businessCategory,
+        },
       });
     } catch (err) {
-      console.error("❌ Error selecting company:", err.message);
-      res.status(500).json({ error: "Server error selecting company" });
+      console.error("❌ selectCustomerCompany error:", err);
+      return res.status(500).json({
+        ok: false,
+        error: "Server error selecting company",
+      });
     }
   }
 );
 
 /* ==========================================================
-   🟡 3. GET CUSTOMER'S ACTIVE COMPANY
-   ========================================================== */
+   🟡 3. GET CUSTOMER ACTIVE COMPANY
+   GET /api/customer/active-company
+========================================================== */
 router.get(
   "/active-company",
   protect,
@@ -76,20 +105,37 @@ router.get(
       if (!req.user.companyId) {
         return res.json({
           ok: false,
-          message: "Customer has not selected a company yet",
+          company: null,
         });
       }
 
-      const company = await Company.findById(req.user.companyId)
-        .select("name email phone address");
+      const company = await Company.findOne({
+        _id: req.user.companyId,
+        isActive: true,
+        isApproved: true,
+      }).select("name logo businessCategory");
 
-      res.json({
+      if (!company) {
+        // Company removed / deactivated
+        req.user.companyId = null;
+        await req.user.save();
+
+        return res.json({
+          ok: false,
+          company: null,
+        });
+      }
+
+      return res.json({
         ok: true,
         company,
       });
     } catch (err) {
-      console.error("❌ Error fetching active company:", err.message);
-      res.status(500).json({ error: "Server error fetching active company" });
+      console.error("❌ getActiveCustomerCompany error:", err);
+      return res.status(500).json({
+        ok: false,
+        error: "Failed to load active company",
+      });
     }
   }
 );

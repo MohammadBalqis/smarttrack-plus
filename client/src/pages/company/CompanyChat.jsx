@@ -1,5 +1,4 @@
-// client/src/pages/company/CompanyChat.jsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { io } from "socket.io-client";
 import api from "../../api/apiClient";
 import styles from "../../styles/company/companyChat.module.css";
@@ -11,22 +10,50 @@ const CompanyChat = () => {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(true);
 
-  /* ================= SOCKET ================= */
-  const socket = useMemo(() => {
-    return io(import.meta.env.VITE_API_URL || "http://localhost:5000", {
-      transports: ["websocket"],
-      auth: {
-        token: localStorage.getItem("st_token"),
-        sid: localStorage.getItem("st_sid"),
-      },
-    });
-  }, []);
+  const socketRef = useRef(null);
 
-  /* ================= LOAD MANAGERS (✅ FIXED) ================= */
+  /* ================= SOCKET (SAFE INIT) ================= */
+  useEffect(() => {
+    const token = localStorage.getItem("st_token");
+
+    if (!token) {
+      console.warn("⛔ Socket not started: token missing");
+      return;
+    }
+
+    socketRef.current = io(
+      import.meta.env.VITE_API_URL || "http://localhost:5000",
+      {
+        transports: ["websocket"],
+        auth: { token },
+      }
+    );
+
+    socketRef.current.on("connect", () => {
+      console.log("✅ Socket connected:", socketRef.current.id);
+      socketRef.current.emit("join", { role: "company" });
+    });
+
+    socketRef.current.on("chat:mc:new", (msg) => {
+      if (msg.managerId === activeManager?._id) {
+        setMessages((prev) => [...prev, msg]);
+      }
+    });
+
+    socketRef.current.on("connect_error", (err) => {
+      console.error("❌ Socket error:", err.message);
+    });
+
+    return () => {
+      socketRef.current?.disconnect();
+    };
+  }, [activeManager]);
+
+  /* ================= LOAD MANAGERS ================= */
   useEffect(() => {
     const loadManagers = async () => {
       try {
-        const res = await api.get("/company/manager/list");
+        const res = await api.get("/manager/list-for-company");
         setManagers(res.data.data || []);
       } catch (err) {
         console.error("❌ Failed to load managers:", err);
@@ -54,22 +81,7 @@ const CompanyChat = () => {
     };
 
     loadChat();
-
-    socket.emit("join", {
-      room: `company_${activeManager._id}`,
-    });
-  }, [activeManager, socket]);
-
-  /* ================= SOCKET RECEIVE ================= */
-  useEffect(() => {
-    socket.on("chat:mc:new", (msg) => {
-      if (msg.managerId === activeManager?._id) {
-        setMessages((prev) => [...prev, msg]);
-      }
-    });
-
-    return () => socket.off("chat:mc:new");
-  }, [socket, activeManager]);
+  }, [activeManager]);
 
   /* ================= SEND MESSAGE ================= */
   const sendMessage = async () => {

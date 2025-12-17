@@ -13,9 +13,8 @@ const CustomerLayout = () => {
   const [toast, setToast] = useState(null);
 
   /* ==========================================================
-     🔵 SOCKET.IO — REAL-TIME NOTIFICATIONS
+     🔵 SOCKET.IO — REAL-TIME NOTIFICATIONS (SAFE)
   ========================================================== */
-
   useEffect(() => {
     if (!user?._id) return;
 
@@ -28,16 +27,13 @@ const CustomerLayout = () => {
 
     // Listen for new notifications
     socket.on("notification:new", (notif) => {
-      // Update unread count UI
       setUnreadCount((prev) => prev + 1);
 
-      // Show toast popup
       setToast({
-        title: notif.title || "New update",
-        message: notif.message,
+        title: notif?.title || "New update",
+        message: notif?.message || "You have a new notification",
       });
 
-      // Hide toast after 4 seconds
       setTimeout(() => setToast(null), 4000);
     });
 
@@ -47,35 +43,9 @@ const CustomerLayout = () => {
   }, [user]);
 
   /* ==========================================================
-     🟡 GET UNREAD COUNT ON FIRST LOAD
-  ========================================================== */
-
-  useEffect(() => {
-    const fetchUnread = async () => {
-      try {
-        const res = await fetch(
-          `${import.meta.env.VITE_API_URL}/api/notifications/list?status=unread`,
-          {
-            credentials: "include",
-            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-          }
-        );
-
-        const data = await res.json();
-        if (data.ok) setUnreadCount(data.total || 0);
-      } catch (err) {
-        console.error("Unread load error", err);
-      }
-    };
-
-    fetchUnread();
-  }, []);
-
-  /* ==========================================================
      UI + LAYOUT
   ========================================================== */
-
-  const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
+  const toggleSidebar = () => setSidebarOpen((prev) => !prev);
 
   return (
     <div className={styles.shell}>
@@ -132,7 +102,6 @@ const CustomerLayout = () => {
                 <span className={styles.menuIcon}>{item.icon}</span>
                 {item.label}
 
-                {/* 🔴 unread badge */}
                 {isNotifications && unreadCount > 0 && (
                   <span className={styles.unreadBadge}>{unreadCount}</span>
                 )}
@@ -149,7 +118,7 @@ const CustomerLayout = () => {
 
       {/* BACKDROP */}
       {sidebarOpen && (
-        <div className={styles.backdrop} onClick={toggleSidebar}></div>
+        <div className={styles.backdrop} onClick={toggleSidebar} />
       )}
 
       {/* ========== MAIN ========== */}
@@ -194,7 +163,7 @@ const CustomerLayout = () => {
         </main>
       </div>
 
-      {/* ========== TOAST NOTIFICATION ========== */}
+      {/* ========== TOAST ========== */}
       {toast && (
         <div className={styles.toast}>
           <strong>{toast.title}</strong>

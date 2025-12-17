@@ -29,21 +29,16 @@
   gap: 10px;
 }
 
-.form h3 {
-  margin-bottom: 8px;
-}
-
 .form input,
 .form select {
-  padding: 8px 10px;
+  padding: 10px;
   border-radius: 8px;
   border: 1px solid #e5e7eb;
 }
 
 .form button {
-  margin-top: 10px;
   background: #2563eb;
-  color: #fff;
+  color: white;
   border: none;
   padding: 10px;
   border-radius: 8px;
@@ -52,20 +47,39 @@
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 16px;
 }
 
 .card {
-  background: #fff;
+  background: white;
   border-radius: 14px;
   padding: 16px;
   box-shadow: 0 6px 16px rgba(0,0,0,0.06);
 }
 
-.card h3 {
-  font-size: 18px;
-  margin-bottom: 6px;
+.badge {
+  display: inline-block;
+  margin: 8px 0;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.pending {
+  background: #fde68a;
+  color: #92400e;
+}
+
+.verified {
+  background: #bbf7d0;
+  color: #065f46;
+}
+
+.rejected {
+  background: #fecaca;
+  color: #7f1d1d;
 }
 
 .verifyBox {
@@ -73,10 +87,6 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-}
-
-.verifyBox input[type="file"] {
-  border: none;
 }
 
 .submitBtn {
@@ -97,25 +107,22 @@
 
 .verifyBtn:disabled {
   background: #94a3b8;
-  cursor: not-allowed;
 }
 
 .createBtn {
-  margin-top: 10px;
   background: #7c3aed;
   color: white;
-  border: none;
   padding: 8px;
   border-radius: 8px;
-  width: 100%;
+  border: none;
+  margin-top: 8px;
 }
 
 .toggleBtn {
-  margin-top: 10px;
   background: #334155;
   color: white;
-  border: none;
   padding: 8px;
   border-radius: 8px;
-  width: 100%;
+  border: none;
+  margin-top: 8px;
 }

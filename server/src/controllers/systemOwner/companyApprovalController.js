@@ -62,11 +62,12 @@ export const getCompanyApplicationById = async (req, res) => {
 };
 
 /* ==========================================================
-   APPROVE APPLICATION  ✅ HARD FIXED
+   APPROVE APPLICATION ✅ FULLY FIXED
 ========================================================== */
 export const approveCompanyApplication = async (req, res) => {
   try {
     const app = await CompanyApplication.findById(req.params.id);
+
     if (!app) {
       return res.status(404).json({ ok: false, error: "Application not found" });
     }
@@ -76,26 +77,25 @@ export const approveCompanyApplication = async (req, res) => {
     }
 
     /* ======================================================
-       1️⃣ USER (EMAIL UNIQUE)
+       1️⃣ CREATE / FIND COMPANY OWNER USER
     ====================================================== */
     let user = await User.findOne({ email: app.companyEmail });
 
     if (!user) {
-      const passwordHash = app.passwordHash
-        ? app.passwordHash
-        : await bcrypt.hash("Temp@12345", 10);
+      const tempPassword = Math.random().toString(36).slice(-10);
+      const passwordHash = await bcrypt.hash(tempPassword, 10);
 
       user = await User.create({
         name: app.ownerName,
         email: app.companyEmail,
-        passwordHash,
+        passwordHash, // ✅ REQUIRED
         role: "company",
         isActive: true,
       });
     }
 
     /* ======================================================
-       2️⃣ COMPANY (NO apiKey, NO duplicates)
+       2️⃣ CREATE / FIND COMPANY
     ====================================================== */
     let company = await Company.findOne({
       $or: [{ ownerId: user._id }, { name: app.companyName }],
@@ -110,19 +110,24 @@ export const approveCompanyApplication = async (req, res) => {
         businessCategory: app.businessCategory || "other",
         businessCategoryCustom: app.businessCategoryOther || null,
         commercialRegistrationNumber: app.commercialRegistrationNumber,
+
         ownerId: user._id,
 
+        // ✅ IMPORTANT FLAGS
         isActive: true,
+        isApproved: true,
         billingStatus: "active",
-        subscription: undefined, // 🔥 IMPORTANT: not null
+        subscription: undefined, // DO NOT set null
       });
     }
 
     /* ======================================================
        3️⃣ LINK USER → COMPANY
     ====================================================== */
-    user.companyId = company._id;
-    await user.save();
+    if (!user.companyId) {
+      user.companyId = company._id;
+      await user.save();
+    }
 
     /* ======================================================
        4️⃣ UPDATE APPLICATION

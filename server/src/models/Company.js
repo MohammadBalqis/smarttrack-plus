@@ -19,6 +19,14 @@ const companySchema = new mongoose.Schema(
     phone: String,
     address: String,
 
+    /* ===============================
+       Branding
+    =============================== */
+    logo: {
+      type: String, // URL or /uploads/...
+      default: null,
+    },
+
     businessCategory: {
       type: String,
       default: "other",
@@ -33,6 +41,9 @@ const companySchema = new mongoose.Schema(
       required: true,
     },
 
+    /* ===============================
+       Subscription & Billing
+    =============================== */
     plan: {
       type: String,
       enum: ["starter", "growth", "pro", "enterprise"],
@@ -56,19 +67,28 @@ const companySchema = new mongoose.Schema(
       default: "active",
     },
 
-    /* 🔑 API KEY
+    /* ===============================
+       API KEY
        - optional
        - indexed ONLY if exists
-       - NEVER null
-    */
+       - NEVER duplicated
+    =============================== */
     apiKey: {
       type: String,
-      default: null, // important: explicit null, not undefined
+      default: null,
     },
 
+    /* ===============================
+       Visibility Flags (🔥 IMPORTANT)
+    =============================== */
     isActive: {
       type: Boolean,
       default: true,
+    },
+
+    isApproved: {
+      type: Boolean,
+      default: false, // 🔥 REQUIRED for customer visibility
     },
   },
   {

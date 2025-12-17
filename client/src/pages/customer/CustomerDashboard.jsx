@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { getActiveCompanyApi } from "../../api/customerCompaniesApi";
+import { getActiveCustomerCompanyApi } from "../../api/customerCompanyApi";
 import { getCustomerActiveTripsApi } from "../../api/customerTripsApi";
 import styles from "../../styles/customer/customerDashboard.module.css";
 
@@ -8,22 +8,37 @@ const CustomerDashboard = () => {
   const [activeTrips, setActiveTrips] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  /* ==========================================================
+     LOAD DASHBOARD DATA
+  ========================================================== */
   useEffect(() => {
-    const load = async () => {
+    const loadDashboard = async () => {
       try {
-        const res1 = await getActiveCompanyApi();
-        if (res1.data.ok) setCompany(res1.data.company);
+        setLoading(true);
 
-        const res2 = await getCustomerActiveTripsApi();
-        setActiveTrips(res2.data.trips || []);
+        // 🔹 Load active company
+        const companyRes = await getActiveCustomerCompanyApi();
+
+        if (companyRes.data?.ok && companyRes.data.company) {
+          setCompany(companyRes.data.company);
+
+          // 🔹 Load trips ONLY if company exists
+          const tripsRes = await getCustomerActiveTripsApi();
+          setActiveTrips(tripsRes.data?.trips || []);
+        } else {
+          setCompany(null);
+          setActiveTrips([]);
+        }
       } catch (err) {
-        console.error("Dashboard load error:", err);
+        console.error("CustomerDashboard load error:", err);
+        setCompany(null);
+        setActiveTrips([]);
       } finally {
         setLoading(false);
       }
     };
 
-    load();
+    loadDashboard();
   }, []);
 
   if (loading) {
@@ -49,10 +64,14 @@ const CustomerDashboard = () => {
         <div className={styles.companyCard}>
           <div className={styles.companyHeader}>
             {company.logo ? (
-              <img src={company.logo} alt="logo" className={styles.companyLogo} />
+              <img
+                src={`${import.meta.env.VITE_API_URL}${company.logo}`}
+                alt={company.name}
+                className={styles.companyLogo}
+              />
             ) : (
               <div className={styles.companyLogoPlaceholder}>
-                {company.name[0]}
+                {company.name?.[0] || "?"}
               </div>
             )}
 
@@ -68,7 +87,9 @@ const CustomerDashboard = () => {
 
           <button
             className={styles.changeCompanyBtn}
-            onClick={() => (window.location.href = "/customer/select-company")}
+            onClick={() =>
+              (window.location.href = "/customer/select-company")
+            }
           >
             Change Company
           </button>
@@ -78,7 +99,9 @@ const CustomerDashboard = () => {
           <p>No company selected yet.</p>
           <button
             className={styles.primaryBtn}
-            onClick={() => (window.location.href = "/customer/select-company")}
+            onClick={() =>
+              (window.location.href = "/customer/select-company")
+            }
           >
             Select a Company
           </button>

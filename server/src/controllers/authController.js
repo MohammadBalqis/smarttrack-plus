@@ -405,3 +405,155 @@ export const registerCompanyRequest = async (req, res) => {
     return res.status(500).json({ error: "Server error" });
   }
 };
+/* ==========================================================
+   HELPERS
+========================================================== */
+const sanitize = (v) => (typeof v === "string" ? v.trim() : v);
+
+const ensureScope = async (req, driverId) =>
+  Driver.findOne({
+    _id: driverId,
+    managerId: req.user._id,
+    companyId: req.user.companyId,
+  });
+
+/* ==========================================================
+   GET DRIVERS
+========================================================== */
+export const getManagerDrivers = async (req, res) => {
+  try {
+    const drivers = await Driver.find({
+      managerId: req.user._id,
+      companyId: req.user.companyId,
+    }).sort({ createdAt: -1 });
+
+    res.json({ ok: true, drivers });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to load drivers" });
+  }
+};
+
+/* ==========================================================
+   CREATE DRIVER PROFILE
+========================================================== */
+export const createDriverProfile = async (req, res) => {
+  try {
+    const { name, phone, address } = req.body;
+    if (!name)
+      return res.status(400).json({ error: "Driver name required" });
+
+    const driver = await Driver.create({
+      name: sanitize(name),
+      phone: sanitize(phone) || "",
+      address: sanitize(address) || "",
+      managerId: req.user._id,
+      companyId: req.user.companyId,
+      status: "offline",
+      verification: { status: "pending" },
+      hasAccount: false,
+      isSuspended: false,
+    });
+
+    res.status(201).json({ ok: true, driver });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Create driver failed" });
+  }
+};
+
+/* ==========================================================
+   SUBMIT VERIFICATION
+========================================================== */
+export const submitDriverVerification = async (req, res) => {
+  try {
+    const driver = await ensureScope(req, req.params.driverId);
+    if (!driver)
+      return res.status(404).json({ error: "Driver not found" });
+
+    const { idNumber, plateNumber, vehicleType, brand, model } = req.body;
+
+    if (!idNumber || !plateNumber || !vehicleType || !brand || !model)
+      return res.status(400).json({ error: "Missing fields" });
+
+    if (!req.files?.idImage?.[0] || !req.files?.vehicleImage?.[0])
+      return res.status(400).json({ error: "Images required" });
+
+    const idImage = `/uploads/drivers/id/${req.files.idImage[0].filename}`;
+    const vehicleImage = `/uploads/drivers/vehicle/${req.files.vehicleImage[0].filename}`;
+
+    driver.verification = {
+      idNumber: sanitize(idNumber),
+      idImage,
+      status: "verified",
+      verifiedAt: new Date(),
+    };
+
+    driver.vehicle = {
+      plateNumber: sanitize(plateNumber),
+      image: vehicleImage,
+      type: sanitize(vehicleType),
+    };
+
+    await driver.save();
+
+    await Vehicle.create({
+      companyId: driver.companyId,
+      driverId: driver._id,
+      type: sanitize(vehicleType),
+      brand: sanitize(brand),
+      model: sanitize(model),
+      plateNumber: sanitize(plateNumber),
+      vehicleImage,
+      driverCertificate: idImage,
+      status: "active",
+    });
+
+    res.json({ ok: true, message: "Driver verified" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Verification failed" });
+  }
+};
+
+/* ==========================================================
+   CREATE DRIVER ACCOUNT (FINAL FIX)
+========================================================== */
+export const createDriverAccount = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const driver = await ensureScope(req, req.params.driverId);
+
+    if (!driver)
+      return res.status(404).json({ error: "Driver not found" });
+
+    if (driver.verification?.status !== "verified")
+      return res.status(400).json({ error: "Driver not verified" });
+
+    if (driver.hasAccount)
+      return res.status(400).json({ error: "Account already exists" });
+
+    const exists = await User.findOne({ email: email.toLowerCase() });
+    if (exists)
+      return res.status(409).json({ error: "Email already used" });
+
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    const user = await User.create({
+      email: email.toLowerCase(),
+      passwordHash,
+      role: "driver",
+      companyId: driver.companyId,
+      isActive: true,
+    });
+
+    driver.userId = user._id;
+    driver.hasAccount = true;
+    await driver.save();
+
+    res.json({ ok: true, message: "Driver account created" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Create account failed" });
+  }
+};

@@ -17,6 +17,15 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  /* ============================
+     HANDLE LOGIN TYPE SWITCH ✅
+  ============================ */
+  const switchLoginType = (type) => {
+    setLoginType(type);
+    setIdentifier("");   // ✅ reset input
+    setError("");        // ✅ clear error
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
@@ -100,10 +109,11 @@ const Login = () => {
                   ? styles.switchActive
                   : styles.switchBtn
               }
-              onClick={() => setLoginType("email")}
+              onClick={() => switchLoginType("email")}
             >
               Email
             </button>
+
             <button
               type="button"
               className={
@@ -111,7 +121,7 @@ const Login = () => {
                   ? styles.switchActive
                   : styles.switchBtn
               }
-              onClick={() => setLoginType("phone")}
+              onClick={() => switchLoginType("phone")}
             >
               Phone
             </button>
@@ -124,8 +134,12 @@ const Login = () => {
               <label className={styles.label}>
                 {loginType === "email" ? "Email" : "Phone Number"}
               </label>
+
               <input
-                type="text"
+                type={loginType === "email" ? "email" : "tel"}   
+                autoComplete={
+                  loginType === "email" ? "email" : "tel"
+                }                                              
                 className={styles.input}
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
@@ -143,6 +157,7 @@ const Login = () => {
               <div className={styles.passwordWrapper}>
                 <input
                   type={showPassword ? "text" : "password"}
+                  autoComplete="current-password"  /* ✅ */
                   className={styles.input}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
